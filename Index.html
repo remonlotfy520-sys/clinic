@@ -1,0 +1,2357 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ملفات المرضى - العيادة</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@500;700;800&family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  :root{
+    --bg:#F6F3EC;
+    --card:#FFFFFF;
+    --ink:#23302B;
+    --muted:#6E7A73;
+    --line:#E4DDCB;
+    --teal:#2F6B5E;
+    --teal-dark:#1F4A40;
+    --tab:#BE7C3A;
+    --red:#B9503E;
+    --shadow: 0 10px 30px -12px rgba(31,74,64,0.18);
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:'Tajawal',sans-serif;}
+  h1,h2,h3,.brand,.tab-num{font-family:'Cairo',sans-serif;}
+
+  /* Background texture */
+  body{
+    background-image:
+      radial-gradient(circle at 100% 0%, rgba(47,107,94,0.06), transparent 40%),
+      radial-gradient(circle at 0% 100%, rgba(190,124,58,0.07), transparent 40%);
+  }
+
+  header{
+    padding:22px 28px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:20px;
+    flex-wrap:wrap;
+    border-bottom:1px solid var(--line);
+    background:linear-gradient(180deg, rgba(255,255,255,.6), rgba(255,255,255,0));
+  }
+  .brand{display:flex;align-items:center;gap:12px;}
+  .brand .mark{
+    width:42px;height:42px;border-radius:10px;
+    background:var(--teal);color:#fff;
+    display:flex;align-items:center;justify-content:center;
+    font-weight:800;font-size:18px;
+    box-shadow:var(--shadow);
+  }
+  .brand .title{font-weight:800;font-size:20px;color:var(--teal-dark);}
+  .brand .sub{font-size:12px;color:var(--muted);margin-top:2px;}
+
+  .search-wrap{position:relative;flex:1;min-width:260px;max-width:480px;}
+  .search-wrap input{
+    width:100%;padding:12px 44px 12px 14px;border-radius:12px;
+    border:1px solid var(--line);background:#fff;font-family:'Tajawal';font-size:15px;
+    outline:none; transition:box-shadow .15s ease, border-color .15s ease;
+  }
+  .search-wrap input:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(47,107,94,.12);}
+  .search-wrap .icon{position:absolute;top:50%;right:14px;transform:translateY(-50%);color:var(--muted);}
+  .results{
+    position:absolute;top:calc(100% + 6px);right:0;left:0;background:#fff;
+    border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);
+    max-height:280px;overflow:auto;z-index:20;display:none;
+  }
+  .results.open{display:block;}
+  .result-item{padding:11px 14px;cursor:pointer;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;gap:8px;align-items:center;}
+  .result-item:last-child{border-bottom:none;}
+  .result-item:hover{background:#F6F3EC;}
+  .result-item .rname{font-weight:700;}
+  .result-item .rmeta{font-size:12px;color:var(--muted);}
+  .empty-result{padding:14px;color:var(--muted);font-size:14px;text-align:center;}
+
+  button{font-family:'Tajawal';cursor:pointer;border:none;}
+  .btn{
+    padding:11px 18px;border-radius:10px;font-weight:700;font-size:14px;
+    display:inline-flex;align-items:center;gap:8px;transition:transform .1s ease, opacity .15s;
+  }
+  .btn:active{transform:scale(.97);}
+  .btn-primary{background:var(--teal);color:#fff;}
+  .btn-primary:hover{background:var(--teal-dark);}
+  .btn-ghost{background:transparent;color:var(--teal-dark);border:1px solid var(--line);}
+  .btn-ghost:hover{border-color:var(--teal);}
+  .btn-outline-red{background:transparent;color:var(--red);border:1px solid rgba(185,80,62,.35);}
+  .btn-outline-red:hover{background:rgba(185,80,62,.06);}
+  .btn:disabled{opacity:.5;cursor:not-allowed;}
+
+  main{max-width:1180px;margin:0 auto;padding:26px 28px 60px;}
+
+  .placeholder{
+    margin-top:60px;text-align:center;color:var(--muted);
+  }
+  .placeholder .big{font-family:'Cairo';font-size:22px;color:var(--teal-dark);font-weight:800;margin-bottom:8px;}
+
+  .layout{display:grid;grid-template-columns:340px 1fr;gap:22px;align-items:start;}
+  @media (max-width:860px){.layout{grid-template-columns:1fr;}}
+
+  /* Folder card */
+  .folder{position:relative;}
+  .folder-tab{
+    position:absolute;top:-16px;right:22px;
+    background:var(--tab);color:#fff;
+    padding:6px 16px 8px;border-radius:8px 8px 0 0;
+    font-family:'Cairo';font-weight:700;font-size:13px;
+    box-shadow:0 -2px 8px rgba(0,0,0,.08);
+    letter-spacing:.3px;
+  }
+  .card{
+    background:var(--card);border-radius:16px;border:1px solid var(--line);
+    box-shadow:var(--shadow);padding:24px 20px 20px;
+  }
+  .field{margin-bottom:14px;}
+  .field label{display:block;font-size:12.5px;color:var(--muted);margin-bottom:6px;font-weight:700;}
+  .field input{
+    width:100%;padding:10px 12px;border-radius:9px;border:1px solid var(--line);
+    font-family:'Tajawal';font-size:14.5px;background:#FCFBF8;outline:none;
+    transition:border-color .15s;
+  }
+  .field input:focus{border-color:var(--teal);background:#fff;}
+  .field input:disabled{color:var(--muted);background:#F2F0E9;}
+  .field-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+
+  .card-actions{display:flex;gap:10px;margin-top:18px;flex-wrap:wrap;}
+
+  .chips{display:flex;flex-wrap:wrap;gap:8px;}
+  .chip{
+    padding:7px 14px;border-radius:999px;border:1px solid var(--line);
+    background:#FCFBF8;font-size:13.5px;font-weight:700;color:var(--muted);
+    transition:all .15s ease; user-select:none;
+  }
+  .chip:hover{border-color:var(--teal);}
+  .chip.active{background:var(--teal);border-color:var(--teal);color:#fff;}
+  .chip.active.risk{background:var(--red);border-color:var(--red);}
+
+  .dropdown-add-select{
+    width:100%;padding:10px 12px;border-radius:9px;border:1px solid var(--line);
+    font-family:'Tajawal';font-size:14px;background:#FCFBF8;outline:none;color:var(--ink);
+  }
+  .dropdown-add-select:focus{border-color:var(--teal);}
+  .chip.active .chip-remove{margin-right:6px;font-weight:900;opacity:.85;cursor:pointer;}
+  .chip.active .chip-remove:hover{opacity:1;}
+
+  .rx-med-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;}
+  .rx-med-row select{
+    width:100%;padding:9px 10px;border-radius:9px;border:1px solid var(--line);
+    font-family:'Tajawal';font-size:13.5px;background:#FCFBF8;outline:none;color:var(--ink);
+  }
+  .rx-med-row select:focus{border-color:var(--teal);}
+  .rx-med-row input{
+    width:100%;padding:9px 10px;border-radius:9px;border:1px solid var(--line);
+    font-family:'Tajawal';font-size:13.5px;background:#FCFBF8;outline:none;
+  }
+  @media (max-width:480px){.rx-med-row{grid-template-columns:1fr;}}
+
+  .tab-bar{display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap;}
+  .tab-btn{
+    padding:11px 18px;border-radius:11px;background:#fff;border:1px solid var(--line);
+    font-weight:700;font-size:13.5px;color:var(--muted);cursor:pointer;transition:all .15s ease;
+    font-family:'Tajawal';
+  }
+  .tab-btn:hover{border-color:var(--teal);color:var(--teal-dark);}
+  .tab-btn.active{background:var(--teal);border-color:var(--teal);color:#fff;}
+  .tab-panel{display:none;}
+  .tab-panel.active{display:block;}
+
+  .patient-id-pill{
+    display:inline-flex;align-items:center;gap:6px;background:#F2EEE1;color:var(--teal-dark);
+    padding:5px 12px;border-radius:999px;font-size:12.5px;font-weight:700;margin-bottom:16px;
+  }
+
+  .exam-card{background:var(--card);border-radius:16px;border:1px solid var(--line);box-shadow:var(--shadow);padding:22px;margin-bottom:22px;}
+  .exam-card h2{margin:0 0 4px;font-size:17px;color:var(--teal-dark);}
+  .exam-card .hint{font-size:12.5px;color:var(--muted);margin-bottom:14px;}
+  textarea{
+    width:100%;min-height:180px;padding:16px 16px;border-radius:12px;border:1px solid var(--line);
+    font-family:'Tajawal';font-size:15px;line-height:34px;resize:vertical;outline:none;
+    background:
+      repeating-linear-gradient(to bottom, transparent 0px, transparent 33px, var(--line) 34px);
+    background-color:#FFFDF8;
+  }
+  textarea:focus{border-color:var(--teal);}
+
+  .visits-card{background:var(--card);border-radius:16px;border:1px solid var(--line);box-shadow:var(--shadow);padding:22px;}
+  .visits-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:10px;}
+  .visits-head h2{margin:0;font-size:17px;color:var(--teal-dark);}
+  .new-visit-form{display:none;background:#F9F7F1;border:1px dashed var(--line);border-radius:12px;padding:16px;margin-bottom:16px;}
+  .new-visit-form.open{display:block;}
+  .new-visit-form .field-row{grid-template-columns:160px 1fr;align-items:end;}
+
+  .visit-item{
+    border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:10px;
+    position:relative;padding-right:20px;
+  }
+  .visit-item::before{
+    content:'';position:absolute;top:16px;bottom:16px;right:0;width:4px;border-radius:4px;background:var(--teal);
+  }
+  .visit-date{font-weight:700;color:var(--teal-dark);font-size:13.5px;margin-bottom:4px;}
+  .visit-notes{font-size:14px;color:var(--ink);white-space:pre-wrap;line-height:1.7;}
+  .visit-label{color:#2563EB;font-weight:700;}
+  .no-visits{color:var(--muted);font-size:14px;text-align:center;padding:20px 0;}
+
+  .contact-list{max-height:65vh;overflow-y:auto;}
+  .contact-row{padding:15px 18px;border-bottom:1px solid var(--line);cursor:pointer;font-size:15px;font-weight:700;color:var(--ink);transition:background .1s ease;}
+  .contact-row:last-child{border-bottom:none;}
+  .contact-row:hover{background:#F6F3EC;}
+  .contact-list::-webkit-scrollbar{width:6px;}
+  .contact-list::-webkit-scrollbar-track{background:transparent;}
+  .contact-list::-webkit-scrollbar-thumb{background:var(--line);border-radius:6px;}
+
+  .cal-weekdays{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:4px;}
+  .cal-weekday{text-align:center;font-size:11.5px;color:var(--muted);font-weight:700;padding:4px 0;}
+  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;}
+  .cal-daycell{aspect-ratio:1;border:1px solid var(--line);border-radius:8px;padding:5px;font-size:12.5px;cursor:pointer;position:relative;background:#fff;transition:background .1s ease;}
+  .cal-daycell:hover{background:#F6F3EC;}
+  .cal-daycell.other-month{opacity:.3;}
+  .cal-daycell.today{border-color:var(--teal);border-width:2px;}
+  .cal-daycell.selected{background:var(--teal);color:#fff;}
+  .cal-daynum{font-weight:700;}
+  .cal-dot{position:absolute;bottom:4px;right:50%;transform:translateX(50%);width:6px;height:6px;border-radius:50%;background:var(--tab);}
+  .cal-daycell.selected .cal-dot{background:#fff;}
+  .appt-item{border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:10px;position:relative;}
+  .appt-date-header{font-family:'Cairo';font-weight:800;color:var(--teal-dark);font-size:14px;margin:14px 0 8px;}
+
+  .toast{
+    position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);
+    background:var(--teal-dark);color:#fff;padding:12px 22px;border-radius:10px;font-size:14px;
+    font-weight:700;box-shadow:var(--shadow);opacity:0;pointer-events:none;transition:all .25s ease;z-index:100;
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+  .toast.error{background:var(--red);}
+
+  .setup-banner{
+    background:#FFF7E8;border:1px solid #F0DDB0;color:#7A5A17;padding:12px 18px;border-radius:10px;
+    font-size:13.5px;margin-bottom:20px;display:none;
+  }
+  .setup-banner.show{display:block;}
+  .spinner{
+    width:15px;height:15px;border-radius:50%;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;
+    animation:spin .7s linear infinite;display:inline-block;
+  }
+  @keyframes spin{to{transform:rotate(360deg);}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <div class="mark">ع</div>
+    <div>
+      <div class="title">ملفات المرضى</div>
+      <div class="sub">دفتر العيادة الرقمي</div>
+    </div>
+  </div>
+  <div class="search-wrap">
+    <input id="searchInput" type="text" placeholder="ابحث بالاسم / رقم التليفون / رقم الملف...">
+    <span class="icon">⌕</span>
+    <div id="results" class="results"></div>
+  </div>
+  <button class="btn btn-ghost" id="viewOperationPatientsBtn">🩺 عمليات</button>
+  <button class="btn btn-ghost" id="viewCasesBtn">📋 الحالات</button>
+  <button class="btn btn-ghost" id="viewStatsBtn">📊 إحصائيات</button>
+  <button class="btn btn-ghost" id="viewRedFlagsBtn" style="position:relative;">
+    🚩
+    <span id="redFlagBadge" style="display:none; position:absolute; top:-6px; left:-6px; background:var(--red); color:#fff; border-radius:999px; font-size:11px; font-weight:800; padding:2px 6px; min-width:18px; text-align:center; line-height:1.3;">0</span>
+  </button>
+  <button class="btn btn-ghost" id="viewCalendarBtn" style="position:relative;">
+    📅
+    <span id="calendarBadge" style="display:none; position:absolute; top:-6px; left:-6px; background:var(--tab); color:#fff; border-radius:999px; font-size:11px; font-weight:800; padding:2px 6px; min-width:18px; text-align:center; line-height:1.3;">0</span>
+  </button>
+  <button class="btn btn-ghost" id="viewMessagesBtn">💬 رسائل</button>
+  <button class="btn btn-primary" id="newPatientBtn">+ مريض جديد</button>
+</header>
+
+<main>
+  <div id="setupBanner" class="setup-banner">
+    ⚠️ لسه معملتش ربط بجوجل شيت. افتح الكود وحط رابط الـ Apps Script في متغير <code>APPS_SCRIPT_URL</code> في الأعلى.
+  </div>
+
+  <div id="placeholder" class="placeholder">
+    <div class="big">ابحث عن مريض أو ابدأ ملف جديد</div>
+    <div>كل بيانات المريض والكشوفات هتتخزن في الشيت تلقائي.</div>
+  </div>
+
+  <div id="operationsPatientsView" style="display:none;">
+    <div class="visits-head" style="margin-bottom:16px;">
+      <h2>مرضى العمليات</h2>
+      <button class="btn btn-ghost" id="closeOperationsViewBtn">✕ إغلاق</button>
+    </div>
+    <div id="operationsPatientsList" class="visits-card" style="padding:8px;"></div>
+  </div>
+
+  <div id="redFlagPatientsView" style="display:none;">
+    <div class="visits-head" style="margin-bottom:16px;">
+      <h2>🚩 حالات Red Flag</h2>
+      <button class="btn btn-ghost" id="closeRedFlagsViewBtn">✕ إغلاق</button>
+    </div>
+    <div id="redFlagPatientsList" class="visits-card" style="padding:8px;"></div>
+  </div>
+
+  <div id="casesView" style="display:none;">
+    <div class="visits-head" style="margin-bottom:14px;">
+      <h2>الحالات</h2>
+      <button class="btn btn-ghost" id="closeCasesViewBtn">✕ إغلاق</button>
+    </div>
+    <div class="tab-bar" style="margin-bottom:14px;">
+      <button class="tab-btn active" id="casesTabRecent" data-cases-tab="recent">الأخيرة</button>
+      <button class="tab-btn" id="casesTabAll" data-cases-tab="all">كل الحالات</button>
+    </div>
+    <div id="casesRecentList" class="visits-card contact-list" style="padding:0;"></div>
+    <div id="casesAllList" class="visits-card contact-list" style="padding:0; display:none;"></div>
+  </div>
+
+  <div id="statsView" style="display:none;">
+    <div class="visits-head" style="margin-bottom:16px;">
+      <h2>الإحصائيات</h2>
+      <button class="btn btn-ghost" id="closeStatsViewBtn">✕ إغلاق</button>
+    </div>
+    <div id="statsContent"></div>
+  </div>
+
+  <div id="calendarView" style="display:none;">
+    <div class="visits-head" style="margin-bottom:14px;">
+      <h2>المواعيد</h2>
+      <button class="btn btn-ghost" id="closeCalendarViewBtn">✕ إغلاق</button>
+    </div>
+
+    <div class="tab-bar" style="margin-bottom:14px;">
+      <button class="tab-btn active" id="calTabCalendar" data-cal-view="calendar">تقويم</button>
+      <button class="tab-btn" id="calTabList" data-cal-view="list">قائمة</button>
+    </div>
+
+    <div class="exam-card" style="margin-bottom:16px;">
+      <div class="card-actions" style="justify-content:flex-start; margin-top:0;">
+        <button class="btn btn-ghost" id="toggleAddAppointmentBtn">+ إضافة موعد</button>
+      </div>
+      <div class="new-visit-form" id="newAppointmentForm">
+        <div class="field-row">
+          <div class="field">
+            <label>التاريخ</label>
+            <input type="date" id="apptDate">
+          </div>
+          <div class="field">
+            <label>الوقت</label>
+            <input type="time" id="apptTime">
+          </div>
+        </div>
+        <div class="field">
+          <label>الموضوع</label>
+          <input type="text" id="apptSubject" placeholder="موضوع الموعد...">
+        </div>
+        <div class="card-actions" style="margin-top:4px;">
+          <button class="btn btn-primary" id="saveAppointmentBtn">حفظ الموعد</button>
+          <button class="btn btn-ghost" id="cancelAppointmentBtn">إلغاء</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="calendarGridView">
+      <div class="visits-head" style="margin-bottom:10px;">
+        <button class="btn btn-ghost" id="calPrevMonthBtn">◀</button>
+        <h2 id="calMonthLabel" style="margin:0;"></h2>
+        <button class="btn btn-ghost" id="calNextMonthBtn">▶</button>
+      </div>
+      <div class="cal-weekdays" id="calWeekdays"></div>
+      <div id="calGrid" class="cal-grid"></div>
+      <div id="calDayList" style="margin-top:16px;"></div>
+    </div>
+
+    <div id="calendarListView" style="display:none;">
+      <div id="appointmentsFullList"></div>
+    </div>
+  </div>
+
+  <div id="messagesView" style="display:none;">
+    <div class="visits-head" style="margin-bottom:14px;">
+      <h2>إرسال رسالة واتساب</h2>
+      <button class="btn btn-ghost" id="closeMessagesViewBtn">✕ إغلاق</button>
+    </div>
+
+    <div class="exam-card" style="margin-bottom:16px;">
+      <label>نص الرسالة</label>
+      <textarea id="msgText" style="min-height:120px;">أهلاً بيك، يسعدنا زيارتك لعيادتنا. لو محتاج أي استفسار احنا في خدمتك.</textarea>
+    </div>
+
+    <div class="exam-card" style="margin-bottom:16px;">
+      <div class="card-actions" style="justify-content:flex-start; margin-top:0;">
+        <button class="btn btn-ghost" id="selectAllMsgBtn">تحديد الكل</button>
+        <button class="btn btn-ghost" id="clearAllMsgBtn">إلغاء التحديد</button>
+      </div>
+    </div>
+
+    <div id="msgPatientsList" class="visits-card" style="padding:8px; max-height:50vh; overflow-y:auto;"></div>
+
+    <div class="card-actions" style="margin-top:16px;">
+      <button class="btn btn-primary" id="prepareMessagesBtn">تجهيز روابط الإرسال</button>
+    </div>
+
+    <div id="msgSendLinks" style="margin-top:16px;"></div>
+  </div>
+
+  <div id="workspace" style="display:none;">
+    <div class="layout">
+      <!-- Patient folder -->
+      <div class="folder">
+      <div class="folder">
+        <div class="folder-tab tab-num" id="folderTab">ملف جديد</div>
+        <div class="card">
+          <div class="field">
+            <label>الاسم</label>
+            <input type="text" id="fName" placeholder="اسم المريض">
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label>السن</label>
+              <input type="text" id="fAge" placeholder="مثال: 34">
+            </div>
+            <div class="field">
+              <label>التليفون</label>
+              <div style="display:flex; gap:8px;">
+                <input type="text" id="fPhone" placeholder="01xxxxxxxxx" style="flex:1;">
+                <button type="button" class="btn btn-ghost" id="sendWhatsappBtn" title="ابعت رسالة واتساب لهذا المريض" style="padding:10px 14px;">💬</button>
+              </div>
+            </div>
+          </div>
+          <div class="field">
+            <label>رقم الملف الثابت بالعيادة</label>
+            <input type="text" id="fClinicNumber" placeholder="مثال: 120">
+          </div>
+          <div class="field">
+            <label>ملاحظات</label>
+            <textarea id="fNote" style="min-height:80px;" placeholder="أي ملاحظة عن المريض..."></textarea>
+          </div>
+          <div class="field">
+            <label>الأمراض المزمنة</label>
+            <select id="chronicSelect" class="dropdown-add-select"></select>
+            <div style="display:flex; gap:8px; margin-top:8px;">
+              <input type="text" id="chronicCustomInput" placeholder="اكتب مرض مش موجود بالقايمة..." style="flex:1;">
+              <button class="btn btn-ghost" id="chronicCustomAddBtn" type="button">+ إضافة</button>
+            </div>
+            <div class="chips" id="chronicChips" style="margin-top:8px;"></div>
+          </div>
+          <div class="card-actions">
+            <button class="btn btn-primary" id="savePatientBtn">حفظ بيانات المريض</button>
+          </div>
+          <div class="card-actions" style="margin-top:8px;">
+            <button class="btn btn-outline-red" id="deletePatientBtn">حذف المريض</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tabbed content -->
+      <div>
+        <div class="exam-card" id="presetRxCard">
+          <h2>روشتات جاهزة</h2>
+          <div class="hint">دوس على أي روشتة تحت وهتتحمّل PDF فورًا باسم المريض وتاريخ اليوم</div>
+          <div class="chips" id="presetRxList"></div>
+        </div>
+
+        <div class="tab-bar">
+          <button class="tab-btn active" data-tab="tab-kashf">الكشف والزيارات</button>
+          <button class="tab-btn" data-tab="tab-rx">الروشتة</button>
+          <button class="tab-btn" data-tab="tab-physio">العلاج الطبيعي</button>
+          <button class="tab-btn" data-tab="tab-reports">التقارير الطبية</button>
+          <button class="tab-btn" data-tab="tab-operations">العمليات</button>
+        </div>
+
+        <!-- Tab: Exam + Visits -->
+        <div class="tab-panel active" id="tab-kashf">
+          <div class="exam-card">
+            <h2>الشكوى والكشف</h2>
+            <div class="hint">القالب بيتحط تلقائي - كمّل في الفراغات وعدّل زي ما يريحك</div>
+            <textarea id="fExam" dir="ltr" style="text-align:left;" placeholder="الشكوى، الفحص، التشخيص، العلاج..."></textarea>
+          </div>
+
+          <div class="exam-card">
+            <h2>الأشعة</h2>
+            <textarea id="fRadiology" style="min-height:110px;" placeholder="الأشعة المطلوبة أو نتائجها..."></textarea>
+            <div class="field" style="margin-top:14px;">
+              <label>رابط أرشيف الأشعة (Google Doc)</label>
+              <div style="display:flex; gap:8px;">
+                <input type="text" id="fRadiologyLink" placeholder="https://docs.google.com/...">
+                <button class="btn btn-ghost" id="openRadiologyLinkBtn" type="button" style="white-space:nowrap;">فتح ↗</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="exam-card">
+            <h2>التحاليل</h2>
+            <textarea id="fLabTests" style="min-height:110px;" placeholder="التحاليل المطلوبة أو نتائجها..."></textarea>
+            <label style="display:flex; align-items:center; gap:8px; margin:16px 0 4px; cursor:pointer; font-size:14px; font-weight:700; color:var(--ink);">
+              <input type="checkbox" id="fHasOperation" style="width:18px;height:18px;">
+              المريض له عملية / عمل عملية
+            </label>
+            <label style="display:flex; align-items:center; gap:8px; margin:4px 0 4px; cursor:pointer; font-size:14px; font-weight:700; color:var(--red);">
+              <input type="checkbox" id="fRedFlag" style="width:18px;height:18px;">
+              🚩 المريض عنده مشكلة (Red Flag)
+            </label>
+            <div class="card-actions">
+              <button class="btn btn-primary" id="saveExamBtn">حفظ الكشف والأشعة والتحاليل</button>
+            </div>
+          </div>
+
+          <div class="visits-card">
+            <div class="visits-head">
+              <h2>سجل الزيارات</h2>
+              <button class="btn btn-ghost" id="toggleVisitBtn">+ تسجيل زيارة جديدة</button>
+            </div>
+
+            <div class="new-visit-form" id="newVisitForm">
+              <div class="field" style="max-width:200px;">
+                <label>تاريخ الزيارة</label>
+                <input type="date" id="vDate">
+              </div>
+              <div class="field">
+                <label>الشكوى والكشف</label>
+                <textarea id="vNotes" dir="ltr" style="min-height:220px; text-align:left;" placeholder="الشكوى، الفحص، التشخيص، العلاج..."></textarea>
+              </div>
+              <div class="field">
+                <label>الأشعة</label>
+                <textarea id="vRadiology" style="min-height:90px;" placeholder="الأشعة المطلوبة أو نتائجها..."></textarea>
+              </div>
+              <div class="field">
+                <label>التحاليل</label>
+                <textarea id="vLabTests" style="min-height:90px;" placeholder="التحاليل المطلوبة أو نتائجها..."></textarea>
+              </div>
+              <div class="card-actions" style="margin-top:4px;">
+                <button class="btn btn-primary" id="addVisitBtn">حفظ الزيارة</button>
+                <button class="btn btn-ghost" id="cancelVisitBtn">إلغاء</button>
+              </div>
+            </div>
+
+            <div id="visitsList"></div>
+          </div>
+        </div>
+
+        <!-- Tab: Prescription -->
+        <div class="tab-panel" id="tab-rx">
+          <div class="exam-card">
+            <h2>الروشتة</h2>
+            <div class="hint">الاسم وتاريخ اليوم بيتحطوا في الروشتة تلقائي - اختار من القوائم تحت</div>
+
+            <div class="field">
+              <label>التشخيص</label>
+              <textarea id="rxDiagnosis" style="min-height:70px;" placeholder="التشخيص..."></textarea>
+            </div>
+
+            <div class="field">
+              <label>الأدوية (حتى 7)</label>
+              <div id="rxMedicines"></div>
+              <datalist id="medicinesDatalist"></datalist>
+              <datalist id="administrationDatalist"></datalist>
+            </div>
+
+            <div class="field">
+              <label>توصيات حسب التشخيص</label>
+              <div class="hint" style="margin-bottom:8px;">دوس على تشخيص وهتتكتب كل توصياته تلقائي تحت</div>
+              <div class="chips" id="diagnosisRecsList"></div>
+            </div>
+
+            <div class="field">
+              <label>التوصيات العامة</label>
+              <select id="rxRecommendationsSelect" class="dropdown-add-select"></select>
+              <div class="chips" id="rxRecommendations" style="margin-top:8px;"></div>
+            </div>
+
+            <div class="field">
+              <label>الأشعة المطلوبة</label>
+              <div class="hint" style="margin-bottom:6px;">اكتب بحرية أو اختار من القايمة عشان تضاف كسطر جديد، وتقدر تعدل أي سطر يدويًا</div>
+              <select id="rxRadiologyReqSelect" class="dropdown-add-select"></select>
+              <textarea id="rxRadiologyReq" style="min-height:80px; margin-top:8px;" placeholder="الأشعة المطلوبة..."></textarea>
+            </div>
+
+            <div class="field">
+              <label>التحاليل المطلوبة</label>
+              <div class="hint" style="margin-bottom:6px;">اكتب بحرية أو اختار من القايمة عشان تضاف كسطر جديد، وتقدر تعدل أي سطر يدويًا</div>
+              <select id="rxLabsReqSelect" class="dropdown-add-select"></select>
+              <textarea id="rxLabsReq" style="min-height:80px; margin-top:8px;" placeholder="التحاليل المطلوبة..."></textarea>
+            </div>
+
+            <div class="card-actions">
+              <button class="btn btn-primary" id="saveRxBtn">حفظ الروشتة</button>
+              <button class="btn btn-primary" id="downloadRxBtn">تحميل الروشتة PDF</button>
+            </div>
+          </div>
+
+          <div class="visits-card">
+            <div class="visits-head">
+              <h2>هستوري الروشتات</h2>
+            </div>
+            <div id="rxHistoryList"></div>
+          </div>
+        </div>
+
+        <!-- Tab: Physiotherapy -->
+        <div class="tab-panel" id="tab-physio">
+          <div class="exam-card">
+            <h2>العلاج الطبيعي</h2>
+            <div class="hint">الاسم وتاريخ اليوم بيتحطوا تلقائي فوق الروشتة</div>
+
+            <div class="field">
+              <label>التشخيص</label>
+              <textarea id="ptDiagnosis" style="min-height:70px;" placeholder="التشخيص..."></textarea>
+            </div>
+
+            <div class="field">
+              <label>المطلوب من العلاج الطبيعي</label>
+              <div class="chips" id="ptInterventions"></div>
+            </div>
+
+            <div class="field" style="max-width:220px;">
+              <label>عدد الجلسات</label>
+              <input type="text" id="ptSessions" placeholder="مثال: 10 جلسات">
+            </div>
+
+            <div class="card-actions">
+              <button class="btn btn-primary" id="savePhysioBtn">حفظ</button>
+              <button class="btn btn-primary" id="downloadPhysioBtn">تحميل روشتة العلاج الطبيعي PDF</button>
+            </div>
+          </div>
+
+          <div class="visits-card">
+            <div class="visits-head">
+              <h2>هستوري العلاج الطبيعي</h2>
+            </div>
+            <div id="physioHistoryList"></div>
+          </div>
+        </div>
+
+        <!-- Tab: Medical Reports -->
+        <div class="tab-panel" id="tab-reports">
+          <div class="exam-card">
+            <h2>التقارير الطبية</h2>
+            <div class="hint">الاسم وتاريخ اليوم بيتحطوا تلقائي فوق التقرير</div>
+
+            <div class="field">
+              <label>تقارير جاهزة</label>
+              <div class="hint" style="margin-bottom:8px;">دوس على عنوان وهيتضاف نصه في التقرير تحت</div>
+              <div class="chips" id="presetReportsList"></div>
+            </div>
+
+            <div class="field">
+              <label>نوع التقرير</label>
+              <select id="reportType" style="width:100%;padding:10px 12px;border-radius:9px;border:1px solid var(--line);font-family:'Tajawal';font-size:14.5px;background:#FCFBF8;">
+                <option value="تقرير طبي عام">تقرير طبي عام</option>
+                <option value="إجازة مرضية">إجازة مرضية</option>
+                <option value="تقرير للتأمين">تقرير للتأمين</option>
+                <option value="تحويل لطبيب آخر">تحويل لطبيب آخر</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label>جمل جاهزة للتقرير</label>
+              <select id="reportPhraseSelect" class="dropdown-add-select"></select>
+            </div>
+
+            <div class="field">
+              <label>نص التقرير</label>
+              <textarea id="reportBody" style="min-height:220px;" placeholder="اكتب نص التقرير هنا..."></textarea>
+            </div>
+
+            <div class="card-actions">
+              <button class="btn btn-primary" id="saveReportBtn">حفظ</button>
+              <button class="btn btn-primary" id="downloadReportBtn">تحميل التقرير PDF</button>
+            </div>
+          </div>
+
+          <div class="visits-card">
+            <div class="visits-head">
+              <h2>هستوري التقارير</h2>
+            </div>
+            <div id="reportHistoryList"></div>
+          </div>
+        </div>
+
+        <!-- Tab: Operations -->
+        <div class="tab-panel" id="tab-operations">
+          <div class="visits-card">
+            <div class="visits-head">
+              <h2>سجل العمليات</h2>
+              <button class="btn btn-ghost" id="toggleOperationBtn">+ تسجيل عملية جديدة</button>
+            </div>
+
+            <div class="new-visit-form" id="newOperationForm">
+              <div class="field" style="max-width:200px;">
+                <label>تاريخ العملية</label>
+                <input type="date" id="opDate">
+              </div>
+
+              <div class="field">
+                <label>اسم العملية</label>
+                <input type="text" id="opName" placeholder="اسم العملية...">
+              </div>
+
+              <div class="field">
+                <label>مكان العملية</label>
+                <select id="opLocation" style="width:100%;padding:10px 12px;border-radius:9px;border:1px solid var(--line);font-family:'Tajawal';font-size:14.5px;background:#FCFBF8;"></select>
+              </div>
+
+              <div class="field">
+                <label>التكلفة</label>
+                <input type="text" id="opCost" placeholder="التكلفة...">
+              </div>
+
+              <div class="field">
+                <label>الغيار الأول</label>
+                <select id="opDressing1" style="width:100%;padding:10px 12px;border-radius:9px;border:1px solid var(--line);font-family:'Tajawal';font-size:14.5px;background:#FCFBF8;"></select>
+              </div>
+
+              <div class="field">
+                <label>الغيار الثاني</label>
+                <select id="opDressing2" style="width:100%;padding:10px 12px;border-radius:9px;border:1px solid var(--line);font-family:'Tajawal';font-size:14.5px;background:#FCFBF8;"></select>
+              </div>
+
+              <div class="field">
+                <label>الغيار الثالث</label>
+                <select id="opDressing3" style="width:100%;padding:10px 12px;border-radius:9px;border:1px solid var(--line);font-family:'Tajawal';font-size:14.5px;background:#FCFBF8;"></select>
+              </div>
+
+              <div class="field">
+                <label>المتابعات</label>
+                <textarea id="opFollowUps" style="min-height:100px;" placeholder="المتابعات..."></textarea>
+              </div>
+
+              <div class="field">
+                <label>ملاحظات</label>
+                <textarea id="opNotes" style="min-height:100px;" placeholder="ملاحظات..."></textarea>
+              </div>
+
+              <div class="card-actions" style="margin-top:4px;">
+                <button class="btn btn-primary" id="addOperationBtn">حفظ العملية</button>
+                <button class="btn btn-ghost" id="cancelOperationBtn">إلغاء</button>
+              </div>
+            </div>
+
+            <div id="operationsList"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<div id="rxTemplate" style="position:fixed; left:-9999px; top:0; width:420px; background:#ffffff; padding:36px 32px; font-family:'Tajawal', sans-serif; color:#1c2420; direction:rtl; font-size:10pt; line-height:1;">
+  <div style="height:70px;"></div>
+  <div style="border-top:2.5px solid #1F4A40; border-bottom:1px solid #e2ddce; padding:12px 2px; display:flex; justify-content:space-between; font-weight:700; margin-bottom:26px; font-size:12pt;">
+    <div><span class="rx-name" style="font-weight:500;"></span></div>
+    <div><span class="rx-date" style="font-weight:500;"></span></div>
+  </div>
+  <div class="rx-body" style="min-height:120px;"></div>
+  <div style="margin-top:60px; display:flex; justify-content:flex-end;">
+    <div style="text-align:center; color:#555;">
+      <div style="width:150px; border-top:1px solid #999; padding-top:6px;">توقيع الطبيب</div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ====== حط هنا رابط الـ Apps Script بعد النشر ====== */
+const APPS_SCRIPT_URL = "<?= scriptUrl ?>";
+/* ==================================================== */
+
+const $ = id => document.getElementById(id);
+let currentPatientId = null;
+let appointmentsData = [];
+let calCurrentMonth = new Date();
+let calSelectedDateStr = null;
+let editingAppointmentId = null;
+
+/* ====== نسخة احتياطية بسيطة تشتغل بيها الصفحة لحد ما تتحمل القوائم من الشيت ====== */
+let MEDICINES_LIST = [
+  { name: 'باراسيتامول', instructions: '', duration: '', diagnosis: '' },
+  { name: 'أوميبرازول', instructions: '', duration: '', diagnosis: '' }
+];
+let RECOMMENDATIONS_LIST = ['الراحة التامة', 'شرب سوائل بكثرة'];
+let RADIOLOGY_LIST = ['أشعة عادية', 'سونار'];
+let LABS_LIST = ['صورة دم كاملة (CBC)'];
+let PT_LIST = ['تقوية عضلية (Muscle Strengthening)', 'تمارين إطالة (Stretching)'];
+let CHRONIC_LIST = ['ضغط', 'سكر', 'قلب', 'روماتويد', 'حساسية', 'كلى', 'كبد'];
+let ADMINISTRATION_LIST = ['مرة يوميًا', 'مرتين يوميًا', 'عند اللزوم'];
+let PRESET_PRESCRIPTIONS = [];
+let DIAGNOSIS_RECS = [];
+let OPERATION_LOCATIONS_LIST = ['غرفة عمليات 1'];
+let DRESSING_TYPES_LIST = ['غيار عادي'];
+let REPORT_PHRASES_LIST = [];
+let PRESET_REPORTS = [];
+/* ================================================================================ */
+
+/* ---------- Tabs ---------- */
+document.querySelectorAll('.tab-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.tab-btn').forEach(b=> b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p=> p.classList.remove('active'));
+    btn.classList.add('active');
+    $(btn.dataset.tab).classList.add('active');
+  });
+});
+function resetToFirstTab(){
+  document.querySelectorAll('.tab-btn').forEach((b,i)=> b.classList.toggle('active', i===0));
+  document.querySelectorAll('.tab-panel').forEach((p,i)=> p.classList.toggle('active', i===0));
+}
+
+function buildMedicineRows(){
+  const box = $('rxMedicines');
+  const prevValues = Array.from(document.querySelectorAll('.rx-med-select')).map(s=>s.value);
+  const prevInstr = Array.from(document.querySelectorAll('.rx-med-instructions')).map(i=>i.value);
+
+  $('medicinesDatalist').innerHTML = MEDICINES_LIST.map(m=>`<option value="${escapeHtml(m.name)}">`).join('');
+  $('administrationDatalist').innerHTML = ADMINISTRATION_LIST.map(a=>`<option value="${escapeHtml(a)}">`).join('');
+
+  box.innerHTML = '';
+  for(let i = 0; i < 7; i++){
+    const row = document.createElement('div');
+    row.className = 'rx-med-row';
+    row.innerHTML = `
+      <input type="text" class="rx-med-select" data-idx="${i}" list="medicinesDatalist" placeholder="اختر دواء أو اكتب اسم جديد...">
+      <input type="text" class="rx-med-instructions" data-idx="${i}" list="administrationDatalist" placeholder="طريقة الإعطاء - اختار أو اكتب...">
+    `;
+    box.appendChild(row);
+    if(prevValues[i]){ row.querySelector('.rx-med-select').value = prevValues[i]; }
+    if(prevInstr[i]){ row.querySelector('.rx-med-instructions').value = prevInstr[i]; }
+
+    row.querySelector('.rx-med-select').addEventListener('change', (e)=>{
+      const med = MEDICINES_LIST.find(m=> m.name === e.target.value);
+      const instrInput = row.querySelector('.rx-med-instructions');
+      if(med && med.instructions && !instrInput.value){
+        instrInput.value = med.instructions;
+      }
+      if(med && med.diagnosis && !$('rxDiagnosis').value.trim()){
+        $('rxDiagnosis').value = med.diagnosis;
+      }
+    });
+  }
+}
+buildMedicineRows();
+
+function renderChips(containerId, list){
+  const box = $(containerId);
+  const selected = getActiveChips(containerId);
+  box.innerHTML = list.map(item=>`<div class="chip" data-value="${escapeHtml(item)}">${escapeHtml(item)}</div>`).join('');
+  box.querySelectorAll('.chip').forEach(chip=>{
+    if(selected.includes(chip.dataset.value)) chip.classList.add('active');
+    chip.addEventListener('click', ()=> chip.classList.toggle('active'));
+  });
+}
+
+/* قايمة منسدلة: تختار منها عنصر فيضاف كـ tag تحتها، وتقدر تشيله بضغطة على × */
+function addChipTag(containerId, value){
+  const box = $(containerId);
+  if(!value) return;
+  if(Array.from(box.querySelectorAll('.chip')).some(c=> c.dataset.value === value)) return;
+  const chip = document.createElement('div');
+  chip.className = 'chip active';
+  chip.dataset.value = value;
+  chip.innerHTML = `${escapeHtml(value)}<span class="chip-remove">×</span>`;
+  chip.querySelector('.chip-remove').addEventListener('click', ()=> chip.remove());
+  box.appendChild(chip);
+}
+function renderDropdownAdd(selectId, containerId, list){
+  const select = $(selectId);
+  select.innerHTML = `<option value="">— اختر —</option>` + list.map(item=>`<option value="${escapeHtml(item)}">${escapeHtml(item)}</option>`).join('');
+  select.onchange = ()=>{
+    addChipTag(containerId, select.value);
+    select.value = '';
+  };
+}
+
+/* قايمة منسدلة تضيف السطر المختار كسطر جديد جوه textarea بدل الـ tags - عشان يفضل النص قابل للتعديل الحر */
+function renderDropdownAppendToTextarea(selectId, textareaId, list){
+  const select = $(selectId);
+  select.innerHTML = `<option value="">— اختر —</option>` + list.map(item=>`<option value="${escapeHtml(item)}">${escapeHtml(item)}</option>`).join('');
+  select.onchange = ()=>{
+    if(!select.value) return;
+    const ta = $(textareaId);
+    ta.value = ta.value.trim() ? (ta.value.replace(/\n+$/,'') + '\n' + select.value) : select.value;
+    select.value = '';
+  };
+}
+renderDropdownAdd('rxRecommendationsSelect', 'rxRecommendations', RECOMMENDATIONS_LIST);
+renderDropdownAppendToTextarea('rxRadiologyReqSelect', 'rxRadiologyReq', RADIOLOGY_LIST);
+renderDropdownAppendToTextarea('rxLabsReqSelect', 'rxLabsReq', LABS_LIST);
+renderDropdownAdd('chronicSelect', 'chronicChips', CHRONIC_LIST);
+renderChips('ptInterventions', PT_LIST);
+
+/* إضافة مرض مزمن مكتوب يدويًا (مش موجود في القايمة الجاهزة) */
+function addCustomChronic(){
+  const input = $('chronicCustomInput');
+  const value = input.value.trim();
+  if(!value) return;
+  addChipTag('chronicChips', value);
+  input.value = '';
+}
+$('chronicCustomAddBtn').onclick = addCustomChronic;
+$('chronicCustomInput').addEventListener('keydown', e=>{
+  if(e.key === 'Enter'){ e.preventDefault(); addCustomChronic(); }
+});
+
+function renderPresetRxList(){
+  const box = $('presetRxList');
+  if(!PRESET_PRESCRIPTIONS.length){
+    box.innerHTML = '<div style="color:#aaa; font-size:13px;">لسه مفيش روشتات جاهزة في الشيت</div>';
+    return;
+  }
+  box.innerHTML = PRESET_PRESCRIPTIONS.map((p,i)=>
+    `<div class="chip" data-idx="${i}" style="cursor:pointer;">${escapeHtml(p.name)}</div>`
+  ).join('');
+  box.querySelectorAll('.chip').forEach(chip=>{
+    chip.addEventListener('click', async ()=>{
+      if(!currentPatientId){ showToast('افتح أو احفظ ملف مريض الأول', true); return; }
+      const preset = PRESET_PRESCRIPTIONS[chip.dataset.idx];
+      const bodyHtml = preset.medicines.map((m,i)=>`<div style="margin-bottom:4px;">${i+1}. ${escapeHtml(m)}</div>`).join('');
+      await exportRxTemplateAsPdf(bodyHtml, 'روشتة-' + preset.name, chip);
+    });
+  });
+}
+renderPresetRxList();
+
+function renderDiagnosisRecsList(){
+  const box = $('diagnosisRecsList');
+  if(!DIAGNOSIS_RECS.length){
+    box.innerHTML = '<div style="color:#aaa; font-size:13px;">لسه مفيش توصيات مربوطة بتشخيص في الشيت</div>';
+    return;
+  }
+  box.innerHTML = DIAGNOSIS_RECS.map((d,i)=>
+    `<div class="chip" data-idx="${i}" style="cursor:pointer;">${escapeHtml(d.diagnosis)}</div>`
+  ).join('');
+  box.querySelectorAll('.chip').forEach(chip=>{
+    chip.addEventListener('click', ()=>{
+      const entry = DIAGNOSIS_RECS[chip.dataset.idx];
+      entry.recommendations.forEach(r=> addChipTag('rxRecommendations', r));
+      if(!$('rxDiagnosis').value.trim()) $('rxDiagnosis').value = entry.diagnosis;
+    });
+  });
+}
+renderDiagnosisRecsList();
+
+/* قايمة منسدلة عادية (بدون tags) - لخانات زي مكان العملية ونوع الغيار */
+function renderPlainSelect(selectId, list, placeholder){
+  const select = $(selectId);
+  const current = select.value;
+  select.innerHTML = `<option value="">${placeholder || '— اختر —'}</option>` + list.map(item=>`<option value="${escapeHtml(item)}">${escapeHtml(item)}</option>`).join('');
+  if(current) select.value = current;
+}
+function renderOperationDropdowns(){
+  renderPlainSelect('opLocation', OPERATION_LOCATIONS_LIST, '— اختر مكان —');
+  renderPlainSelect('opDressing1', DRESSING_TYPES_LIST, '— اختر —');
+  renderPlainSelect('opDressing2', DRESSING_TYPES_LIST, '— اختر —');
+  renderPlainSelect('opDressing3', DRESSING_TYPES_LIST, '— اختر —');
+}
+renderOperationDropdowns();
+
+/* تقارير جاهزة - بتضيف نصها في خانة نص التقرير */
+function renderPresetReportsList(){
+  const box = $('presetReportsList');
+  if(!PRESET_REPORTS.length){
+    box.innerHTML = '<div style="color:#aaa; font-size:13px;">لسه مفيش تقارير جاهزة في الشيت</div>';
+    return;
+  }
+  box.innerHTML = PRESET_REPORTS.map((r,i)=>
+    `<div class="chip" data-idx="${i}" style="cursor:pointer;">${escapeHtml(r.title)}</div>`
+  ).join('');
+  box.querySelectorAll('.chip').forEach(chip=>{
+    chip.addEventListener('click', ()=>{
+      const entry = PRESET_REPORTS[chip.dataset.idx];
+      const current = $('reportBody').value;
+      $('reportBody').value = current ? (current + '\n' + entry.text) : entry.text;
+    });
+  });
+}
+renderPresetReportsList();
+
+/* جمل جاهزة تتضاف في نص التقرير */
+function renderReportPhraseSelect(){
+  const select = $('reportPhraseSelect');
+  select.innerHTML = `<option value="">— أضف جملة —</option>` + REPORT_PHRASES_LIST.map(p=>`<option value="${escapeHtml(p)}">${escapeHtml(p)}</option>`).join('');
+  select.onchange = ()=>{
+    if(!select.value) return;
+    const current = $('reportBody').value;
+    $('reportBody').value = current ? (current + '\n' + select.value) : select.value;
+    select.value = '';
+  };
+}
+renderReportPhraseSelect();
+
+/* ---------- تحميل القوائم من الشيت (لو الرابط متسجل) ---------- */
+async function loadListsFromSheet(){
+  if(!APPS_SCRIPT_URL || APPS_SCRIPT_URL.includes('PASTE_YOUR')) return;
+  try{
+    const data = await apiGet({action:'getLists'});
+    if(data.error) return;
+    if(data.medicines && data.medicines.length) MEDICINES_LIST = data.medicines;
+    if(data.recommendations && data.recommendations.length) RECOMMENDATIONS_LIST = data.recommendations;
+    if(data.radiology && data.radiology.length) RADIOLOGY_LIST = data.radiology;
+    if(data.labs && data.labs.length) LABS_LIST = data.labs;
+    if(data.physio && data.physio.length) PT_LIST = data.physio;
+    if(data.chronicDiseases && data.chronicDiseases.length) CHRONIC_LIST = data.chronicDiseases;
+    if(data.administration && data.administration.length) ADMINISTRATION_LIST = data.administration;
+    if(data.presets) PRESET_PRESCRIPTIONS = data.presets;
+    if(data.diagnosisRecommendations) DIAGNOSIS_RECS = data.diagnosisRecommendations;
+    if(data.operationLocations && data.operationLocations.length) OPERATION_LOCATIONS_LIST = data.operationLocations;
+    if(data.dressingTypes && data.dressingTypes.length) DRESSING_TYPES_LIST = data.dressingTypes;
+    if(data.reportPhrases && data.reportPhrases.length) REPORT_PHRASES_LIST = data.reportPhrases;
+    if(data.presetReports) PRESET_REPORTS = data.presetReports;
+
+    buildMedicineRows();
+    renderDropdownAdd('rxRecommendationsSelect', 'rxRecommendations', RECOMMENDATIONS_LIST);
+    renderDropdownAppendToTextarea('rxRadiologyReqSelect', 'rxRadiologyReq', RADIOLOGY_LIST);
+    renderDropdownAppendToTextarea('rxLabsReqSelect', 'rxLabsReq', LABS_LIST);
+    renderDropdownAdd('chronicSelect', 'chronicChips', CHRONIC_LIST);
+    renderChips('ptInterventions', PT_LIST);
+    renderPresetRxList();
+    renderDiagnosisRecsList();
+    renderOperationDropdowns();
+    renderPresetReportsList();
+    renderReportPhraseSelect();
+  }catch(err){ /* لو فشل التحميل، الصفحة بتفضل شغالة بالنسخة الاحتياطية */ }
+}
+loadListsFromSheet();
+
+function getActiveChips(containerId){
+  return Array.from($(containerId).querySelectorAll('.chip.active')).map(c=> c.dataset.value);
+}
+function setActiveChips(containerId, values){
+  const selected = values || [];
+  const hasDropdown = document.getElementById(containerId + 'Select');
+  if(hasDropdown){
+    $(containerId).innerHTML = '';
+    selected.forEach(v=> addChipTag(containerId, v));
+  } else {
+    $(containerId).querySelectorAll('.chip').forEach(chip=>{
+      chip.classList.toggle('active', selected.includes(chip.dataset.value));
+    });
+  }
+}
+
+function collectPhysio(){
+  return {
+    diagnosis: $('ptDiagnosis').value.trim(),
+    interventions: getActiveChips('ptInterventions'),
+    sessions: $('ptSessions').value.trim()
+  };
+}
+function loadPhysio(raw){
+  let pt;
+  try{ pt = raw ? JSON.parse(raw) : null; }catch(e){ pt = null; }
+  pt = pt || { diagnosis:'', interventions:[], sessions:'' };
+  $('ptDiagnosis').value = pt.diagnosis || '';
+  setActiveChips('ptInterventions', pt.interventions);
+  $('ptSessions').value = pt.sessions || '';
+}
+function resetPhysioForm(){
+  $('ptDiagnosis').value = '';
+  setActiveChips('ptInterventions', []);
+  $('ptSessions').value = '';
+}
+
+function collectReport(){
+  return {
+    type: $('reportType').value,
+    body: $('reportBody').value
+  };
+}
+function loadReport(raw){
+  let rep;
+  try{ rep = raw ? JSON.parse(raw) : null; }catch(e){ rep = null; }
+  rep = rep || { type:'تقرير طبي عام', body:'' };
+  $('reportType').value = rep.type || 'تقرير طبي عام';
+  $('reportBody').value = rep.body || '';
+}
+function resetReportForm(){
+  $('reportType').value = 'تقرير طبي عام';
+  $('reportBody').value = '';
+}
+
+/* ---------- Operations ---------- */
+let editingOperationId = null;
+
+function renderOperations(operations){
+  const box = $('operationsList');
+  if(!operations.length){
+    box.innerHTML = '<div class="no-visits">لسه مفيش عمليات مسجلة</div>';
+    return;
+  }
+  box.innerHTML = operations.map(o=>`
+    <div class="visit-item">
+      <div class="visit-date">${escapeHtml(formatDate(o.OperationDate))}</div>
+      <div class="visit-notes"><b>${escapeHtml(o.OperationName || '—')}</b></div>
+      ${o.Location ? `<div class="visit-notes"><b>مكان العملية:</b> ${escapeHtml(o.Location)}</div>` : ''}
+      ${o.Cost ? `<div class="visit-notes"><b>التكلفة:</b> ${escapeHtml(o.Cost)}</div>` : ''}
+      ${o.Dressing1 ? `<div class="visit-notes"><b>الغيار الأول:</b> ${escapeHtml(o.Dressing1)}</div>` : ''}
+      ${o.Dressing2 ? `<div class="visit-notes"><b>الغيار الثاني:</b> ${escapeHtml(o.Dressing2)}</div>` : ''}
+      ${o.Dressing3 ? `<div class="visit-notes"><b>الغيار الثالث:</b> ${escapeHtml(o.Dressing3)}</div>` : ''}
+      ${o.FollowUps ? `<div class="visit-notes"><b>المتابعات:</b> ${escapeHtml(o.FollowUps)}</div>` : ''}
+      ${o.Notes ? `<div class="visit-notes"><b>ملاحظات:</b> ${escapeHtml(o.Notes)}</div>` : ''}
+      <div class="card-actions" style="margin-top:10px;">
+        <button class="btn btn-ghost op-edit-btn" style="padding:6px 12px; font-size:12.5px;">تعديل</button>
+        <button class="btn btn-outline-red op-delete-btn" style="padding:6px 12px; font-size:12.5px;">حذف</button>
+      </div>
+    </div>`).join('');
+
+  box.querySelectorAll('.op-edit-btn').forEach((btn,idx)=>{
+    btn.addEventListener('click', ()=> startEditOperation(operations[idx]));
+  });
+  box.querySelectorAll('.op-delete-btn').forEach((btn,idx)=>{
+    btn.addEventListener('click', ()=> deleteOperationEntry(operations[idx].OperationID));
+  });
+}
+
+function startEditOperation(o){
+  editingOperationId = o.OperationID;
+  const d = new Date(o.OperationDate);
+  $('opDate').value = isNaN(d) ? '' : d.toISOString().slice(0,10);
+  $('opName').value = o.OperationName || '';
+  $('opLocation').value = o.Location || '';
+  $('opCost').value = o.Cost || '';
+  $('opDressing1').value = o.Dressing1 || '';
+  $('opDressing2').value = o.Dressing2 || '';
+  $('opDressing3').value = o.Dressing3 || '';
+  $('opFollowUps').value = o.FollowUps || '';
+  $('opNotes').value = o.Notes || '';
+  $('addOperationBtn').textContent = 'حفظ التعديل';
+  $('newOperationForm').classList.add('open');
+  $('newOperationForm').scrollIntoView({behavior:'smooth', block:'nearest'});
+}
+
+async function deleteOperationEntry(operationId){
+  if(!confirm('حذف هذه العملية نهائيًا؟')) return;
+  try{
+    const data = await apiGet({action:'deleteOperation', id: operationId});
+    if(data.error){ showToast(data.error, true); return; }
+    showToast('اتحذفت العملية ✓');
+    const fresh = await apiGet({action:'getPatient', id: currentPatientId});
+    renderOperations(fresh.operations || []);
+  }catch(err){ showToast('حصل خطأ أثناء الحذف', true); }
+}
+
+$('toggleOperationBtn').onclick = ()=>{
+  if(!currentPatientId){ showToast('احفظ بيانات المريض الأول', true); return; }
+  editingOperationId = null;
+  $('addOperationBtn').textContent = 'حفظ العملية';
+  $('opDate').value = new Date().toISOString().slice(0,10);
+  ['opName','opCost','opFollowUps','opNotes'].forEach(id=> $(id).value='');
+  ['opLocation','opDressing1','opDressing2','opDressing3'].forEach(id=> $(id).value='');
+  $('newOperationForm').classList.add('open');
+};
+$('cancelOperationBtn').onclick = ()=>{
+  editingOperationId = null;
+  $('addOperationBtn').textContent = 'حفظ العملية';
+  $('newOperationForm').classList.remove('open');
+};
+
+$('addOperationBtn').onclick = async ()=>{
+  const date = $('opDate').value;
+  if(!date){ showToast('اختار تاريخ العملية', true); return; }
+  const isEditing = !!editingOperationId;
+  const btn = $('addOperationBtn');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> جاري الحفظ...';
+  try{
+    const operation = {
+      OperationDate: date,
+      OperationName: $('opName').value.trim(),
+      Location: $('opLocation').value,
+      Cost: $('opCost').value.trim(),
+      Dressing1: $('opDressing1').value,
+      Dressing2: $('opDressing2').value,
+      Dressing3: $('opDressing3').value,
+      FollowUps: $('opFollowUps').value,
+      Notes: $('opNotes').value
+    };
+    let data;
+    if(isEditing){
+      operation.OperationID = editingOperationId;
+      data = await apiPost({action:'updateOperation', operation});
+    } else {
+      operation.PatientID = currentPatientId;
+      data = await apiPost({action:'addOperation', operation});
+    }
+    if(data.error){ showToast(data.error, true); }
+    else{
+      showToast(isEditing ? 'اتحدثت العملية ✓' : 'اتسجلت العملية ✓');
+      editingOperationId = null;
+      ['opName','opCost','opFollowUps','opNotes'].forEach(id=> $(id).value='');
+      ['opLocation','opDressing1','opDressing2','opDressing3'].forEach(id=> $(id).value='');
+      $('newOperationForm').classList.remove('open');
+      const fresh = await apiGet({action:'getPatient', id: currentPatientId});
+      renderOperations(fresh.operations || []);
+    }
+  }catch(err){ showToast('حصل خطأ أثناء الحفظ', true); }
+  finally{
+    btn.disabled = false;
+    btn.textContent = editingOperationId ? 'حفظ التعديل' : 'حفظ العملية';
+  }
+};
+
+/* ================== المواعيد (الكالندر) ================== */
+function buildAppointmentItemHtml(a){
+  return `<div class="appt-item" data-id="${escapeHtml(String(a.AppointmentID))}">
+    <div class="visit-date">${escapeHtml(a.AppointmentTime || '')}</div>
+    <div class="visit-notes"><b>${escapeHtml(a.Subject || '—')}</b></div>
+    <div class="card-actions" style="margin-top:10px;">
+      <button class="btn btn-ghost appt-edit-btn" style="padding:6px 12px; font-size:12.5px;">تعديل</button>
+      <button class="btn btn-outline-red appt-delete-btn" style="padding:6px 12px; font-size:12.5px;">حذف</button>
+    </div>
+  </div>`;
+}
+
+function wireAppointmentItemButtons(container){
+  container.querySelectorAll('.appt-item').forEach(item=>{
+    const id = item.dataset.id;
+    const appt = appointmentsData.find(a=> String(a.AppointmentID) === id);
+    if(!appt) return;
+    const editBtn = item.querySelector('.appt-edit-btn');
+    const delBtn = item.querySelector('.appt-delete-btn');
+    if(editBtn) editBtn.addEventListener('click', ()=> startEditAppointment(appt));
+    if(delBtn) delBtn.addEventListener('click', ()=> deleteAppointmentEntry(appt.AppointmentID));
+  });
+}
+
+function renderCalendarGrid(){
+  const year = calCurrentMonth.getFullYear();
+  const month = calCurrentMonth.getMonth();
+  const monthNames = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+  $('calMonthLabel').textContent = `${monthNames[month]} ${year}`;
+
+  const weekdayNames = ['أحد','اثنين','ثلاثاء','أربعاء','خميس','جمعة','سبت'];
+  $('calWeekdays').innerHTML = weekdayNames.map(w=>`<div class="cal-weekday">${w}</div>`).join('');
+
+  const firstDay = new Date(year, month, 1);
+  const startWeekday = firstDay.getDay();
+  const daysInMonth = new Date(year, month+1, 0).getDate();
+  const daysInPrevMonth = new Date(year, month, 0).getDate();
+
+  const apptCountByDate = {};
+  appointmentsData.forEach(a=>{
+    const d = String(a.AppointmentDate || '').slice(0,10);
+    if(!d) return;
+    apptCountByDate[d] = (apptCountByDate[d]||0)+1;
+  });
+
+  const todayStr = new Date().toISOString().slice(0,10);
+  let cells = [];
+
+  for(let i=startWeekday-1; i>=0; i--){
+    cells.push({dayNum: daysInPrevMonth - i, otherMonth:true, dateStr:null});
+  }
+  for(let d=1; d<=daysInMonth; d++){
+    const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    cells.push({dayNum:d, otherMonth:false, dateStr});
+  }
+  let nextDay = 1;
+  while(cells.length % 7 !== 0){
+    cells.push({dayNum: nextDay++, otherMonth:true, dateStr:null});
+  }
+
+  $('calGrid').innerHTML = cells.map(c=>{
+    const classes = ['cal-daycell'];
+    if(c.otherMonth) classes.push('other-month');
+    if(c.dateStr === todayStr) classes.push('today');
+    if(c.dateStr && c.dateStr === calSelectedDateStr) classes.push('selected');
+    const count = c.dateStr ? (apptCountByDate[c.dateStr]||0) : 0;
+    return `<div class="${classes.join(' ')}" data-date="${c.dateStr||''}">
+      <div class="cal-daynum">${c.dayNum}</div>
+      ${count > 0 ? '<div class="cal-dot"></div>' : ''}
+    </div>`;
+  }).join('');
+
+  $('calGrid').querySelectorAll('.cal-daycell').forEach(cell=>{
+    const dateStr = cell.dataset.date;
+    if(!dateStr) return;
+    cell.addEventListener('click', ()=>{
+      calSelectedDateStr = dateStr;
+      renderCalendarGrid();
+      renderCalDayList(dateStr);
+    });
+  });
+
+  if(calSelectedDateStr) renderCalDayList(calSelectedDateStr);
+  else renderCalDayList(null);
+}
+
+function renderCalDayList(dateStr){
+  const box = $('calDayList');
+  if(!dateStr){
+    box.innerHTML = '<div class="no-visits">دوس على يوم عشان تشوف مواعيده</div>';
+    return;
+  }
+  const items = appointmentsData.filter(a=> String(a.AppointmentDate||'').slice(0,10) === dateStr);
+  if(!items.length){
+    box.innerHTML = `<div class="no-visits">مفيش مواعيد في ${escapeHtml(formatDate(dateStr))}</div>`;
+    return;
+  }
+  box.innerHTML = `<div class="appt-date-header">${escapeHtml(formatDate(dateStr))}</div>` +
+    items.map(a=> buildAppointmentItemHtml(a)).join('');
+  wireAppointmentItemButtons(box);
+}
+
+function renderAppointmentsFullList(){
+  const box = $('appointmentsFullList');
+  if(!appointmentsData.length){
+    box.innerHTML = '<div class="no-visits">لسه مفيش مواعيد مسجلة</div>';
+    return;
+  }
+  const grouped = {};
+  const order = [];
+  appointmentsData.forEach(a=>{
+    const d = String(a.AppointmentDate||'').slice(0,10) || 'بدون تاريخ';
+    if(!grouped[d]){ grouped[d]=[]; order.push(d); }
+    grouped[d].push(a);
+  });
+  let html = '';
+  order.forEach(d=>{
+    html += `<div class="appt-date-header">${d === 'بدون تاريخ' ? d : escapeHtml(formatDate(d))}</div>`;
+    grouped[d].forEach(a=>{ html += buildAppointmentItemHtml(a); });
+  });
+  box.innerHTML = html;
+  wireAppointmentItemButtons(box);
+}
+
+async function loadAppointments(){
+  try{
+    const data = await apiGet({action:'getAppointments'});
+    appointmentsData = data.results || [];
+  }catch(err){ appointmentsData = []; }
+  renderCalendarGrid();
+  renderAppointmentsFullList();
+}
+
+function startEditAppointment(appt){
+  editingAppointmentId = appt.AppointmentID;
+  $('apptDate').value = String(appt.AppointmentDate||'').slice(0,10);
+  $('apptTime').value = appt.AppointmentTime || '';
+  $('apptSubject').value = appt.Subject || '';
+  $('saveAppointmentBtn').textContent = 'حفظ التعديل';
+  $('newAppointmentForm').classList.add('open');
+  $('newAppointmentForm').scrollIntoView({behavior:'smooth', block:'nearest'});
+}
+
+async function deleteAppointmentEntry(id){
+  if(!confirm('حذف هذا الموعد نهائيًا؟')) return;
+  try{
+    const data = await apiGet({action:'deleteAppointment', id});
+    if(data.error){ showToast(data.error, true); return; }
+    showToast('اتحذف الموعد ✓');
+    await loadAppointments();
+    updateTitleBadge();
+  }catch(err){ showToast('حصل خطأ أثناء الحذف', true); }
+}
+
+$('toggleAddAppointmentBtn').onclick = ()=>{
+  editingAppointmentId = null;
+  $('saveAppointmentBtn').textContent = 'حفظ الموعد';
+  $('apptDate').value = calSelectedDateStr || new Date().toISOString().slice(0,10);
+  $('apptTime').value = '';
+  $('apptSubject').value = '';
+  $('newAppointmentForm').classList.add('open');
+};
+$('cancelAppointmentBtn').onclick = ()=>{
+  editingAppointmentId = null;
+  $('saveAppointmentBtn').textContent = 'حفظ الموعد';
+  $('newAppointmentForm').classList.remove('open');
+};
+
+$('saveAppointmentBtn').onclick = async ()=>{
+  const date = $('apptDate').value;
+  const subject = $('apptSubject').value.trim();
+  if(!date){ showToast('اختار تاريخ الموعد', true); return; }
+  if(!subject){ showToast('اكتب موضوع الموعد', true); return; }
+  const isEditing = !!editingAppointmentId;
+  const btn = $('saveAppointmentBtn');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> جاري الحفظ...';
+  try{
+    const appointment = {
+      AppointmentDate: date,
+      AppointmentTime: $('apptTime').value,
+      Subject: subject
+    };
+    let data;
+    if(isEditing){
+      appointment.AppointmentID = editingAppointmentId;
+      data = await apiPost({action:'updateAppointment', appointment});
+    } else {
+      data = await apiPost({action:'addAppointment', appointment});
+    }
+    if(data.error){ showToast(data.error, true); }
+    else{
+      showToast(isEditing ? 'اتحدث الموعد ✓' : 'اتسجل الموعد ✓');
+      editingAppointmentId = null;
+      $('newAppointmentForm').classList.remove('open');
+      await loadAppointments();
+      updateTitleBadge();
+    }
+  }catch(err){ showToast('حصل خطأ أثناء الحفظ', true); }
+  finally{
+    btn.disabled = false;
+    btn.textContent = editingAppointmentId ? 'حفظ التعديل' : 'حفظ الموعد';
+  }
+};
+
+document.querySelectorAll('[data-cal-view]').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('[data-cal-view]').forEach(b=> b.classList.remove('active'));
+    btn.classList.add('active');
+    const view = btn.dataset.calView;
+    $('calendarGridView').style.display = view === 'calendar' ? 'block' : 'none';
+    $('calendarListView').style.display = view === 'list' ? 'block' : 'none';
+  });
+});
+
+$('calPrevMonthBtn').onclick = ()=>{
+  calCurrentMonth = new Date(calCurrentMonth.getFullYear(), calCurrentMonth.getMonth()-1, 1);
+  renderCalendarGrid();
+};
+$('calNextMonthBtn').onclick = ()=>{
+  calCurrentMonth = new Date(calCurrentMonth.getFullYear(), calCurrentMonth.getMonth()+1, 1);
+  renderCalendarGrid();
+};
+
+function collectPrescription(){
+  const medicines = Array.from(document.querySelectorAll('.rx-med-select'))
+    .map((sel, i)=>({
+      name: sel.value,
+      instructions: document.querySelector(`.rx-med-instructions[data-idx="${i}"]`).value.trim()
+    }))
+    .filter(m => m.name);
+  return {
+    diagnosis: $('rxDiagnosis').value.trim(),
+    medicines,
+    recommendations: getActiveChips('rxRecommendations'),
+    radiologyRequested: $('rxRadiologyReq').value.split('\n').map(s=>s.trim()).filter(Boolean),
+    labsRequested: $('rxLabsReq').value.split('\n').map(s=>s.trim()).filter(Boolean)
+  };
+}
+
+function loadPrescription(raw){
+  let rx;
+  try{ rx = raw ? JSON.parse(raw) : null; }catch(e){ rx = null; }
+  rx = rx || { diagnosis:'', medicines:[], recommendations:[], radiologyRequested:[], labsRequested:[] };
+
+  $('rxDiagnosis').value = rx.diagnosis || '';
+  document.querySelectorAll('.rx-med-select').forEach((sel, i)=>{
+    const m = rx.medicines && rx.medicines[i];
+    sel.value = m ? m.name : '';
+    document.querySelector(`.rx-med-instructions[data-idx="${i}"]`).value = m ? (m.instructions||'') : '';
+  });
+  setActiveChips('rxRecommendations', rx.recommendations);
+  $('rxRadiologyReq').value = (rx.radiologyRequested || []).join('\n');
+  $('rxLabsReq').value = (rx.labsRequested || []).join('\n');
+}
+
+function resetPrescriptionForm(){
+  $('rxDiagnosis').value = '';
+  document.querySelectorAll('.rx-med-select').forEach(sel=> sel.value='');
+  document.querySelectorAll('.rx-med-instructions').forEach(inp=> inp.value='');
+  setActiveChips('rxRecommendations', []);
+  $('rxRadiologyReq').value = '';
+  $('rxLabsReq').value = '';
+}
+
+const EXAM_TEMPLATE =
+`History (Present illness) and Exam:
+
+Diagnosis:
+
+Decision:
+
+For:
+`;
+
+if (!APPS_SCRIPT_URL || APPS_SCRIPT_URL.includes('PASTE_YOUR')) {
+  $('setupBanner').classList.add('show');
+}
+
+function showToast(msg, isError){
+  const t = $('toast');
+  t.textContent = msg;
+  t.classList.toggle('error', !!isError);
+  t.classList.add('show');
+  setTimeout(()=> t.classList.remove('show'), 2600);
+}
+
+async function apiGet(params){
+  const url = APPS_SCRIPT_URL + '?' + new URLSearchParams(params).toString();
+  const res = await fetch(url);
+  return res.json();
+}
+async function apiPost(body){
+  const { action, ...rest } = body;
+  const url = APPS_SCRIPT_URL + '?' + new URLSearchParams({ action, data: JSON.stringify(rest) }).toString();
+  const res = await fetch(url);
+  return res.json();
+}
+
+/* ---------- Search ---------- */
+let searchTimer;
+$('searchInput').addEventListener('input', e=>{
+  clearTimeout(searchTimer);
+  const q = e.target.value.trim();
+  const box = $('results');
+  if(!q){ box.classList.remove('open'); return; }
+  searchTimer = setTimeout(async ()=>{
+    try{
+      const data = await apiGet({action:'search', query:q});
+      renderResults(data.results || []);
+    }catch(err){ showToast('تعذر البحث - تأكد من ربط الشيت', true); }
+  }, 300);
+});
+
+function renderResults(list){
+  const box = $('results');
+  box.innerHTML = '';
+  if(list.length === 0){
+    box.innerHTML = '<div class="empty-result">مفيش نتائج</div>';
+  } else {
+    list.forEach(p=>{
+      const div = document.createElement('div');
+      div.className = 'result-item';
+      div.innerHTML = `<div><div class="rname">${escapeHtml(p.Name||'')}</div>
+        <div class="rmeta">ملف ${escapeHtml(String(p.PatientID))} · ${escapeHtml(String(p.Phone||''))}</div></div>
+        <div class="rmeta">رقم ${escapeHtml(String(p.ClinicNumber||'—'))}</div>`;
+      div.onclick = ()=> loadPatient(p.PatientID);
+      box.appendChild(div);
+    });
+  }
+  box.classList.add('open');
+}
+
+document.addEventListener('click', e=>{
+  if(!e.target.closest('.search-wrap')) $('results').classList.remove('open');
+});
+
+/* ---------- Chronic diseases chips ---------- */
+function getSelectedChronic(){
+  return Array.from(document.querySelectorAll('#chronicChips .chip.active'))
+    .map(c=> c.dataset.value).join('، ');
+}
+function setChronicChips(value){
+  const selected = (value || '').split(/[،,]/).map(s=>s.trim()).filter(Boolean);
+  $('chronicChips').innerHTML = '';
+  selected.forEach(v=> addChipTag('chronicChips', v));
+}
+function clearChronicChips(){
+  $('chronicChips').innerHTML = '';
+}
+
+/* ---------- Load / new patient ---------- */
+async function loadPatient(id){
+  try{
+    const data = await apiGet({action:'getPatient', id});
+    if(data.error){ showToast(data.error, true); return; }
+    currentPatientId = data.patient.PatientID;
+    $('folderTab').textContent = 'ملف رقم ' + data.patient.PatientID;
+    $('fName').value = data.patient.Name || '';
+    $('fAge').value = data.patient.Age || '';
+    $('fPhone').value = data.patient.Phone || '';
+    $('fClinicNumber').value = data.patient.ClinicNumber || '';
+    $('fNote').value = data.patient.Note || '';
+    setChronicChips(data.patient.ChronicDiseases);
+    $('fExam').value = data.patient.ExamNotes || EXAM_TEMPLATE;
+    $('fRadiology').value = data.patient.Radiology || '';
+    $('fRadiologyLink').value = data.patient.RadiologyLink || '';
+    $('fLabTests').value = data.patient.LabTests || '';
+    $('fHasOperation').checked = String(data.patient.HasOperation).trim().toUpperCase() === 'TRUE';
+    $('fRedFlag').checked = String(data.patient.RedFlag).trim().toUpperCase() === 'TRUE';
+    loadPrescription(data.patient.Prescription);
+    loadPhysio(data.patient.Physio);
+    loadReport(data.patient.MedicalReport);
+    renderVisits(data.visits || []);
+    renderOperations(data.operations || []);
+    renderRxHistory(data.rxHistory || []);
+    renderPhysioHistory(data.physioHistory || []);
+    renderReportHistory(data.reportHistory || []);
+    $('results').classList.remove('open');
+    $('searchInput').value = '';
+    openWorkspace();
+    resetToFirstTab();
+  }catch(err){ showToast('تعذر تحميل الملف', true); }
+}
+
+function newPatient(){
+  currentPatientId = null;
+  $('folderTab').textContent = 'ملف جديد';
+  ['fName','fAge','fPhone','fClinicNumber','fNote'].forEach(id=> $(id).value='');
+  $('fExam').value = EXAM_TEMPLATE;
+  $('fRadiology').value = '';
+  $('fRadiologyLink').value = '';
+  $('fLabTests').value = '';
+  $('fHasOperation').checked = false;
+  $('fRedFlag').checked = false;
+  resetPrescriptionForm();
+  resetPhysioForm();
+  resetReportForm();
+  clearChronicChips();
+  renderVisits([]);
+  renderOperations([]);
+  renderRxHistory([]);
+  renderPhysioHistory([]);
+  renderReportHistory([]);
+  openWorkspace();
+  resetToFirstTab();
+  $('fName').focus();
+}
+$('newPatientBtn').onclick = newPatient;
+
+function openWorkspace(){
+  $('placeholder').style.display = 'none';
+  $('operationsPatientsView').style.display = 'none';
+  $('redFlagPatientsView').style.display = 'none';
+  $('casesView').style.display = 'none';
+  $('statsView').style.display = 'none';
+  $('calendarView').style.display = 'none';
+  $('messagesView').style.display = 'none';
+  $('workspace').style.display = 'block';
+  $('newVisitForm').classList.remove('open');
+}
+
+/* ---------- Operations patients list ---------- */
+$('viewOperationPatientsBtn').onclick = async ()=>{
+  $('placeholder').style.display = 'none';
+  $('workspace').style.display = 'none';
+  $('redFlagPatientsView').style.display = 'none';
+  $('casesView').style.display = 'none';
+  $('statsView').style.display = 'none';
+  $('calendarView').style.display = 'none';
+  $('messagesView').style.display = 'none';
+  $('operationsPatientsView').style.display = 'block';
+  const box = $('operationsPatientsList');
+  box.innerHTML = '<div class="no-visits">جاري التحميل...</div>';
+  try{
+    const data = await apiGet({action:'getOperationPatients'});
+    const list = data.results || [];
+    if(!list.length){
+      box.innerHTML = '<div class="no-visits">لا يوجد مرضى عمليات مسجلين</div>';
+      return;
+    }
+    box.innerHTML = list.map(p=>`
+      <div class="result-item" data-id="${escapeHtml(String(p.PatientID))}" style="cursor:pointer;">
+        <div><div class="rname">${escapeHtml(p.Name||'')}</div>
+        <div class="rmeta">ملف ${escapeHtml(String(p.PatientID))} · ${escapeHtml(String(p.Phone||''))}</div></div>
+        <div style="display:flex; align-items:center; gap:10px;">
+          <div class="rmeta">رقم ${escapeHtml(String(p.ClinicNumber||'—'))}</div>
+          <button class="btn btn-outline-red op-remove-btn" data-id="${escapeHtml(String(p.PatientID))}" style="padding:5px 10px; font-size:12px;">حذف من اللستة</button>
+        </div>
+      </div>`).join('');
+    box.querySelectorAll('.result-item').forEach(item=>{
+      item.addEventListener('click', ()=> loadPatient(item.dataset.id));
+    });
+    box.querySelectorAll('.op-remove-btn').forEach(btn=>{
+      btn.addEventListener('click', async (e)=>{
+        e.stopPropagation();
+        if(!confirm('حذف المريض ده من لستة العمليات؟ (بياناته مش هتتمسح)')) return;
+        try{
+          await apiGet({action:'removeOperationFlag', id: btn.dataset.id});
+          btn.closest('.result-item').remove();
+          showToast('اتشال من اللستة ✓');
+        }catch(err){ showToast('حصل خطأ أثناء الحذف من اللستة', true); }
+      });
+    });
+  }catch(err){ box.innerHTML = '<div class="no-visits">تعذر تحميل اللستة</div>'; }
+};
+$('closeOperationsViewBtn').onclick = ()=>{
+  $('operationsPatientsView').style.display = 'none';
+  if(currentPatientId){ $('workspace').style.display = 'block'; }
+  else{ $('placeholder').style.display = 'block'; }
+};
+
+/* ---------- Red Flag patients list ---------- */
+$('viewRedFlagsBtn').onclick = async ()=>{
+  $('placeholder').style.display = 'none';
+  $('workspace').style.display = 'none';
+  $('operationsPatientsView').style.display = 'none';
+  $('casesView').style.display = 'none';
+  $('statsView').style.display = 'none';
+  $('calendarView').style.display = 'none';
+  $('messagesView').style.display = 'none';
+  $('redFlagPatientsView').style.display = 'block';
+  const box = $('redFlagPatientsList');
+  box.innerHTML = '<div class="no-visits">جاري التحميل...</div>';
+  try{
+    const data = await apiGet({action:'getRedFlagPatients'});
+    const list = data.results || [];
+    if(!list.length){
+      box.innerHTML = '<div class="no-visits">لا يوجد حالات Red Flag حاليًا</div>';
+      return;
+    }
+    box.innerHTML = list.map(p=>`
+      <div class="result-item" data-id="${escapeHtml(String(p.PatientID))}" style="cursor:pointer;">
+        <div><div class="rname">🚩 ${escapeHtml(p.Name||'')}</div>
+        <div class="rmeta">ملف ${escapeHtml(String(p.PatientID))} · ${escapeHtml(String(p.Phone||''))}</div></div>
+        <div style="display:flex; align-items:center; gap:10px;">
+          <div class="rmeta">رقم ${escapeHtml(String(p.ClinicNumber||'—'))}</div>
+          <button class="btn btn-outline-red rf-remove-btn" data-id="${escapeHtml(String(p.PatientID))}" style="padding:5px 10px; font-size:12px;">حذف من اللستة</button>
+        </div>
+      </div>`).join('');
+    box.querySelectorAll('.result-item').forEach(item=>{
+      item.addEventListener('click', ()=> loadPatient(item.dataset.id));
+    });
+    box.querySelectorAll('.rf-remove-btn').forEach(btn=>{
+      btn.addEventListener('click', async (e)=>{
+        e.stopPropagation();
+        if(!confirm('حذف المريض ده من لستة Red Flag؟ (بياناته مش هتتمسح)')) return;
+        try{
+          await apiGet({action:'removeRedFlag', id: btn.dataset.id});
+          btn.closest('.result-item').remove();
+          showToast('اتشال من اللستة ✓');
+          updateTitleBadge();
+        }catch(err){ showToast('حصل خطأ أثناء الحذف من اللستة', true); }
+      });
+    });
+  }catch(err){ box.innerHTML = '<div class="no-visits">تعذر تحميل اللستة</div>'; }
+};
+$('closeRedFlagsViewBtn').onclick = ()=>{
+  $('redFlagPatientsView').style.display = 'none';
+  if(currentPatientId){ $('workspace').style.display = 'block'; }
+  else{ $('placeholder').style.display = 'block'; }
+};
+
+/* ---------- Cases list (Recent / All) ---------- */
+function renderContactList(containerId, list){
+  const box = $(containerId);
+  if(!list.length){
+    box.innerHTML = '<div class="no-visits">لا يوجد حالات</div>';
+    return;
+  }
+  box.innerHTML = list.map(p=>`
+    <div class="contact-row" data-id="${escapeHtml(String(p.PatientID))}" style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
+      <span>${escapeHtml(p.Name || '—')}</span>
+      <span style="font-size:12.5px; color:var(--muted); font-weight:500; white-space:nowrap;">${p.LastVisitDate ? escapeHtml(formatDate(p.LastVisitDate)) : ''}</span>
+    </div>`).join('');
+  box.querySelectorAll('.contact-row').forEach(row=>{
+    row.addEventListener('click', ()=> loadPatient(row.dataset.id));
+  });
+}
+
+async function loadCasesTab(tab){
+  const containerId = tab === 'recent' ? 'casesRecentList' : 'casesAllList';
+  const box = $(containerId);
+  box.innerHTML = '<div class="no-visits">جاري التحميل...</div>';
+  try{
+    const action = tab === 'recent' ? 'getRecentPatients' : 'getAllPatients';
+    const data = await apiGet({action});
+    renderContactList(containerId, data.results || []);
+  }catch(err){ box.innerHTML = '<div class="no-visits">تعذر التحميل</div>'; }
+}
+
+document.querySelectorAll('[data-cases-tab]').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('[data-cases-tab]').forEach(b=> b.classList.remove('active'));
+    btn.classList.add('active');
+    const tab = btn.dataset.casesTab;
+    $('casesRecentList').style.display = tab === 'recent' ? 'block' : 'none';
+    $('casesAllList').style.display = tab === 'all' ? 'block' : 'none';
+    loadCasesTab(tab);
+  });
+});
+
+$('viewCasesBtn').onclick = async ()=>{
+  $('placeholder').style.display = 'none';
+  $('workspace').style.display = 'none';
+  $('operationsPatientsView').style.display = 'none';
+  $('redFlagPatientsView').style.display = 'none';
+  $('statsView').style.display = 'none';
+  $('calendarView').style.display = 'none';
+  $('messagesView').style.display = 'none';
+  $('casesView').style.display = 'block';
+  document.querySelectorAll('[data-cases-tab]').forEach(b=> b.classList.remove('active'));
+  $('casesTabRecent').classList.add('active');
+  $('casesRecentList').style.display = 'block';
+  $('casesAllList').style.display = 'none';
+  loadCasesTab('recent');
+};
+$('closeCasesViewBtn').onclick = ()=>{
+  $('casesView').style.display = 'none';
+  if(currentPatientId){ $('workspace').style.display = 'block'; }
+  else{ $('placeholder').style.display = 'block'; }
+};
+
+/* ---------- Stats view ---------- */
+function statBlock(label, value){
+  return `<div class="exam-card" style="display:flex; justify-content:space-between; align-items:center; padding:16px 20px;">
+    <div style="font-weight:700; color:var(--ink);">${escapeHtml(label)}</div>
+    <div style="font-family:'Cairo'; font-weight:800; font-size:22px; color:var(--teal-dark);">${value}</div>
+  </div>`;
+}
+
+async function loadStats(){
+  const box = $('statsContent');
+  box.innerHTML = '<div class="no-visits">جاري التحميل...</div>';
+  try{
+    const [data, dupData] = await Promise.all([
+      apiGet({action:'getStats'}),
+      apiGet({action:'getDuplicateNames'})
+    ]);
+    let html = '';
+    html += statBlock('عدد المرضى الكلي', data.totalPatients);
+    html += statBlock('مرضى جدد هذا الأسبوع', data.newWeek);
+    html += statBlock('مرضى جدد هذا الشهر', data.newMonth);
+    html += statBlock('مرضى جدد هذه السنة', data.newYear);
+    html += statBlock('مرضى بزيارتين أو أكتر', data.twoPlusVisits);
+    html += statBlock('مرضى ليهم عمليات', data.withOperations);
+    html += statBlock('مرضى ليهم علاج طبيعي', data.withPhysio);
+    html += statBlock('مرضى ليهم تقرير طبي', data.withReport);
+    html += statBlock('🚩 حالات Red Flag', data.redFlags);
+
+    html += `<div class="exam-card"><h2>حسب السن</h2>`;
+    Object.keys(data.ageGroups || {}).forEach(k=>{
+      html += `<div class="visit-notes">${escapeHtml(k)}: <b>${data.ageGroups[k]}</b></div>`;
+    });
+    html += `</div>`;
+
+    const diagEntries = Object.entries(data.byDiagnosis || {}).sort((a,b)=> b[1]-a[1]);
+    html += `<div class="exam-card"><h2>حسب التشخيص</h2>`;
+    if(!diagEntries.length){
+      html += `<div class="no-visits">لا يوجد تشخيصات مسجلة</div>`;
+    } else {
+      diagEntries.forEach(([diag,count])=>{
+        html += `<div class="visit-notes">${escapeHtml(diag)}: <b>${count}</b></div>`;
+      });
+    }
+    html += `</div>`;
+
+    const duplicates = dupData.duplicates || [];
+    html += `<div class="exam-card"><h2>أسماء متكررة</h2>`;
+    if(!duplicates.length){
+      html += `<div class="no-visits">مفيش أسماء متكررة حاليًا</div>`;
+    } else {
+      html += `<div class="hint" style="margin-bottom:10px;">دوس على أي مريض تحت عشان تفتح ملفه وتقرر تمسحه أو تعدله أو تدمجه</div>`;
+      duplicates.forEach((dup, di)=>{
+        html += `<div class="visit-date" style="margin-top:${di>0?'16px':'0'};">${escapeHtml(dup.name)} (${dup.patients.length})</div>`;
+        dup.patients.forEach(p=>{
+          html += `<div class="result-item dup-patient-row" data-id="${escapeHtml(String(p.PatientID))}" style="cursor:pointer;">
+            <div><div class="rname">${escapeHtml(p.Name||'')}</div>
+            <div class="rmeta">ملف ${escapeHtml(String(p.PatientID))} · ${escapeHtml(String(p.Phone||''))}</div></div>
+            <div class="rmeta">رقم ${escapeHtml(String(p.ClinicNumber||'—'))}</div>
+          </div>`;
+        });
+      });
+    }
+    html += `</div>`;
+
+    box.innerHTML = html;
+    box.querySelectorAll('.dup-patient-row').forEach(row=>{
+      row.addEventListener('click', ()=> loadPatient(row.dataset.id));
+    });
+  }catch(err){ box.innerHTML = '<div class="no-visits">تعذر تحميل الإحصائيات</div>'; }
+}
+
+$('viewStatsBtn').onclick = ()=>{
+  $('placeholder').style.display = 'none';
+  $('workspace').style.display = 'none';
+  $('operationsPatientsView').style.display = 'none';
+  $('redFlagPatientsView').style.display = 'none';
+  $('casesView').style.display = 'none';
+  $('calendarView').style.display = 'none';
+  $('messagesView').style.display = 'none';
+  $('statsView').style.display = 'block';
+  loadStats();
+};
+$('closeStatsViewBtn').onclick = ()=>{
+  $('statsView').style.display = 'none';
+  if(currentPatientId){ $('workspace').style.display = 'block'; }
+  else{ $('placeholder').style.display = 'block'; }
+};
+
+$('viewCalendarBtn').onclick = async ()=>{
+  $('placeholder').style.display = 'none';
+  $('workspace').style.display = 'none';
+  $('operationsPatientsView').style.display = 'none';
+  $('redFlagPatientsView').style.display = 'none';
+  $('casesView').style.display = 'none';
+  $('statsView').style.display = 'none';
+  $('messagesView').style.display = 'none';
+  $('calendarView').style.display = 'block';
+  calSelectedDateStr = null;
+  document.querySelectorAll('[data-cal-view]').forEach(b=> b.classList.remove('active'));
+  $('calTabCalendar').classList.add('active');
+  $('calendarGridView').style.display = 'block';
+  $('calendarListView').style.display = 'none';
+  await loadAppointments();
+};
+$('closeCalendarViewBtn').onclick = ()=>{
+  $('calendarView').style.display = 'none';
+  if(currentPatientId){ $('workspace').style.display = 'block'; }
+  else{ $('placeholder').style.display = 'block'; }
+};
+
+/* رقم التليفون المصري بيبدأ بصفر (11 رقم) - واتساب محتاج كود الدولة بدل الصفر */
+function normalizePhoneForWhatsapp(phone){
+  let p = String(phone).replace(/[^\d]/g, '');
+  if(p.startsWith('0') && p.length === 11){
+    p = '20' + p.slice(1);
+  }
+  return p;
+}
+
+/* ---------- Individual WhatsApp icon inside patient file ---------- */
+$('sendWhatsappBtn').onclick = ()=>{
+  const phone = $('fPhone').value.trim();
+  if(!phone){ showToast('اكتب رقم تليفون المريض الأول', true); return; }
+  const url = `https://wa.me/${normalizePhoneForWhatsapp(phone)}`;
+  window.open(url, '_blank');
+};
+
+/* ---------- Messages (WhatsApp) - bulk ---------- */
+let allPatientsForMsg = [];
+
+function renderMsgPatientsList(list){
+  const box = $('msgPatientsList');
+  if(!list.length){
+    box.innerHTML = '<div class="no-visits">لا يوجد مرضى برقم تليفون</div>';
+    return;
+  }
+  box.innerHTML = list.map(p=>`
+    <label style="display:flex; align-items:center; gap:10px; padding:11px 8px; border-bottom:1px solid var(--line); cursor:pointer;">
+      <input type="checkbox" class="msg-patient-check" data-id="${escapeHtml(String(p.PatientID))}" data-phone="${escapeHtml(String(p.Phone))}" data-name="${escapeHtml(p.Name||'')}" style="width:18px;height:18px;">
+      <span style="flex:1; font-weight:600;">${escapeHtml(p.Name || '—')}</span>
+      <span style="color:var(--muted); font-size:13px;">${escapeHtml(String(p.Phone))}</span>
+    </label>`).join('');
+}
+
+async function loadMessagesPatients(){
+  const box = $('msgPatientsList');
+  box.innerHTML = '<div class="no-visits">جاري التحميل...</div>';
+  try{
+    const data = await apiGet({action:'getAllPatients'});
+    allPatientsForMsg = (data.results || []).filter(p => p.Phone);
+    renderMsgPatientsList(allPatientsForMsg);
+  }catch(err){ box.innerHTML = '<div class="no-visits">تعذر تحميل المرضى</div>'; }
+}
+
+$('selectAllMsgBtn').onclick = ()=>{
+  document.querySelectorAll('.msg-patient-check').forEach(cb=> cb.checked = true);
+};
+$('clearAllMsgBtn').onclick = ()=>{
+  document.querySelectorAll('.msg-patient-check').forEach(cb=> cb.checked = false);
+};
+
+$('prepareMessagesBtn').onclick = ()=>{
+  const text = $('msgText').value.trim();
+  if(!text){ showToast('اكتب نص الرسالة الأول', true); return; }
+  const checked = Array.from(document.querySelectorAll('.msg-patient-check:checked'));
+  if(!checked.length){ showToast('اختار مريض واحد على الأقل', true); return; }
+  const encoded = encodeURIComponent(text);
+  const box = $('msgSendLinks');
+  box.innerHTML = `<div class="visits-head" style="margin-bottom:10px;"><h2>روابط الإرسال (${checked.length})</h2></div>` +
+    checked.map(cb=>{
+      const phone = normalizePhoneForWhatsapp(cb.dataset.phone);
+      const name = cb.dataset.name;
+      const url = `https://wa.me/${phone}?text=${encoded}`;
+      return `<a href="${url}" target="_blank" class="btn btn-primary" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; text-decoration:none;">
+        <span>واتساب ${escapeHtml(name)}</span>
+        <span>↗</span>
+      </a>`;
+    }).join('');
+  showToast('الروابط جاهزة تحت - دوس على كل واحد يفتحلك واتساب بالرسالة جاهزة');
+};
+
+$('viewMessagesBtn').onclick = async ()=>{
+  $('placeholder').style.display = 'none';
+  $('workspace').style.display = 'none';
+  $('operationsPatientsView').style.display = 'none';
+  $('redFlagPatientsView').style.display = 'none';
+  $('casesView').style.display = 'none';
+  $('statsView').style.display = 'none';
+  $('calendarView').style.display = 'none';
+  $('messagesView').style.display = 'block';
+  $('msgSendLinks').innerHTML = '';
+  await loadMessagesPatients();
+};
+$('closeMessagesViewBtn').onclick = ()=>{
+  $('messagesView').style.display = 'none';
+  if(currentPatientId){ $('workspace').style.display = 'block'; }
+  else{ $('placeholder').style.display = 'block'; }
+};
+
+/* ---------- Title-bar badge (عدد المرضى وحالات Red Flag) ---------- */
+async function updateTitleBadge(){
+  if(!APPS_SCRIPT_URL || APPS_SCRIPT_URL.includes('PASTE_YOUR')) return;
+  try{
+    const data = await apiGet({action:'getBasicCounts'});
+    let badge = '';
+    if(data.redFlags > 0) badge += `🚩${data.redFlags} `;
+    badge += `👥${data.total}`;
+    document.title = `(${badge}) ملفات المرضى - العيادة`;
+
+    const redBadge = $('redFlagBadge');
+    if(data.redFlags > 0){
+      redBadge.textContent = data.redFlags;
+      redBadge.style.display = 'block';
+    } else {
+      redBadge.style.display = 'none';
+    }
+
+    const calBadge = $('calendarBadge');
+    if(data.upcomingAppointments > 0){
+      calBadge.textContent = data.upcomingAppointments;
+      calBadge.style.display = 'block';
+    } else {
+      calBadge.style.display = 'none';
+    }
+  }catch(err){ /* تجاهل */ }
+}
+updateTitleBadge();
+
+/* ---------- Save patient ---------- */
+async function savePatientData(btn, historyType){
+  const name = $('fName').value.trim();
+  if(!name){ showToast('اكتب اسم المريض الأول', true); return; }
+  btn.disabled = true; const orig = btn.textContent; btn.innerHTML = '<span class="spinner"></span> جاري الحفظ...';
+  try{
+    const patient = {
+      PatientID: currentPatientId,
+      Name: name,
+      Age: $('fAge').value.trim(),
+      Phone: $('fPhone').value.trim(),
+      ClinicNumber: $('fClinicNumber').value.trim(),
+      Note: $('fNote').value,
+      ChronicDiseases: getSelectedChronic(),
+      ExamNotes: $('fExam').value,
+      Radiology: $('fRadiology').value,
+      RadiologyLink: $('fRadiologyLink').value.trim(),
+      LabTests: $('fLabTests').value,
+      HasOperation: $('fHasOperation').checked ? 'TRUE' : '',
+      RedFlag: $('fRedFlag').checked ? 'TRUE' : '',
+      Prescription: JSON.stringify(collectPrescription()),
+      Physio: JSON.stringify(collectPhysio()),
+      MedicalReport: JSON.stringify(collectReport())
+    };
+    const data = await apiPost({action:'savePatient', patient});
+    if(data.error){ showToast(data.error, true); }
+    else{
+      currentPatientId = data.patientId;
+      $('folderTab').textContent = 'ملف رقم ' + data.patientId;
+      showToast('اتحفظ بنجاح ✓');
+      updateTitleBadge();
+
+      if(historyType){
+        const content = historyType === 'rx' ? collectPrescription()
+          : historyType === 'physio' ? collectPhysio()
+          : collectReport();
+        const todayStr = new Date().toISOString().slice(0,10);
+        await apiPost({action:'addHistory', entry:{
+          PatientID: currentPatientId, Type: historyType, HistoryDate: todayStr, Content: JSON.stringify(content)
+        }});
+        const fresh = await apiGet({action:'getPatient', id: currentPatientId});
+        renderRxHistory(fresh.rxHistory || []);
+        renderPhysioHistory(fresh.physioHistory || []);
+        renderReportHistory(fresh.reportHistory || []);
+      }
+    }
+  }catch(err){ showToast('حصل خطأ أثناء الحفظ', true); }
+  finally{ btn.disabled = false; btn.textContent = orig; }
+}
+$('savePatientBtn').onclick = ()=> savePatientData($('savePatientBtn'));
+$('saveExamBtn').onclick = ()=> savePatientData($('saveExamBtn'));
+$('saveRxBtn').onclick = ()=> savePatientData($('saveRxBtn'), 'rx');
+$('savePhysioBtn').onclick = ()=> savePatientData($('savePhysioBtn'), 'physio');
+$('saveReportBtn').onclick = ()=> savePatientData($('saveReportBtn'), 'report');
+
+/* ---------- Rx / Physio / Report history ---------- */
+function renderRxHistory(entries){
+  const box = $('rxHistoryList');
+  if(!entries.length){ box.innerHTML = '<div class="no-visits">لسه مفيش هستوري روشتات</div>'; return; }
+  box.innerHTML = entries.map(h=>{
+    let content = {};
+    try{ content = JSON.parse(h.Content || '{}'); }catch(e){}
+    return `<div class="visit-item">
+      <div class="visit-date">${escapeHtml(formatDate(h.HistoryDate))}</div>
+      <div class="visit-notes">${buildRxBodyHtml(Object.assign({diagnosis:'',medicines:[],recommendations:[],radiologyRequested:[],labsRequested:[]}, content))}</div>
+    </div>`;
+  }).join('');
+}
+function renderPhysioHistory(entries){
+  const box = $('physioHistoryList');
+  if(!entries.length){ box.innerHTML = '<div class="no-visits">لسه مفيش هستوري علاج طبيعي</div>'; return; }
+  box.innerHTML = entries.map(h=>{
+    let content = {};
+    try{ content = JSON.parse(h.Content || '{}'); }catch(e){}
+    return `<div class="visit-item">
+      <div class="visit-date">${escapeHtml(formatDate(h.HistoryDate))}</div>
+      <div class="visit-notes">${buildPhysioBodyHtml(Object.assign({diagnosis:'',interventions:[],sessions:''}, content))}</div>
+    </div>`;
+  }).join('');
+}
+function renderReportHistory(entries){
+  const box = $('reportHistoryList');
+  if(!entries.length){ box.innerHTML = '<div class="no-visits">لسه مفيش هستوري تقارير</div>'; return; }
+  box.innerHTML = entries.map(h=>{
+    let content = {};
+    try{ content = JSON.parse(h.Content || '{}'); }catch(e){}
+    return `<div class="visit-item">
+      <div class="visit-date">${escapeHtml(formatDate(h.HistoryDate))}</div>
+      <div class="visit-notes">${buildReportBodyHtml(Object.assign({type:'',body:''}, content))}</div>
+    </div>`;
+  }).join('');
+}
+
+$('openRadiologyLinkBtn').onclick = ()=>{
+  const link = $('fRadiologyLink').value.trim();
+  if(!link){ showToast('مفيش لينك محفوظ', true); return; }
+  window.open(link, '_blank', 'noopener');
+};
+
+$('deletePatientBtn').onclick = async ()=>{
+  if(!currentPatientId){ showToast('مفيش مريض مفتوح للحذف', true); return; }
+  if(!confirm('هل أنت متأكد من حذف هذا المريض نهائيًا؟ هذا الإجراء لا يمكن التراجع عنه.')) return;
+  const btn = $('deletePatientBtn');
+  btn.disabled = true; const orig = btn.textContent; btn.innerHTML = '<span class="spinner"></span> جاري الحذف...';
+  try{
+    const data = await apiGet({action:'deletePatient', id: currentPatientId});
+    if(data.error){ showToast(data.error, true); }
+    else{
+      showToast('اتحذف المريض ✓');
+      currentPatientId = null;
+      $('workspace').style.display = 'none';
+      $('placeholder').style.display = 'block';
+      updateTitleBadge();
+    }
+  }catch(err){ showToast('حصل خطأ أثناء الحذف', true); }
+  finally{ btn.disabled = false; btn.textContent = orig; }
+};
+
+/* ---------- Visits ---------- */
+let editingVisitId = null;
+
+function renderVisits(visits){
+  const box = $('visitsList');
+  if(!visits.length){
+    box.innerHTML = '<div class="no-visits">لسه مفيش زيارات مسجلة</div>';
+    return;
+  }
+  box.innerHTML = visits.map(v=>`
+    <div class="visit-item" data-id="${escapeHtml(String(v.VisitID))}">
+      <div class="visit-date">${escapeHtml(formatDate(v.VisitDate))}</div>
+      <div class="visit-notes">${escapeHtml(v.VisitNotes || '—')}</div>
+      ${v.Radiology ? `<div class="visit-notes"><b class="visit-label">الأشعة:</b> ${escapeHtml(v.Radiology)}</div>` : ''}
+      ${v.LabTests ? `<div class="visit-notes"><b class="visit-label">التحاليل:</b> ${escapeHtml(v.LabTests)}</div>` : ''}
+      <div class="card-actions" style="margin-top:10px;">
+        <button class="btn btn-ghost visit-edit-btn" style="padding:6px 12px; font-size:12.5px;">تعديل</button>
+        <button class="btn btn-outline-red visit-delete-btn" style="padding:6px 12px; font-size:12.5px;">حذف</button>
+      </div>
+    </div>`).join('');
+
+  box.querySelectorAll('.visit-item').forEach(item=>{
+    const id = item.dataset.id;
+    const visit = visits.find(v=> String(v.VisitID) === id);
+    if(!visit) return;
+    const editBtn = item.querySelector('.visit-edit-btn');
+    const delBtn = item.querySelector('.visit-delete-btn');
+    if(editBtn) editBtn.addEventListener('click', ()=> startEditVisit(visit));
+    if(delBtn) delBtn.addEventListener('click', ()=> deleteVisitEntry(visit.VisitID));
+  });
+}
+
+function startEditVisit(visit){
+  editingVisitId = visit.VisitID;
+  $('vDate').value = String(visit.VisitDate||'').slice(0,10);
+  $('vNotes').value = visit.VisitNotes || '';
+  $('vRadiology').value = visit.Radiology || '';
+  $('vLabTests').value = visit.LabTests || '';
+  $('addVisitBtn').textContent = 'حفظ التعديل';
+  $('newVisitForm').classList.add('open');
+  $('newVisitForm').scrollIntoView({behavior:'smooth', block:'nearest'});
+}
+
+async function deleteVisitEntry(visitId){
+  if(!confirm('حذف هذه الزيارة نهائيًا؟')) return;
+  try{
+    const data = await apiGet({action:'deleteVisit', id: visitId});
+    if(data.error){ showToast(data.error, true); return; }
+    showToast('اتحذفت الزيارة ✓');
+    const fresh = await apiGet({action:'getPatient', id: currentPatientId});
+    renderVisits(fresh.visits || []);
+  }catch(err){ showToast('حصل خطأ أثناء الحذف', true); }
+}
+
+$('toggleVisitBtn').onclick = ()=>{
+  if(!currentPatientId){ showToast('احفظ بيانات المريض الأول', true); return; }
+  editingVisitId = null;
+  $('addVisitBtn').textContent = 'حفظ الزيارة';
+  $('vDate').value = new Date().toISOString().slice(0,10);
+  $('vNotes').value = EXAM_TEMPLATE;
+  $('vRadiology').value = '';
+  $('vLabTests').value = '';
+  $('newVisitForm').classList.add('open');
+};
+$('cancelVisitBtn').onclick = ()=>{
+  editingVisitId = null;
+  $('addVisitBtn').textContent = 'حفظ الزيارة';
+  $('newVisitForm').classList.remove('open');
+};
+
+$('addVisitBtn').onclick = async ()=>{
+  const date = $('vDate').value;
+  const notes = $('vNotes').value.trim();
+  const radiology = $('vRadiology').value.trim();
+  const labTests = $('vLabTests').value.trim();
+  if(!date){ showToast('اختار تاريخ الزيارة', true); return; }
+  const isEditing = !!editingVisitId;
+  const btn = $('addVisitBtn');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> جاري الحفظ...';
+  try{
+    const visit = { VisitDate: date, VisitNotes: notes, Radiology: radiology, LabTests: labTests };
+    let data;
+    if(isEditing){
+      visit.VisitID = editingVisitId;
+      data = await apiPost({action:'updateVisit', visit});
+    } else {
+      visit.PatientID = currentPatientId;
+      data = await apiPost({action:'addVisit', visit});
+    }
+    if(data.error){ showToast(data.error, true); }
+    else{
+      showToast(isEditing ? 'اتحدثت الزيارة ✓' : 'اتسجلت الزيارة ✓');
+      editingVisitId = null;
+      $('vNotes').value = ''; $('vRadiology').value = ''; $('vLabTests').value = '';
+      $('newVisitForm').classList.remove('open');
+      const fresh = await apiGet({action:'getPatient', id: currentPatientId});
+      renderVisits(fresh.visits || []);
+    }
+  }catch(err){ showToast('حصل خطأ أثناء الحفظ', true); }
+  finally{
+    btn.disabled = false;
+    btn.textContent = editingVisitId ? 'حفظ التعديل' : 'حفظ الزيارة';
+  }
+};
+
+/* ---------- Prescription PDF ---------- */
+function buildRxBodyHtml(rx){
+  const section = (title, innerHtml) => `
+    <div style="margin-bottom:18px;">
+      <div style="font-weight:700; font-size:10pt; color:#1F4A40; margin-bottom:6px;">${title}</div>
+      ${innerHtml}
+    </div>`;
+
+  let html = '';
+
+  if(rx.diagnosis){
+    html += section('التشخيص', `<div>${escapeHtml(rx.diagnosis)}</div>`);
+  }
+
+  if(rx.medicines.length){
+    html += section('الأدوية', rx.medicines.map((m,i)=>
+      `<div style="margin-bottom:4px;">${i+1}. ${escapeHtml(m.name)}${m.instructions ? ' - ' + escapeHtml(m.instructions) : ''}</div>`
+    ).join(''));
+  } else {
+    html += section('الأدوية', '<div style="color:#aaa;">لا يوجد أدوية</div>');
+  }
+
+  if(rx.recommendations.length){
+    html += section('توصيات عامة', rx.recommendations.map(r=>`<div>• ${escapeHtml(r)}</div>`).join(''));
+  }
+
+  if(rx.radiologyRequested.length || rx.labsRequested.length){
+    let reqHtml = '';
+    if(rx.radiologyRequested.length){
+      reqHtml += `<div><b>أشعة:</b></div>` + rx.radiologyRequested.map(a=>`<div>• ${escapeHtml(a)}</div>`).join('');
+    }
+    if(rx.labsRequested.length){
+      reqHtml += `<div><b>تحاليل:</b></div>` + rx.labsRequested.map(t=>`<div>• ${escapeHtml(t)}</div>`).join('');
+    }
+    html += section('المطلوب', reqHtml);
+  }
+
+  return html;
+}
+
+function buildPhysioBodyHtml(pt){
+  const section = (title, innerHtml) => `
+    <div style="margin-bottom:18px;">
+      <div style="font-weight:700; font-size:10pt; color:#1F4A40; margin-bottom:6px;">${title}</div>
+      ${innerHtml}
+    </div>`;
+
+  let html = '';
+  if(pt.diagnosis){
+    html += section('التشخيص', `<div>${escapeHtml(pt.diagnosis)}</div>`);
+  }
+  if(pt.interventions.length){
+    html += section('المطلوب من العلاج الطبيعي', pt.interventions.map(i=>`<div>• ${escapeHtml(i)}</div>`).join(''));
+  } else {
+    html += section('المطلوب من العلاج الطبيعي', '<div style="color:#aaa;">لا يوجد</div>');
+  }
+  if(pt.sessions){
+    html += section('عدد الجلسات', `<div>${escapeHtml(pt.sessions)}</div>`);
+  }
+  return html;
+}
+
+function buildReportBodyHtml(rep){
+  return `
+    <div style="margin-bottom:14px;">
+      <div style="font-weight:700; font-size:10pt; color:#1F4A40; margin-bottom:6px;">${escapeHtml(rep.type || 'تقرير طبي')}</div>
+    </div>
+    <div style="white-space:pre-wrap;">${escapeHtml(rep.body || '')}</div>`;
+}
+
+async function exportRxTemplateAsPdf(bodyHtml, filenamePrefix, btn){
+  const name = $('fName').value.trim() || '—';
+  const todayStr = new Date().toLocaleDateString('ar-EG', {year:'numeric', month:'long', day:'numeric'});
+
+  const tpl = $('rxTemplate');
+  tpl.querySelector('.rx-name').textContent = name;
+  tpl.querySelector('.rx-date').textContent = todayStr;
+  tpl.querySelector('.rx-body').innerHTML = bodyHtml;
+
+  btn.disabled = true; const orig = btn.textContent; btn.innerHTML = '<span class="spinner"></span> جاري التجهيز...';
+  try{
+    const canvas = await html2canvas(tpl, {scale:2, backgroundColor:'#ffffff'});
+    const imgData = canvas.toDataURL('image/png');
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({unit:'pt', format:'a5'});
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    const ratio = canvas.width / canvas.height;
+    let imgWidth = pageWidth;
+    let imgHeight = imgWidth / ratio;
+    if(imgHeight > pageHeight){ imgHeight = pageHeight; imgWidth = imgHeight * ratio; }
+    const x = (pageWidth - imgWidth) / 2;
+    pdf.addImage(imgData, 'PNG', x, 0, imgWidth, imgHeight);
+    pdf.save(`${filenamePrefix}-${name}.pdf`);
+  }catch(err){ showToast('تعذر إنشاء PDF', true); }
+  finally{ btn.disabled = false; btn.textContent = orig; }
+}
+
+$('downloadRxBtn').onclick = ()=>{
+  if(!currentPatientId){ showToast('احفظ بيانات المريض الأول', true); return; }
+  exportRxTemplateAsPdf(buildRxBodyHtml(collectPrescription()), 'روشتة', $('downloadRxBtn'));
+};
+
+$('downloadPhysioBtn').onclick = ()=>{
+  if(!currentPatientId){ showToast('احفظ بيانات المريض الأول', true); return; }
+  exportRxTemplateAsPdf(buildPhysioBodyHtml(collectPhysio()), 'علاج-طبيعي', $('downloadPhysioBtn'));
+};
+
+$('downloadReportBtn').onclick = ()=>{
+  if(!currentPatientId){ showToast('احفظ بيانات المريض الأول', true); return; }
+  exportRxTemplateAsPdf(buildReportBodyHtml(collectReport()), 'تقرير-طبي', $('downloadReportBtn'));
+};
+
+/* ---------- helpers ---------- */
+function formatDate(d){
+  try{
+    const dt = new Date(d);
+    if(isNaN(dt)) return d;
+    return dt.toLocaleDateString('ar-EG', {year:'numeric', month:'long', day:'numeric'});
+  }catch(e){ return d; }
+}
+function escapeHtml(str){
+  return String(str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+</script>
+</body>
+</html>
