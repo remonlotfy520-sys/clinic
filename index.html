@@ -761,7 +761,7 @@
 
 <script>
 /* ====== حط هنا رابط الـ Apps Script بعد النشر ====== */
-const APPS_SCRIPT_URL = "<?= scriptUrl ?>";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzL49V7VjPyJN_gNL9d3tBUy8kOkwqUjhVt3pIhFVwnF5SO6wLtF9I4r8x2y1t9Kq_JUQ/exec";
 /* ==================================================== */
 
 const $ = id => document.getElementById(id);
@@ -1789,12 +1789,10 @@ function statBlock(label, value){
 async function loadStats(){
   const box = $('statsContent');
   box.innerHTML = '<div class="no-visits">جاري التحميل...</div>';
+  let html = '';
+
   try{
-    const [data, dupData] = await Promise.all([
-      apiGet({action:'getStats'}),
-      apiGet({action:'getDuplicateNames'})
-    ]);
-    let html = '';
+    const data = await apiGet({action:'getStats'});
     html += statBlock('عدد المرضى الكلي', data.totalPatients);
     html += statBlock('مرضى جدد هذا الأسبوع', data.newWeek);
     html += statBlock('مرضى جدد هذا الشهر', data.newMonth);
@@ -1821,17 +1819,25 @@ async function loadStats(){
       });
     }
     html += `</div>`;
+  }catch(err){
+    html += `<div class="exam-card"><div class="no-visits">تعذر تحميل الإحصائيات الأساسية</div></div>`;
+  }
 
-    const duplicates = dupData.duplicates || [];
-    html += `<div class="exam-card"><h2>أسماء متكررة</h2>`;
+  box.innerHTML = html; // نعرض الإحصائيات فورًا من غير ما ننتظر الأسماء المتكررة
+
+  try{
+    const dupData = await apiGet({action:'getDuplicateNames'});
+    const allDuplicates = dupData.duplicates || [];
+    const duplicates = allDuplicates.slice(0, 50);
+    let dupHtml = `<div class="exam-card"><h2>أسماء متكررة${allDuplicates.length > 50 ? ' (أول 50 من ' + allDuplicates.length + ')' : ''}</h2>`;
     if(!duplicates.length){
-      html += `<div class="no-visits">مفيش أسماء متكررة حاليًا</div>`;
+      dupHtml += `<div class="no-visits">مفيش أسماء متكررة حاليًا</div>`;
     } else {
-      html += `<div class="hint" style="margin-bottom:10px;">دوس على أي مريض تحت عشان تفتح ملفه وتقرر تمسحه أو تعدله أو تدمجه</div>`;
+      dupHtml += `<div class="hint" style="margin-bottom:10px;">دوس على أي مريض تحت عشان تفتح ملفه وتقرر تمسحه أو تعدله أو تدمجه</div>`;
       duplicates.forEach((dup, di)=>{
-        html += `<div class="visit-date" style="margin-top:${di>0?'16px':'0'};">${escapeHtml(dup.name)} (${dup.patients.length})</div>`;
+        dupHtml += `<div class="visit-date" style="margin-top:${di>0?'16px':'0'};">${escapeHtml(dup.name)} (${dup.patients.length})</div>`;
         dup.patients.forEach(p=>{
-          html += `<div class="result-item dup-patient-row" data-id="${escapeHtml(String(p.PatientID))}" style="cursor:pointer;">
+          dupHtml += `<div class="result-item dup-patient-row" data-id="${escapeHtml(String(p.PatientID))}" style="cursor:pointer;">
             <div><div class="rname">${escapeHtml(p.Name||'')}</div>
             <div class="rmeta">ملف ${escapeHtml(String(p.PatientID))} · ${escapeHtml(String(p.Phone||''))}</div></div>
             <div class="rmeta">رقم ${escapeHtml(String(p.ClinicNumber||'—'))}</div>
@@ -1839,13 +1845,14 @@ async function loadStats(){
         });
       });
     }
-    html += `</div>`;
-
-    box.innerHTML = html;
+    dupHtml += `</div>`;
+    box.insertAdjacentHTML('beforeend', dupHtml);
     box.querySelectorAll('.dup-patient-row').forEach(row=>{
       row.addEventListener('click', ()=> loadPatient(row.dataset.id));
     });
-  }catch(err){ box.innerHTML = '<div class="no-visits">تعذر تحميل الإحصائيات</div>'; }
+  }catch(err){
+    box.insertAdjacentHTML('beforeend', '<div class="exam-card"><h2>أسماء متكررة</h2><div class="no-visits">تعذر تحميل الأسماء المتكررة</div></div>');
+  }
 }
 
 $('viewStatsBtn').onclick = ()=>{
