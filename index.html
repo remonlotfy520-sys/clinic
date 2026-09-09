@@ -95,6 +95,15 @@
   }
   .placeholder .big{font-family:'Cairo';font-size:22px;color:var(--teal-dark);font-weight:800;margin-bottom:8px;}
 
+  .dashboard-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;}
+  .dashboard-card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px 20px;box-shadow:var(--shadow);}
+  .dashboard-card h2{font-family:'Cairo';font-size:15px;color:var(--teal-dark);margin-bottom:10px;}
+  .dashboard-card .dash-row{display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid var(--line); cursor:pointer;}
+  .dashboard-card .dash-row:last-child{border-bottom:none;}
+  .dashboard-card .dash-row:hover{color:var(--teal-dark);}
+  .dashboard-card .dash-empty{color:var(--muted); font-size:13.5px; padding:6px 0;}
+  .dashboard-card .dash-big-num{font-family:'Cairo'; font-weight:800; font-size:32px; color:var(--red);}
+
   .layout{display:grid;grid-template-columns:340px 1fr;gap:22px;align-items:start;}
   @media (max-width:860px){.layout{grid-template-columns:1fr;}}
 
@@ -117,7 +126,7 @@
   .field input{
     width:100%;padding:10px 12px;border-radius:9px;border:1px solid var(--line);
     font-family:'Tajawal';font-size:14.5px;background:#FCFBF8;outline:none;
-    transition:border-color .15s;
+    transition:border-color .15s;color:#1450C4;
   }
   .field input:focus{border-color:var(--teal);background:#fff;}
   .field input:disabled{color:var(--muted);background:#F2F0E9;}
@@ -151,9 +160,18 @@
   .rx-med-row select:focus{border-color:var(--teal);}
   .rx-med-row input{
     width:100%;padding:9px 10px;border-radius:9px;border:1px solid var(--line);
-    font-family:'Tajawal';font-size:13.5px;background:#FCFBF8;outline:none;
+    font-family:'Tajawal';font-size:13.5px;background:#FCFBF8;outline:none;color:#1450C4;
   }
   @media (max-width:480px){.rx-med-row{grid-template-columns:1fr;}}
+
+  .autocomplete-wrap{position:relative;}
+  .autocomplete-list{
+    position:absolute;top:100%;right:0;left:0;margin-top:2px;background:#fff;
+    border:1px solid var(--line);border-radius:10px;max-height:180px;overflow-y:auto;
+    z-index:60;box-shadow:var(--shadow);display:none;
+  }
+  .autocomplete-item{padding:9px 12px;cursor:pointer;font-size:13.5px;font-family:'Tajawal';}
+  .autocomplete-item:hover{background:#F6F3EC;}
 
   .tab-bar{display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap;}
   .tab-btn{
@@ -179,7 +197,7 @@
     font-family:'Tajawal';font-size:15px;line-height:34px;resize:vertical;outline:none;
     background:
       repeating-linear-gradient(to bottom, transparent 0px, transparent 33px, var(--line) 34px);
-    background-color:#FFFDF8;
+    background-color:#FFFDF8;color:#1450C4;
   }
   textarea:focus{border-color:var(--teal);}
 
@@ -224,6 +242,13 @@
   .appt-item{border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:10px;position:relative;}
   .appt-date-header{font-family:'Cairo';font-weight:800;color:var(--teal-dark);font-size:14px;margin:14px 0 8px;}
 
+  .history-icons{display:flex;flex-wrap:wrap;gap:14px;}
+  .img-card{text-align:center;}
+  .history-icon-card{width:88px;text-align:center;cursor:pointer;}
+  .history-icon-card .icon-box{width:68px;height:68px;margin:0 auto 6px;background:#fff;border:1px solid var(--line);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:28px;transition:border-color .15s ease, transform .1s ease;box-shadow:var(--shadow);}
+  .history-icon-card:hover .icon-box{border-color:var(--teal);transform:translateY(-2px);}
+  .history-icon-card .icon-date{font-size:11.5px;color:var(--muted);font-weight:700;}
+
   .toast{
     position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);
     background:var(--teal-dark);color:#fff;padding:12px 22px;border-radius:10px;font-size:14px;
@@ -245,6 +270,24 @@
 </style>
 </head>
 <body>
+
+<div id="loginScreen" style="position:fixed; inset:0; background:var(--bg); z-index:500; display:flex; align-items:center; justify-content:center; padding:20px;">
+  <div class="card" style="max-width:360px; width:100%; text-align:center;">
+    <div class="mark" style="margin:0 auto 14px;">ع</div>
+    <h2 style="font-family:'Cairo'; color:var(--teal-dark); margin-bottom:2px; font-size:20px;">ملفات المرضى</h2>
+    <div class="hint" style="margin-bottom:22px;">دفتر العيادة الرقمي</div>
+    <div class="field" style="text-align:right;">
+      <label>اسم المستخدم</label>
+      <input type="text" id="loginUsername" placeholder="اسم المستخدم" autocomplete="username">
+    </div>
+    <div class="field" style="text-align:right;">
+      <label>كلمة المرور</label>
+      <input type="password" id="loginPassword" placeholder="كلمة المرور" autocomplete="current-password">
+    </div>
+    <div id="loginError" style="color:var(--red); font-size:13px; margin-bottom:10px; display:none;"></div>
+    <button class="btn btn-primary" id="loginBtn" style="width:100%;">دخول</button>
+  </div>
+</div>
 
 <header>
   <div class="brand">
@@ -270,8 +313,12 @@
     📅
     <span id="calendarBadge" style="display:none; position:absolute; top:-6px; left:-6px; background:var(--tab); color:#fff; border-radius:999px; font-size:11px; font-weight:800; padding:2px 6px; min-width:18px; text-align:center; line-height:1.3;">0</span>
   </button>
-  <button class="btn btn-ghost" id="viewMessagesBtn">💬 رسائل</button>
+  <label style="display:flex; align-items:center; gap:6px; font-size:12.5px; color:var(--muted); cursor:pointer;" title="استخدم صورة الشعار المرفوعة على درايف بدل الورقة البيضاء في كل ملفات PDF">
+    <input type="checkbox" id="useLetterheadToggle" style="width:15px;height:15px;">
+    استخدام الشعار
+  </label>
   <button class="btn btn-primary" id="newPatientBtn">+ مريض جديد</button>
+  <button class="btn btn-ghost" id="logoutBtn" title="تسجيل خروج">🚪</button>
 </header>
 
 <main>
@@ -282,6 +329,7 @@
   <div id="placeholder" class="placeholder">
     <div class="big">ابحث عن مريض أو ابدأ ملف جديد</div>
     <div>كل بيانات المريض والكشوفات هتتخزن في الشيت تلقائي.</div>
+    <div id="dashboardContent" style="text-align:right; margin-top:28px;"></div>
   </div>
 
   <div id="operationsPatientsView" style="display:none;">
@@ -374,37 +422,9 @@
     </div>
   </div>
 
-  <div id="messagesView" style="display:none;">
-    <div class="visits-head" style="margin-bottom:14px;">
-      <h2>إرسال رسالة واتساب</h2>
-      <button class="btn btn-ghost" id="closeMessagesViewBtn">✕ إغلاق</button>
-    </div>
-
-    <div class="exam-card" style="margin-bottom:16px;">
-      <label>نص الرسالة</label>
-      <textarea id="msgText" style="min-height:120px;">أهلاً بيك، يسعدنا زيارتك لعيادتنا. لو محتاج أي استفسار احنا في خدمتك.</textarea>
-    </div>
-
-    <div class="exam-card" style="margin-bottom:16px;">
-      <div class="card-actions" style="justify-content:flex-start; margin-top:0;">
-        <button class="btn btn-ghost" id="selectAllMsgBtn">تحديد الكل</button>
-        <button class="btn btn-ghost" id="clearAllMsgBtn">إلغاء التحديد</button>
-      </div>
-    </div>
-
-    <div id="msgPatientsList" class="visits-card" style="padding:8px; max-height:50vh; overflow-y:auto;"></div>
-
-    <div class="card-actions" style="margin-top:16px;">
-      <button class="btn btn-primary" id="prepareMessagesBtn">تجهيز روابط الإرسال</button>
-    </div>
-
-    <div id="msgSendLinks" style="margin-top:16px;"></div>
-  </div>
-
   <div id="workspace" style="display:none;">
     <div class="layout">
       <!-- Patient folder -->
-      <div class="folder">
       <div class="folder">
         <div class="folder-tab tab-num" id="folderTab">ملف جديد</div>
         <div class="card">
@@ -419,10 +439,7 @@
             </div>
             <div class="field">
               <label>التليفون</label>
-              <div style="display:flex; gap:8px;">
-                <input type="text" id="fPhone" placeholder="01xxxxxxxxx" style="flex:1;">
-                <button type="button" class="btn btn-ghost" id="sendWhatsappBtn" title="ابعت رسالة واتساب لهذا المريض" style="padding:10px 14px;">💬</button>
-              </div>
+              <input type="text" id="fPhone" placeholder="01xxxxxxxxx">
             </div>
           </div>
           <div class="field">
@@ -453,18 +470,14 @@
 
       <!-- Tabbed content -->
       <div>
-        <div class="exam-card" id="presetRxCard">
-          <h2>روشتات جاهزة</h2>
-          <div class="hint">دوس على أي روشتة تحت وهتتحمّل PDF فورًا باسم المريض وتاريخ اليوم</div>
-          <div class="chips" id="presetRxList"></div>
-        </div>
-
         <div class="tab-bar">
           <button class="tab-btn active" data-tab="tab-kashf">الكشف والزيارات</button>
           <button class="tab-btn" data-tab="tab-rx">الروشتة</button>
           <button class="tab-btn" data-tab="tab-physio">العلاج الطبيعي</button>
           <button class="tab-btn" data-tab="tab-reports">التقارير الطبية</button>
           <button class="tab-btn" data-tab="tab-operations">العمليات</button>
+          <button class="tab-btn" data-tab="tab-invoice">فاتورة</button>
+          <button class="tab-btn" data-tab="tab-images">الصور</button>
         </div>
 
         <!-- Tab: Exam + Visits -->
@@ -538,6 +551,12 @@
 
         <!-- Tab: Prescription -->
         <div class="tab-panel" id="tab-rx">
+          <div class="exam-card" id="presetRxCard">
+            <h2>روشتات جاهزة</h2>
+            <div class="hint">دوس على أي روشتة تحت وهتتحمّل PDF فورًا باسم المريض وتاريخ اليوم</div>
+            <div class="chips" id="presetRxList"></div>
+          </div>
+
           <div class="exam-card">
             <h2>الروشتة</h2>
             <div class="hint">الاسم وتاريخ اليوم بيتحطوا في الروشتة تلقائي - اختار من القوائم تحت</div>
@@ -550,8 +569,6 @@
             <div class="field">
               <label>الأدوية (حتى 7)</label>
               <div id="rxMedicines"></div>
-              <datalist id="medicinesDatalist"></datalist>
-              <datalist id="administrationDatalist"></datalist>
             </div>
 
             <div class="field">
@@ -738,6 +755,72 @@
             <div id="operationsList"></div>
           </div>
         </div>
+
+        <!-- Tab: Invoice -->
+        <div class="tab-panel" id="tab-invoice">
+          <div class="visits-card">
+            <div class="visits-head">
+              <h2>سجل الفواتير</h2>
+              <button class="btn btn-ghost" id="toggleInvoiceBtn">+ فاتورة جديدة</button>
+            </div>
+
+            <div class="new-visit-form" id="newInvoiceForm">
+              <div class="field" style="max-width:200px;">
+                <label>تاريخ الفاتورة</label>
+                <input type="date" id="invDate">
+              </div>
+
+              <div class="field">
+                <label>إضافة خدمة</label>
+                <select id="invServiceSelect" class="dropdown-add-select"></select>
+              </div>
+
+              <div class="field">
+                <label>أو أضف بند مخصص (زي "عملية" أو أي حاجة مش في القايمة)</label>
+                <div style="display:flex; gap:8px;">
+                  <input type="text" id="invCustomName" placeholder="اسم البند..." style="flex:2;">
+                  <input type="text" id="invCustomPrice" placeholder="السعر" style="flex:1;">
+                  <button type="button" class="btn btn-ghost" id="addCustomInvoiceItemBtn">إضافة</button>
+                </div>
+              </div>
+
+              <div class="field">
+                <div id="invItemsList" class="visits-card" style="padding:8px;"></div>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-top:12px; padding:0 6px;">
+                  <span style="font-weight:800; font-family:'Cairo';">الإجمالي</span>
+                  <span id="invTotal" style="font-weight:800; font-family:'Cairo'; font-size:20px; color:var(--teal-dark);">0</span>
+                </div>
+              </div>
+
+              <div class="field">
+                <label>ملاحظات</label>
+                <textarea id="invNotes" style="min-height:80px;" placeholder="ملاحظات إضافية على الفاتورة..."></textarea>
+              </div>
+
+              <div class="card-actions" style="margin-top:4px;">
+                <button class="btn btn-primary" id="saveInvoiceBtn">حفظ الفاتورة</button>
+                <button class="btn btn-ghost" id="cancelInvoiceBtn">إلغاء</button>
+              </div>
+            </div>
+
+            <div id="invoicesList"></div>
+          </div>
+        </div>
+
+        <!-- Tab: Images -->
+        <div class="tab-panel" id="tab-images">
+          <div class="visits-card">
+            <div class="visits-head">
+              <h2>صور المريض</h2>
+              <label class="btn btn-primary" style="cursor:pointer; margin:0;">
+                + إضافة صورة
+                <input type="file" id="imageUploadInput" accept="image/*" capture="environment" style="display:none;">
+              </label>
+            </div>
+            <div class="hint" style="margin-bottom:14px;">أشعة، جروح، مستندات... الصورة بتتصغّر تلقائي قبل الرفع عشان توفر مساحة</div>
+            <div id="patientImagesList" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(130px,1fr)); gap:14px;"></div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -745,14 +828,28 @@
 
 <div class="toast" id="toast"></div>
 
+<div id="historyDetailModal" style="display:none; position:fixed; inset:0; background:rgba(31,74,64,.45); z-index:200; align-items:center; justify-content:center; padding:20px;">
+  <div class="card" style="max-width:520px; width:100%; max-height:85vh; overflow-y:auto; position:relative;">
+    <button id="closeHistoryDetailBtn" class="btn btn-ghost" style="position:absolute; top:14px; left:14px; padding:6px 12px;">✕</button>
+    <div id="historyDetailTitle" class="visit-date" style="margin-bottom:16px; font-size:15px;"></div>
+    <div id="historyDetailContent"></div>
+    <div class="card-actions" style="margin-top:18px;">
+      <button class="btn btn-ghost" id="editHistoryBtn">تعديل</button>
+      <button class="btn btn-outline-red" id="deleteHistoryBtn">حذف</button>
+      <button class="btn btn-primary" id="downloadHistoryPdfBtn">تحميل PDF</button>
+    </div>
+  </div>
+</div>
+
 <div id="rxTemplate" style="position:fixed; left:-9999px; top:0; width:420px; background:#ffffff; padding:36px 32px; font-family:'Tajawal', sans-serif; color:#1c2420; direction:rtl; font-size:10pt; line-height:1;">
-  <div style="height:70px;"></div>
-  <div style="border-top:2.5px solid #1F4A40; border-bottom:1px solid #e2ddce; padding:12px 2px; display:flex; justify-content:space-between; font-weight:700; margin-bottom:26px; font-size:12pt;">
+  <img class="rx-letterhead-img" style="display:none; position:absolute; top:0; left:0; width:100%; height:100%; z-index:0;">
+  <div class="rx-header-spacer" style="height:70px; position:relative; z-index:1;"></div>
+  <div class="rx-header-line" style="border-top:2.5px solid #1F4A40; border-bottom:1px solid #e2ddce; padding:12px 2px; display:flex; justify-content:space-between; font-weight:700; margin-bottom:26px; font-size:12pt; position:relative; z-index:1;">
     <div><span class="rx-name" style="font-weight:500;"></span></div>
     <div><span class="rx-date" style="font-weight:500;"></span></div>
   </div>
-  <div class="rx-body" style="min-height:120px;"></div>
-  <div style="margin-top:60px; display:flex; justify-content:flex-end;">
+  <div class="rx-body" style="min-height:120px; position:relative; z-index:1;"></div>
+  <div style="margin-top:60px; display:flex; justify-content:flex-end; position:relative; z-index:1;">
     <div style="text-align:center; color:#555;">
       <div style="width:150px; border-top:1px solid #999; padding-top:6px;">توقيع الطبيب</div>
     </div>
@@ -761,7 +858,7 @@
 
 <script>
 /* ====== حط هنا رابط الـ Apps Script بعد النشر ====== */
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzL49V7VjPyJN_gNL9d3tBUy8kOkwqUjhVt3pIhFVwnF5SO6wLtF9I4r8x2y1t9Kq_JUQ/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzAQxmSHR1Vcy1kS1mQmiCsjD_xjXF-tjhty6GfKcPR61PPeKseR06vzy9JM7eKdUBRRw/exec";
 /* ==================================================== */
 
 const $ = id => document.getElementById(id);
@@ -770,6 +867,8 @@ let appointmentsData = [];
 let calCurrentMonth = new Date();
 let calSelectedDateStr = null;
 let editingAppointmentId = null;
+let editingHistoryId = null;
+let editingHistoryType = null;
 
 /* ====== نسخة احتياطية بسيطة تشتغل بيها الصفحة لحد ما تتحمل القوائم من الشيت ====== */
 let MEDICINES_LIST = [
@@ -782,6 +881,9 @@ let LABS_LIST = ['صورة دم كاملة (CBC)'];
 let PT_LIST = ['تقوية عضلية (Muscle Strengthening)', 'تمارين إطالة (Stretching)'];
 let CHRONIC_LIST = ['ضغط', 'سكر', 'قلب', 'روماتويد', 'حساسية', 'كلى', 'كبد'];
 let ADMINISTRATION_LIST = ['مرة يوميًا', 'مرتين يوميًا', 'عند اللزوم'];
+let SERVICES_LIST = [];
+let currentInvoiceItems = [];
+let editingInvoiceId = null;
 let PRESET_PRESCRIPTIONS = [];
 let DIAGNOSIS_RECS = [];
 let OPERATION_LOCATIONS_LIST = ['غرفة عمليات 1'];
@@ -804,29 +906,69 @@ function resetToFirstTab(){
   document.querySelectorAll('.tab-panel').forEach((p,i)=> p.classList.toggle('active', i===0));
 }
 
+/* قايمة اقتراحات مبنية يدويًا (بديل عن datalist) - عشان datalist مش شغالة كويس
+   على أجهزة أبل (آيباد/آيفون سفاري) والاقتراحات مش بتظهر عليها */
+function attachAutocomplete(input, getOptions){
+  let wrap = input.parentElement;
+  if(!wrap.classList.contains('autocomplete-wrap')){
+    wrap = document.createElement('div');
+    wrap.className = 'autocomplete-wrap';
+    input.parentNode.insertBefore(wrap, input);
+    wrap.appendChild(input);
+  }
+  let list = wrap.querySelector('.autocomplete-list');
+  if(!list){
+    list = document.createElement('div');
+    list.className = 'autocomplete-list';
+    wrap.appendChild(list);
+  }
+
+  function showList(){
+    const q = input.value.trim().toLowerCase();
+    const options = getOptions();
+    const matches = q ? options.filter(o => o.toLowerCase().includes(q)) : options;
+    if(!matches.length){ list.style.display = 'none'; return; }
+    list.innerHTML = matches.map(o=> `<div class="autocomplete-item">${escapeHtml(o)}</div>`).join('');
+    list.style.display = 'block';
+    list.querySelectorAll('.autocomplete-item').forEach(item=>{
+      item.addEventListener('mousedown', (e)=>{
+        e.preventDefault();
+        input.value = item.textContent;
+        list.style.display = 'none';
+        input.dispatchEvent(new Event('change', {bubbles:true}));
+      });
+    });
+  }
+
+  input.addEventListener('focus', showList);
+  input.addEventListener('input', showList);
+  input.addEventListener('blur', ()=>{ setTimeout(()=> list.style.display = 'none', 150); });
+}
+
 function buildMedicineRows(){
   const box = $('rxMedicines');
   const prevValues = Array.from(document.querySelectorAll('.rx-med-select')).map(s=>s.value);
   const prevInstr = Array.from(document.querySelectorAll('.rx-med-instructions')).map(i=>i.value);
-
-  $('medicinesDatalist').innerHTML = MEDICINES_LIST.map(m=>`<option value="${escapeHtml(m.name)}">`).join('');
-  $('administrationDatalist').innerHTML = ADMINISTRATION_LIST.map(a=>`<option value="${escapeHtml(a)}">`).join('');
 
   box.innerHTML = '';
   for(let i = 0; i < 7; i++){
     const row = document.createElement('div');
     row.className = 'rx-med-row';
     row.innerHTML = `
-      <input type="text" class="rx-med-select" data-idx="${i}" list="medicinesDatalist" placeholder="اختر دواء أو اكتب اسم جديد...">
-      <input type="text" class="rx-med-instructions" data-idx="${i}" list="administrationDatalist" placeholder="طريقة الإعطاء - اختار أو اكتب...">
+      <input type="text" class="rx-med-select" data-idx="${i}" placeholder="اختر دواء أو اكتب اسم جديد..." autocomplete="off">
+      <input type="text" class="rx-med-instructions" data-idx="${i}" placeholder="طريقة الإعطاء - اختار أو اكتب..." autocomplete="off">
     `;
     box.appendChild(row);
     if(prevValues[i]){ row.querySelector('.rx-med-select').value = prevValues[i]; }
     if(prevInstr[i]){ row.querySelector('.rx-med-instructions').value = prevInstr[i]; }
 
-    row.querySelector('.rx-med-select').addEventListener('change', (e)=>{
+    const medInput = row.querySelector('.rx-med-select');
+    const instrInput = row.querySelector('.rx-med-instructions');
+    attachAutocomplete(medInput, () => MEDICINES_LIST.map(m=> m.name));
+    attachAutocomplete(instrInput, () => ADMINISTRATION_LIST);
+
+    medInput.addEventListener('change', (e)=>{
       const med = MEDICINES_LIST.find(m=> m.name === e.target.value);
-      const instrInput = row.querySelector('.rx-med-instructions');
       if(med && med.instructions && !instrInput.value){
         instrInput.value = med.instructions;
       }
@@ -1017,9 +1159,12 @@ async function loadListsFromSheet(){
     renderOperationDropdowns();
     renderPresetReportsList();
     renderReportPhraseSelect();
+
+    const svcData = await apiGet({action:'getServices'});
+    if(svcData.results) SERVICES_LIST = svcData.results;
+    renderServiceSelect();
   }catch(err){ /* لو فشل التحميل، الصفحة بتفضل شغالة بالنسخة الاحتياطية */ }
 }
-loadListsFromSheet();
 
 function getActiveChips(containerId){
   return Array.from($(containerId).querySelectorAll('.chip.active')).map(c=> c.dataset.value);
@@ -1195,6 +1340,267 @@ $('addOperationBtn').onclick = async ()=>{
     btn.textContent = editingOperationId ? 'حفظ التعديل' : 'حفظ العملية';
   }
 };
+
+/* ================== الفاتورة ================== */
+function renderServiceSelect(){
+  const select = $('invServiceSelect');
+  select.innerHTML = `<option value="">— اختر خدمة —</option>` +
+    SERVICES_LIST.map((s,i)=>`<option value="${i}">${escapeHtml(s.name)} (${escapeHtml(String(s.price))})</option>`).join('');
+  select.onchange = ()=>{
+    if(select.value === '') return;
+    const svc = SERVICES_LIST[select.value];
+    currentInvoiceItems.push({name: svc.name, price: svc.price});
+    renderInvoiceItems();
+    select.value = '';
+  };
+}
+
+function renderInvoiceItems(){
+  const box = $('invItemsList');
+  if(!currentInvoiceItems.length){
+    box.innerHTML = '<div class="no-visits">لسه مفيش خدمات مضافة</div>';
+  } else {
+    box.innerHTML = currentInvoiceItems.map((it,i)=>`
+      <div style="display:flex; justify-content:space-between; align-items:center; padding:9px 6px; border-bottom:1px solid var(--line); gap:8px;">
+        <span style="flex:1;">${escapeHtml(it.name)}</span>
+        <input type="text" class="inv-item-price" data-idx="${i}" value="${escapeHtml(String(it.price))}" style="width:80px; padding:6px 8px; border-radius:7px; border:1px solid var(--line); text-align:center; font-family:'Tajawal'; font-size:13.5px;">
+        <button type="button" class="btn btn-ghost inv-remove-btn" data-idx="${i}" style="padding:3px 9px; font-size:12px;">✕</button>
+      </div>`).join('');
+    box.querySelectorAll('.inv-item-price').forEach(inp=>{
+      inp.addEventListener('input', ()=>{
+        currentInvoiceItems[Number(inp.dataset.idx)].price = inp.value;
+        updateInvoiceTotalDisplay();
+      });
+    });
+    box.querySelectorAll('.inv-remove-btn').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        currentInvoiceItems.splice(Number(btn.dataset.idx), 1);
+        renderInvoiceItems();
+      });
+    });
+  }
+  updateInvoiceTotalDisplay();
+}
+
+function updateInvoiceTotalDisplay(){
+  const total = currentInvoiceItems.reduce((sum, it)=> sum + (parseFloat(it.price) || 0), 0);
+  $('invTotal').textContent = total;
+}
+
+$('addCustomInvoiceItemBtn').onclick = ()=>{
+  const name = $('invCustomName').value.trim();
+  const price = $('invCustomPrice').value.trim();
+  if(!name){ showToast('اكتب اسم البند الأول', true); return; }
+  currentInvoiceItems.push({ name, price: price || 0 });
+  renderInvoiceItems();
+  $('invCustomName').value = '';
+  $('invCustomPrice').value = '';
+};
+
+function renderInvoices(invoices){
+  const box = $('invoicesList');
+  if(!invoices.length){ box.innerHTML = '<div class="no-visits">لسه مفيش فواتير مسجلة</div>'; return; }
+  box.innerHTML = invoices.map((inv, i)=>{
+    let items = [];
+    try{ items = JSON.parse(inv.Items || '[]'); }catch(e){}
+    return `<div class="visit-item" data-idx="${i}">
+      <div class="visit-date">${escapeHtml(formatDate(inv.InvoiceDate))}</div>
+      <div class="visit-notes">${items.map(it=> escapeHtml(it.name) + ' (' + escapeHtml(String(it.price)) + ')').join(' - ')}</div>
+      <div class="visit-notes"><b class="visit-label">الإجمالي:</b> ${escapeHtml(String(inv.Total))}</div>
+      ${inv.Notes ? `<div class="visit-notes"><b class="visit-label">ملاحظات:</b> ${escapeHtml(inv.Notes)}</div>` : ''}
+      <div class="card-actions" style="margin-top:10px;">
+        <button class="btn btn-ghost inv-edit-btn" style="padding:6px 12px; font-size:12.5px;">تعديل</button>
+        <button class="btn btn-outline-red inv-delete-btn" style="padding:6px 12px; font-size:12.5px;">حذف</button>
+        <button class="btn btn-primary inv-pdf-btn" style="padding:6px 12px; font-size:12.5px;">تحميل PDF</button>
+      </div>
+    </div>`;
+  }).join('');
+
+  box.querySelectorAll('.visit-item').forEach(item=>{
+    const inv = invoices[item.dataset.idx];
+    let items = [];
+    try{ items = JSON.parse(inv.Items || '[]'); }catch(e){}
+    const editBtn = item.querySelector('.inv-edit-btn');
+    const delBtn = item.querySelector('.inv-delete-btn');
+    const pdfBtn = item.querySelector('.inv-pdf-btn');
+    if(editBtn) editBtn.addEventListener('click', ()=> startEditInvoice(inv, items));
+    if(delBtn) delBtn.addEventListener('click', ()=> deleteInvoiceEntry(inv.InvoiceID));
+    if(pdfBtn) pdfBtn.addEventListener('click', ()=>{
+      const bodyHtml = buildInvoiceBodyHtml(items, inv.Total, inv.Notes);
+      exportRxTemplateAsPdf(bodyHtml, 'فاتورة', pdfBtn, formatDate(inv.InvoiceDate));
+    });
+  });
+}
+
+function startEditInvoice(inv, items){
+  editingInvoiceId = inv.InvoiceID;
+  currentInvoiceItems = items.slice();
+  $('invDate').value = String(inv.InvoiceDate || '').slice(0,10);
+  $('invNotes').value = inv.Notes || '';
+  $('saveInvoiceBtn').textContent = 'حفظ التعديل';
+  renderInvoiceItems();
+  $('newInvoiceForm').classList.add('open');
+  $('newInvoiceForm').scrollIntoView({behavior:'smooth', block:'nearest'});
+}
+
+async function deleteInvoiceEntry(invoiceId){
+  if(!confirm('حذف هذه الفاتورة نهائيًا؟')) return;
+  try{
+    const data = await apiGet({action:'deleteInvoice', id: invoiceId});
+    if(data.error){ showToast(data.error, true); return; }
+    showToast('اتحذفت الفاتورة ✓');
+    const fresh = await apiGet({action:'getPatient', id: currentPatientId});
+    renderInvoices(fresh.invoices || []);
+  }catch(err){ showToast('حصل خطأ أثناء الحذف', true); }
+}
+
+$('toggleInvoiceBtn').onclick = ()=>{
+  if(!currentPatientId){ showToast('احفظ بيانات المريض الأول', true); return; }
+  editingInvoiceId = null;
+  currentInvoiceItems = [];
+  $('invDate').value = new Date().toISOString().slice(0,10);
+  $('invNotes').value = '';
+  $('saveInvoiceBtn').textContent = 'حفظ الفاتورة';
+  renderInvoiceItems();
+  $('newInvoiceForm').classList.add('open');
+};
+$('cancelInvoiceBtn').onclick = ()=>{
+  editingInvoiceId = null;
+  $('saveInvoiceBtn').textContent = 'حفظ الفاتورة';
+  $('newInvoiceForm').classList.remove('open');
+};
+
+$('saveInvoiceBtn').onclick = async ()=>{
+  const date = $('invDate').value;
+  if(!date){ showToast('اختار تاريخ الفاتورة', true); return; }
+  if(!currentInvoiceItems.length){ showToast('ضيف خدمة واحدة على الأقل', true); return; }
+  const total = currentInvoiceItems.reduce((sum, it)=> sum + (parseFloat(it.price) || 0), 0);
+  const isEditing = !!editingInvoiceId;
+  const btn = $('saveInvoiceBtn');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> جاري الحفظ...';
+  try{
+    const invoice = { InvoiceDate: date, Items: JSON.stringify(currentInvoiceItems), Total: total, Notes: $('invNotes').value.trim() };
+    let data;
+    if(isEditing){
+      invoice.InvoiceID = editingInvoiceId;
+      data = await apiPost({action:'updateInvoice', invoice});
+    } else {
+      invoice.PatientID = currentPatientId;
+      data = await apiPost({action:'addInvoice', invoice});
+    }
+    if(data.error){ showToast(data.error, true); }
+    else{
+      showToast(isEditing ? 'اتحدّثت الفاتورة ✓' : 'اتسجلت الفاتورة ✓');
+      editingInvoiceId = null;
+      currentInvoiceItems = [];
+      $('newInvoiceForm').classList.remove('open');
+      const fresh = await apiGet({action:'getPatient', id: currentPatientId});
+      renderInvoices(fresh.invoices || []);
+    }
+  }catch(err){ showToast('حصل خطأ أثناء الحفظ', true); }
+  finally{
+    btn.disabled = false;
+    btn.textContent = editingInvoiceId ? 'حفظ التعديل' : 'حفظ الفاتورة';
+  }
+};
+
+/* ================== صور المرضى ================== */
+// إرسال حقيقي بطريقة POST (مش زي باقي الأكشنز اللي بتتبعت GET) - عشان بيانات
+// الصورة (base64) كبيرة ومينفعش تتحط في رابط URL عادي
+async function apiPostReal(payload){
+  const token = localStorage.getItem('clinicToken') || '';
+  const res = await fetch(APPS_SCRIPT_URL, {
+    method: 'POST',
+    body: JSON.stringify(Object.assign({}, payload, {token}))
+  });
+  const data = await res.json();
+  if(data && data.needLogin){ handleSessionExpired(); }
+  return data;
+}
+
+// نصغّر الصورة لعرض أقصاه 1000 بكسل قبل الرفع - عشان توفر مساحة كبيرة
+function resizeImageFile(file, maxDim){
+  return new Promise((resolve, reject)=>{
+    const reader = new FileReader();
+    reader.onload = (e)=>{
+      const img = new Image();
+      img.onload = ()=>{
+        let { width, height } = img;
+        if(width > maxDim || height > maxDim){
+          if(width > height){
+            height = Math.round(height * maxDim / width);
+            width = maxDim;
+          } else {
+            width = Math.round(width * maxDim / height);
+            height = maxDim;
+          }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width; canvas.height = height;
+        canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', 0.85));
+      };
+      img.onerror = reject;
+      img.src = e.target.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+function renderPatientImages(images){
+  const box = $('patientImagesList');
+  if(!images.length){ box.innerHTML = '<div class="no-visits">لسه مفيش صور مرفوعة</div>'; return; }
+  box.innerHTML = images.map(im=>{
+    const viewUrl = `https://drive.google.com/uc?export=view&id=${im.DriveFileId}`;
+    return `<div class="img-card" data-id="${escapeHtml(String(im.ImageID))}">
+      <a href="${viewUrl}" target="_blank">
+        <img src="${viewUrl}" loading="lazy" style="width:100%; height:120px; object-fit:cover; border-radius:10px; border:1px solid var(--line); background:#F2F0E9;">
+      </a>
+      <div style="font-size:11px; color:var(--muted); text-align:center; margin-top:5px;">${escapeHtml(formatDate(im.ImageDate))}</div>
+      <button type="button" class="btn btn-outline-red img-delete-btn" style="width:100%; margin-top:4px; padding:5px; font-size:11px;">حذف</button>
+    </div>`;
+  }).join('');
+
+  box.querySelectorAll('.img-card').forEach(card=>{
+    const delBtn = card.querySelector('.img-delete-btn');
+    delBtn.addEventListener('click', async ()=>{
+      if(!confirm('حذف هذه الصورة نهائيًا؟')) return;
+      try{
+        const data = await apiGet({action:'deletePatientImage', id: card.dataset.id});
+        if(data.error){ showToast(data.error, true); return; }
+        showToast('اتحذفت الصورة ✓');
+        const fresh = await apiGet({action:'getPatient', id: currentPatientId});
+        renderPatientImages(fresh.images || []);
+      }catch(err){ showToast('حصل خطأ أثناء الحذف', true); }
+    });
+  });
+}
+
+$('imageUploadInput').addEventListener('change', async (e)=>{
+  const file = e.target.files[0];
+  if(!file){ return; }
+  if(!currentPatientId){ showToast('احفظ بيانات المريض الأول', true); e.target.value = ''; return; }
+  showToast('جاري رفع الصورة...');
+  try{
+    const dataUrl = await resizeImageFile(file, 1000);
+    const base64 = dataUrl.split(',')[1];
+    const data = await apiPostReal({
+      action: 'addPatientImage',
+      PatientID: currentPatientId,
+      ImageDate: new Date().toISOString().slice(0,10),
+      base64: base64,
+      mimeType: 'image/jpeg'
+    });
+    if(data.error){ showToast(data.error, true); }
+    else{
+      showToast('اتضافت الصورة ✓');
+      const fresh = await apiGet({action:'getPatient', id: currentPatientId});
+      renderPatientImages(fresh.images || []);
+    }
+  }catch(err){ showToast('حصل خطأ أثناء رفع الصورة', true); }
+  finally{ e.target.value = ''; }
+});
 
 /* ================== المواعيد (الكالندر) ================== */
 function buildAppointmentItemHtml(a){
@@ -1483,15 +1889,21 @@ function showToast(msg, isError){
 }
 
 async function apiGet(params){
-  const url = APPS_SCRIPT_URL + '?' + new URLSearchParams(params).toString();
+  const token = localStorage.getItem('clinicToken') || '';
+  const url = APPS_SCRIPT_URL + '?' + new URLSearchParams(Object.assign({}, params, {token})).toString();
   const res = await fetch(url);
-  return res.json();
+  const data = await res.json();
+  if(data && data.needLogin){ handleSessionExpired(); }
+  return data;
 }
 async function apiPost(body){
   const { action, ...rest } = body;
-  const url = APPS_SCRIPT_URL + '?' + new URLSearchParams({ action, data: JSON.stringify(rest) }).toString();
+  const token = localStorage.getItem('clinicToken') || '';
+  const url = APPS_SCRIPT_URL + '?' + new URLSearchParams({ action, data: JSON.stringify(rest), token }).toString();
   const res = await fetch(url);
-  return res.json();
+  const data = await res.json();
+  if(data && data.needLogin){ handleSessionExpired(); }
+  return data;
 }
 
 /* ---------- Search ---------- */
@@ -1551,6 +1963,8 @@ async function loadPatient(id){
   try{
     const data = await apiGet({action:'getPatient', id});
     if(data.error){ showToast(data.error, true); return; }
+    editingHistoryId = null;
+    editingHistoryType = null;
     currentPatientId = data.patient.PatientID;
     $('folderTab').textContent = 'ملف رقم ' + data.patient.PatientID;
     $('fName').value = data.patient.Name || '';
@@ -1573,6 +1987,8 @@ async function loadPatient(id){
     renderRxHistory(data.rxHistory || []);
     renderPhysioHistory(data.physioHistory || []);
     renderReportHistory(data.reportHistory || []);
+    renderInvoices(data.invoices || []);
+    renderPatientImages(data.images || []);
     $('results').classList.remove('open');
     $('searchInput').value = '';
     openWorkspace();
@@ -1582,6 +1998,10 @@ async function loadPatient(id){
 
 function newPatient(){
   currentPatientId = null;
+  editingHistoryId = null;
+  editingHistoryType = null;
+  editingInvoiceId = null;
+  currentInvoiceItems = [];
   $('folderTab').textContent = 'ملف جديد';
   ['fName','fAge','fPhone','fClinicNumber','fNote'].forEach(id=> $(id).value='');
   $('fExam').value = EXAM_TEMPLATE;
@@ -1599,6 +2019,8 @@ function newPatient(){
   renderRxHistory([]);
   renderPhysioHistory([]);
   renderReportHistory([]);
+  renderInvoices([]);
+  renderPatientImages([]);
   openWorkspace();
   resetToFirstTab();
   $('fName').focus();
@@ -1612,7 +2034,6 @@ function openWorkspace(){
   $('casesView').style.display = 'none';
   $('statsView').style.display = 'none';
   $('calendarView').style.display = 'none';
-  $('messagesView').style.display = 'none';
   $('workspace').style.display = 'block';
   $('newVisitForm').classList.remove('open');
 }
@@ -1625,7 +2046,6 @@ $('viewOperationPatientsBtn').onclick = async ()=>{
   $('casesView').style.display = 'none';
   $('statsView').style.display = 'none';
   $('calendarView').style.display = 'none';
-  $('messagesView').style.display = 'none';
   $('operationsPatientsView').style.display = 'block';
   const box = $('operationsPatientsList');
   box.innerHTML = '<div class="no-visits">جاري التحميل...</div>';
@@ -1664,7 +2084,7 @@ $('viewOperationPatientsBtn').onclick = async ()=>{
 $('closeOperationsViewBtn').onclick = ()=>{
   $('operationsPatientsView').style.display = 'none';
   if(currentPatientId){ $('workspace').style.display = 'block'; }
-  else{ $('placeholder').style.display = 'block'; }
+  else{ $('placeholder').style.display = 'block'; loadDashboard(); }
 };
 
 /* ---------- Red Flag patients list ---------- */
@@ -1675,7 +2095,6 @@ $('viewRedFlagsBtn').onclick = async ()=>{
   $('casesView').style.display = 'none';
   $('statsView').style.display = 'none';
   $('calendarView').style.display = 'none';
-  $('messagesView').style.display = 'none';
   $('redFlagPatientsView').style.display = 'block';
   const box = $('redFlagPatientsList');
   box.innerHTML = '<div class="no-visits">جاري التحميل...</div>';
@@ -1715,7 +2134,7 @@ $('viewRedFlagsBtn').onclick = async ()=>{
 $('closeRedFlagsViewBtn').onclick = ()=>{
   $('redFlagPatientsView').style.display = 'none';
   if(currentPatientId){ $('workspace').style.display = 'block'; }
-  else{ $('placeholder').style.display = 'block'; }
+  else{ $('placeholder').style.display = 'block'; loadDashboard(); }
 };
 
 /* ---------- Cases list (Recent / All) ---------- */
@@ -1764,7 +2183,6 @@ $('viewCasesBtn').onclick = async ()=>{
   $('redFlagPatientsView').style.display = 'none';
   $('statsView').style.display = 'none';
   $('calendarView').style.display = 'none';
-  $('messagesView').style.display = 'none';
   $('casesView').style.display = 'block';
   document.querySelectorAll('[data-cases-tab]').forEach(b=> b.classList.remove('active'));
   $('casesTabRecent').classList.add('active');
@@ -1775,7 +2193,7 @@ $('viewCasesBtn').onclick = async ()=>{
 $('closeCasesViewBtn').onclick = ()=>{
   $('casesView').style.display = 'none';
   if(currentPatientId){ $('workspace').style.display = 'block'; }
-  else{ $('placeholder').style.display = 'block'; }
+  else{ $('placeholder').style.display = 'block'; loadDashboard(); }
 };
 
 /* ---------- Stats view ---------- */
@@ -1862,14 +2280,13 @@ $('viewStatsBtn').onclick = ()=>{
   $('redFlagPatientsView').style.display = 'none';
   $('casesView').style.display = 'none';
   $('calendarView').style.display = 'none';
-  $('messagesView').style.display = 'none';
   $('statsView').style.display = 'block';
   loadStats();
 };
 $('closeStatsViewBtn').onclick = ()=>{
   $('statsView').style.display = 'none';
   if(currentPatientId){ $('workspace').style.display = 'block'; }
-  else{ $('placeholder').style.display = 'block'; }
+  else{ $('placeholder').style.display = 'block'; loadDashboard(); }
 };
 
 $('viewCalendarBtn').onclick = async ()=>{
@@ -1879,7 +2296,6 @@ $('viewCalendarBtn').onclick = async ()=>{
   $('redFlagPatientsView').style.display = 'none';
   $('casesView').style.display = 'none';
   $('statsView').style.display = 'none';
-  $('messagesView').style.display = 'none';
   $('calendarView').style.display = 'block';
   calSelectedDateStr = null;
   document.querySelectorAll('[data-cal-view]').forEach(b=> b.classList.remove('active'));
@@ -1891,96 +2307,7 @@ $('viewCalendarBtn').onclick = async ()=>{
 $('closeCalendarViewBtn').onclick = ()=>{
   $('calendarView').style.display = 'none';
   if(currentPatientId){ $('workspace').style.display = 'block'; }
-  else{ $('placeholder').style.display = 'block'; }
-};
-
-/* رقم التليفون المصري بيبدأ بصفر (11 رقم) - واتساب محتاج كود الدولة بدل الصفر */
-function normalizePhoneForWhatsapp(phone){
-  let p = String(phone).replace(/[^\d]/g, '');
-  if(p.startsWith('0') && p.length === 11){
-    p = '20' + p.slice(1);
-  }
-  return p;
-}
-
-/* ---------- Individual WhatsApp icon inside patient file ---------- */
-$('sendWhatsappBtn').onclick = ()=>{
-  const phone = $('fPhone').value.trim();
-  if(!phone){ showToast('اكتب رقم تليفون المريض الأول', true); return; }
-  const url = `https://wa.me/${normalizePhoneForWhatsapp(phone)}`;
-  window.open(url, '_blank');
-};
-
-/* ---------- Messages (WhatsApp) - bulk ---------- */
-let allPatientsForMsg = [];
-
-function renderMsgPatientsList(list){
-  const box = $('msgPatientsList');
-  if(!list.length){
-    box.innerHTML = '<div class="no-visits">لا يوجد مرضى برقم تليفون</div>';
-    return;
-  }
-  box.innerHTML = list.map(p=>`
-    <label style="display:flex; align-items:center; gap:10px; padding:11px 8px; border-bottom:1px solid var(--line); cursor:pointer;">
-      <input type="checkbox" class="msg-patient-check" data-id="${escapeHtml(String(p.PatientID))}" data-phone="${escapeHtml(String(p.Phone))}" data-name="${escapeHtml(p.Name||'')}" style="width:18px;height:18px;">
-      <span style="flex:1; font-weight:600;">${escapeHtml(p.Name || '—')}</span>
-      <span style="color:var(--muted); font-size:13px;">${escapeHtml(String(p.Phone))}</span>
-    </label>`).join('');
-}
-
-async function loadMessagesPatients(){
-  const box = $('msgPatientsList');
-  box.innerHTML = '<div class="no-visits">جاري التحميل...</div>';
-  try{
-    const data = await apiGet({action:'getAllPatients'});
-    allPatientsForMsg = (data.results || []).filter(p => p.Phone);
-    renderMsgPatientsList(allPatientsForMsg);
-  }catch(err){ box.innerHTML = '<div class="no-visits">تعذر تحميل المرضى</div>'; }
-}
-
-$('selectAllMsgBtn').onclick = ()=>{
-  document.querySelectorAll('.msg-patient-check').forEach(cb=> cb.checked = true);
-};
-$('clearAllMsgBtn').onclick = ()=>{
-  document.querySelectorAll('.msg-patient-check').forEach(cb=> cb.checked = false);
-};
-
-$('prepareMessagesBtn').onclick = ()=>{
-  const text = $('msgText').value.trim();
-  if(!text){ showToast('اكتب نص الرسالة الأول', true); return; }
-  const checked = Array.from(document.querySelectorAll('.msg-patient-check:checked'));
-  if(!checked.length){ showToast('اختار مريض واحد على الأقل', true); return; }
-  const encoded = encodeURIComponent(text);
-  const box = $('msgSendLinks');
-  box.innerHTML = `<div class="visits-head" style="margin-bottom:10px;"><h2>روابط الإرسال (${checked.length})</h2></div>` +
-    checked.map(cb=>{
-      const phone = normalizePhoneForWhatsapp(cb.dataset.phone);
-      const name = cb.dataset.name;
-      const url = `https://wa.me/${phone}?text=${encoded}`;
-      return `<a href="${url}" target="_blank" class="btn btn-primary" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; text-decoration:none;">
-        <span>واتساب ${escapeHtml(name)}</span>
-        <span>↗</span>
-      </a>`;
-    }).join('');
-  showToast('الروابط جاهزة تحت - دوس على كل واحد يفتحلك واتساب بالرسالة جاهزة');
-};
-
-$('viewMessagesBtn').onclick = async ()=>{
-  $('placeholder').style.display = 'none';
-  $('workspace').style.display = 'none';
-  $('operationsPatientsView').style.display = 'none';
-  $('redFlagPatientsView').style.display = 'none';
-  $('casesView').style.display = 'none';
-  $('statsView').style.display = 'none';
-  $('calendarView').style.display = 'none';
-  $('messagesView').style.display = 'block';
-  $('msgSendLinks').innerHTML = '';
-  await loadMessagesPatients();
-};
-$('closeMessagesViewBtn').onclick = ()=>{
-  $('messagesView').style.display = 'none';
-  if(currentPatientId){ $('workspace').style.display = 'block'; }
-  else{ $('placeholder').style.display = 'block'; }
+  else{ $('placeholder').style.display = 'block'; loadDashboard(); }
 };
 
 /* ---------- Title-bar badge (عدد المرضى وحالات Red Flag) ---------- */
@@ -2010,7 +2337,149 @@ async function updateTitleBadge(){
     }
   }catch(err){ /* تجاهل */ }
 }
-updateTitleBadge();
+
+
+/* ---------- الشاشة الرئيسية (Dashboard) ---------- */
+async function loadDashboard(){
+  const box = $('dashboardContent');
+  if(!APPS_SCRIPT_URL || APPS_SCRIPT_URL.includes('PASTE_YOUR')) return;
+  box.innerHTML = '<div class="dash-empty">جاري التحميل...</div>';
+  let html = '<div class="dashboard-grid">';
+
+  // مواعيد النهاردة
+  try{
+    const apptData = await apiGet({action:'getAppointments'});
+    const todayStr = new Date().toISOString().slice(0,10);
+    const todayAppts = (apptData.results || []).filter(a => String(a.AppointmentDate||'').slice(0,10) === todayStr);
+    html += `<div class="dashboard-card"><h2>📅 مواعيد النهاردة</h2>`;
+    if(!todayAppts.length){
+      html += `<div class="dash-empty">مفيش مواعيد النهاردة</div>`;
+    } else {
+      todayAppts.forEach(a=>{
+        html += `<div class="dash-row"><span>${escapeHtml(a.Subject||'—')}</span><span>${escapeHtml(a.AppointmentTime||'')}</span></div>`;
+      });
+    }
+    html += `</div>`;
+  }catch(err){
+    html += `<div class="dashboard-card"><h2>📅 مواعيد النهاردة</h2><div class="dash-empty">تعذر التحميل</div></div>`;
+  }
+
+  // آخر 5 حالات
+  try{
+    const recentData = await apiGet({action:'getRecentPatients'});
+    const recent = (recentData.results || []).slice(0, 5);
+    html += `<div class="dashboard-card"><h2>🕓 آخر حالات فتحتها</h2>`;
+    if(!recent.length){
+      html += `<div class="dash-empty">لسه ملفتحتش أي مريض</div>`;
+    } else {
+      recent.forEach(p=>{
+        html += `<div class="dash-row dash-patient-row" data-id="${escapeHtml(String(p.PatientID))}"><span>${escapeHtml(p.Name||'—')}</span><span style="color:var(--muted); font-size:12.5px;">${p.LastVisitDate ? escapeHtml(formatDate(p.LastVisitDate)) : ''}</span></div>`;
+      });
+    }
+    html += `</div>`;
+  }catch(err){
+    html += `<div class="dashboard-card"><h2>🕓 آخر حالات فتحتها</h2><div class="dash-empty">تعذر التحميل</div></div>`;
+  }
+
+  // عدد الـ Red Flags
+  try{
+    const counts = await apiGet({action:'getBasicCounts'});
+    html += `<div class="dashboard-card"><h2>🚩 حالات Red Flag</h2>
+      <div class="dash-big-num">${counts.redFlags || 0}</div>
+    </div>`;
+  }catch(err){
+    html += `<div class="dashboard-card"><h2>🚩 حالات Red Flag</h2><div class="dash-empty">تعذر التحميل</div></div>`;
+  }
+
+  html += '</div>';
+  box.innerHTML = html;
+  box.querySelectorAll('.dash-patient-row').forEach(row=>{
+    row.addEventListener('click', ()=> loadPatient(row.dataset.id));
+  });
+}
+
+/* ---------- تسجيل الدخول ---------- */
+function showLoginScreen(){
+  $('loginScreen').style.display = 'flex';
+}
+function hideLoginScreen(){
+  $('loginScreen').style.display = 'none';
+}
+function handleSessionExpired(){
+  localStorage.removeItem('clinicToken');
+  showLoginScreen();
+}
+
+function initAppAfterLogin(){
+  loadListsFromSheet();
+  updateTitleBadge();
+  loadDashboard();
+}
+
+async function attemptAutoLogin(){
+  const token = localStorage.getItem('clinicToken');
+  if(!token){ showLoginScreen(); return; }
+  try{
+    const data = await apiGet({action:'validateToken', token});
+    if(data.valid){
+      hideLoginScreen();
+      initAppAfterLogin();
+    } else {
+      localStorage.removeItem('clinicToken');
+      showLoginScreen();
+    }
+  }catch(err){
+    showLoginScreen();
+  }
+}
+
+$('loginBtn').onclick = async ()=>{
+  const username = $('loginUsername').value.trim();
+  const password = $('loginPassword').value;
+  if(!username || !password){
+    $('loginError').textContent = 'اكتب اسم المستخدم وكلمة المرور';
+    $('loginError').style.display = 'block';
+    return;
+  }
+  const btn = $('loginBtn');
+  btn.disabled = true; const orig = btn.textContent; btn.textContent = 'جاري الدخول...';
+  try{
+    const data = await apiGet({action:'login', username, password});
+    if(data.error){
+      $('loginError').textContent = data.error;
+      $('loginError').style.display = 'block';
+    } else {
+      localStorage.setItem('clinicToken', data.token);
+      $('loginError').style.display = 'none';
+      $('loginPassword').value = '';
+      hideLoginScreen();
+      initAppAfterLogin();
+    }
+  }catch(err){
+    $('loginError').textContent = 'حصل خطأ في الاتصال، حاول تاني';
+    $('loginError').style.display = 'block';
+  }
+  finally{
+    btn.disabled = false; btn.textContent = orig;
+  }
+};
+
+$('loginPassword').addEventListener('keydown', e=>{
+  if(e.key === 'Enter') $('loginBtn').click();
+});
+
+$('logoutBtn').onclick = ()=>{
+  if(!confirm('تسجيل الخروج من الموقع؟')) return;
+  localStorage.removeItem('clinicToken');
+  location.reload();
+};
+
+if(!APPS_SCRIPT_URL || APPS_SCRIPT_URL.includes('PASTE_YOUR')){
+  hideLoginScreen();
+} else {
+  attemptAutoLogin();
+}
+
 
 /* ---------- Save patient ---------- */
 async function savePatientData(btn, historyType){
@@ -2048,10 +2517,20 @@ async function savePatientData(btn, historyType){
         const content = historyType === 'rx' ? collectPrescription()
           : historyType === 'physio' ? collectPhysio()
           : collectReport();
-        const todayStr = new Date().toISOString().slice(0,10);
-        await apiPost({action:'addHistory', entry:{
-          PatientID: currentPatientId, Type: historyType, HistoryDate: todayStr, Content: JSON.stringify(content)
-        }});
+
+        if(editingHistoryId && editingHistoryType === historyType){
+          await apiPost({action:'updateHistory', entry:{
+            HistoryID: editingHistoryId, Content: JSON.stringify(content)
+          }});
+          showToast('اتحدّث السجل ✓');
+          editingHistoryId = null;
+          editingHistoryType = null;
+        } else {
+          const todayStr = new Date().toISOString().slice(0,10);
+          await apiPost({action:'addHistory', entry:{
+            PatientID: currentPatientId, Type: historyType, HistoryDate: todayStr, Content: JSON.stringify(content)
+          }});
+        }
         const fresh = await apiGet({action:'getPatient', id: currentPatientId});
         renderRxHistory(fresh.rxHistory || []);
         renderPhysioHistory(fresh.physioHistory || []);
@@ -2068,42 +2547,98 @@ $('savePhysioBtn').onclick = ()=> savePatientData($('savePhysioBtn'), 'physio');
 $('saveReportBtn').onclick = ()=> savePatientData($('saveReportBtn'), 'report');
 
 /* ---------- Rx / Physio / Report history ---------- */
+let currentHistoryEntry = null;
+
+function openHistoryDetail(type, entry, labelPrefix, buildBodyHtmlFn){
+  let content = {};
+  try{ content = JSON.parse(entry.Content || '{}'); }catch(e){}
+  currentHistoryEntry = { type, entry, content, buildBodyHtmlFn };
+  $('historyDetailTitle').textContent = labelPrefix + ' - ' + formatDate(entry.HistoryDate);
+  $('historyDetailContent').innerHTML = buildBodyHtmlFn(content);
+  $('historyDetailModal').style.display = 'flex';
+}
+$('closeHistoryDetailBtn').onclick = ()=>{
+  $('historyDetailModal').style.display = 'none';
+  currentHistoryEntry = null;
+};
+
+function renderHistoryIcons(containerId, entries, icon, labelPrefix, buildBodyHtmlFn, emptyText, type){
+  const box = $(containerId);
+  if(!entries.length){ box.innerHTML = `<div class="no-visits">${emptyText}</div>`; return; }
+  box.innerHTML = `<div class="history-icons">` + entries.map((h,i)=>`
+    <div class="history-icon-card" data-idx="${i}">
+      <div class="icon-box">${icon}</div>
+      <div class="icon-date">${escapeHtml(formatDate(h.HistoryDate))}</div>
+    </div>`).join('') + `</div>`;
+  box.querySelectorAll('.history-icon-card').forEach(card=>{
+    card.addEventListener('click', ()=>{
+      openHistoryDetail(type, entries[card.dataset.idx], labelPrefix, buildBodyHtmlFn);
+    });
+  });
+}
+
 function renderRxHistory(entries){
-  const box = $('rxHistoryList');
-  if(!entries.length){ box.innerHTML = '<div class="no-visits">لسه مفيش هستوري روشتات</div>'; return; }
-  box.innerHTML = entries.map(h=>{
-    let content = {};
-    try{ content = JSON.parse(h.Content || '{}'); }catch(e){}
-    return `<div class="visit-item">
-      <div class="visit-date">${escapeHtml(formatDate(h.HistoryDate))}</div>
-      <div class="visit-notes">${buildRxBodyHtml(Object.assign({diagnosis:'',medicines:[],recommendations:[],radiologyRequested:[],labsRequested:[]}, content))}</div>
-    </div>`;
-  }).join('');
+  renderHistoryIcons('rxHistoryList', entries, '💊', 'روشتة',
+    content => buildRxBodyHtml(Object.assign({diagnosis:'',medicines:[],recommendations:[],radiologyRequested:[],labsRequested:[]}, content)),
+    'لسه مفيش هستوري روشتات', 'rx');
 }
 function renderPhysioHistory(entries){
-  const box = $('physioHistoryList');
-  if(!entries.length){ box.innerHTML = '<div class="no-visits">لسه مفيش هستوري علاج طبيعي</div>'; return; }
-  box.innerHTML = entries.map(h=>{
-    let content = {};
-    try{ content = JSON.parse(h.Content || '{}'); }catch(e){}
-    return `<div class="visit-item">
-      <div class="visit-date">${escapeHtml(formatDate(h.HistoryDate))}</div>
-      <div class="visit-notes">${buildPhysioBodyHtml(Object.assign({diagnosis:'',interventions:[],sessions:''}, content))}</div>
-    </div>`;
-  }).join('');
+  renderHistoryIcons('physioHistoryList', entries, '🏃', 'علاج طبيعي',
+    content => buildPhysioBodyHtml(Object.assign({diagnosis:'',interventions:[],sessions:''}, content)),
+    'لسه مفيش هستوري علاج طبيعي', 'physio');
 }
 function renderReportHistory(entries){
-  const box = $('reportHistoryList');
-  if(!entries.length){ box.innerHTML = '<div class="no-visits">لسه مفيش هستوري تقارير</div>'; return; }
-  box.innerHTML = entries.map(h=>{
-    let content = {};
-    try{ content = JSON.parse(h.Content || '{}'); }catch(e){}
-    return `<div class="visit-item">
-      <div class="visit-date">${escapeHtml(formatDate(h.HistoryDate))}</div>
-      <div class="visit-notes">${buildReportBodyHtml(Object.assign({type:'',body:''}, content))}</div>
-    </div>`;
-  }).join('');
+  renderHistoryIcons('reportHistoryList', entries, '📋', 'تقرير',
+    content => buildReportBodyHtml(Object.assign({type:'',body:''}, content)),
+    'لسه مفيش هستوري تقارير', 'report');
 }
+
+$('downloadHistoryPdfBtn').onclick = ()=>{
+  if(!currentHistoryEntry) return;
+  const { type, entry, content, buildBodyHtmlFn } = currentHistoryEntry;
+  const bodyHtml = buildBodyHtmlFn(content);
+  const dateStr = formatDate(entry.HistoryDate);
+  const prefix = type === 'rx' ? 'روشتة' : type === 'physio' ? 'علاج-طبيعي' : 'تقرير-طبي';
+  exportRxTemplateAsPdf(bodyHtml, prefix, $('downloadHistoryPdfBtn'), dateStr);
+};
+
+$('deleteHistoryBtn').onclick = async ()=>{
+  if(!currentHistoryEntry) return;
+  if(!confirm('حذف هذا السجل نهائيًا؟')) return;
+  try{
+    const data = await apiGet({action:'deleteHistory', id: currentHistoryEntry.entry.HistoryID});
+    if(data.error){ showToast(data.error, true); return; }
+    showToast('اتحذف السجل ✓');
+    $('historyDetailModal').style.display = 'none';
+    currentHistoryEntry = null;
+    const fresh = await apiGet({action:'getPatient', id: currentPatientId});
+    renderRxHistory(fresh.rxHistory || []);
+    renderPhysioHistory(fresh.physioHistory || []);
+    renderReportHistory(fresh.reportHistory || []);
+  }catch(err){ showToast('حصل خطأ أثناء الحذف', true); }
+};
+
+$('editHistoryBtn').onclick = ()=>{
+  if(!currentHistoryEntry) return;
+  const { type, entry } = currentHistoryEntry;
+  editingHistoryId = entry.HistoryID;
+  editingHistoryType = type;
+
+  if(type === 'rx') loadPrescription(entry.Content);
+  else if(type === 'physio') loadPhysio(entry.Content);
+  else if(type === 'report') loadReport(entry.Content);
+
+  $('historyDetailModal').style.display = 'none';
+  currentHistoryEntry = null;
+
+  const tabId = type === 'rx' ? 'tab-rx' : type === 'physio' ? 'tab-physio' : 'tab-reports';
+  document.querySelectorAll('.tab-btn').forEach(b=> b.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p=> p.classList.remove('active'));
+  document.querySelector(`.tab-btn[data-tab="${tabId}"]`).classList.add('active');
+  $(tabId).classList.add('active');
+
+  showToast('عدّل البيانات ودوس حفظ عشان تحدّث السجل ده');
+};
 
 $('openRadiologyLinkBtn').onclick = ()=>{
   const link = $('fRadiologyLink').value.trim();
@@ -2125,6 +2660,7 @@ $('deletePatientBtn').onclick = async ()=>{
       $('workspace').style.display = 'none';
       $('placeholder').style.display = 'block';
       updateTitleBadge();
+      loadDashboard();
     }
   }catch(err){ showToast('حصل خطأ أثناء الحذف', true); }
   finally{ btn.disabled = false; btn.textContent = orig; }
@@ -2305,19 +2841,115 @@ function buildReportBodyHtml(rep){
     <div style="white-space:pre-wrap;">${escapeHtml(rep.body || '')}</div>`;
 }
 
-async function exportRxTemplateAsPdf(bodyHtml, filenamePrefix, btn){
+function buildInvoiceBodyHtml(items, total, notes){
+  if(!items || !items.length){
+    return '<div style="color:#888;">لا يوجد خدمات مسجلة</div>';
+  }
+  let html = '<table style="width:100%; border-collapse:collapse; font-size:10pt;">';
+  html += `<tr style="border-bottom:1.5px solid #1F4A40;">
+    <th style="text-align:right; padding:8px 4px;">الخدمة</th>
+    <th style="text-align:left; padding:8px 4px;">السعر</th>
+  </tr>`;
+  items.forEach(it=>{
+    html += `<tr style="border-bottom:1px solid #e2ddce;">
+      <td style="padding:8px 4px;">${escapeHtml(it.name)}</td>
+      <td style="text-align:left; padding:8px 4px;">${escapeHtml(String(it.price))}</td>
+    </tr>`;
+  });
+  html += `<tr>
+    <td style="padding:12px 4px 4px; font-weight:800;">الإجمالي</td>
+    <td style="text-align:left; padding:12px 4px 4px; font-weight:800;">${escapeHtml(String(total))}</td>
+  </tr>`;
+  html += '</table>';
+  if(notes && notes.trim()){
+    html += `<div style="margin-top:18px; padding-top:10px; border-top:1px solid #e2ddce; white-space:pre-wrap; font-size:9.5pt; color:#444;">
+      <b>ملاحظات:</b> ${escapeHtml(notes)}
+    </div>`;
+  }
+  return html;
+}
+
+let letterheadImageData = null;
+let letterheadFetchAttempted = false;
+let letterheadRatio = null; // النسبة بين العرض والارتفاع الحقيقيين لصورة الشعار
+
+async function ensureLetterheadLoaded(){
+  if(letterheadImageData || letterheadFetchAttempted) return;
+  letterheadFetchAttempted = true;
+  try{
+    const data = await apiGet({action:'getLetterheadImage'});
+    if(data.success){
+      await new Promise((resolve)=>{
+        const img = new Image();
+        img.onload = ()=>{
+          letterheadRatio = img.naturalWidth / img.naturalHeight;
+          resolve();
+        };
+        img.onerror = resolve;
+        img.src = data.dataUrl;
+      });
+      letterheadImageData = data.dataUrl;
+    }
+  }catch(err){ /* تجاهل */ }
+}
+
+$('useLetterheadToggle').addEventListener('change', ()=>{
+  localStorage.setItem('useLetterhead', $('useLetterheadToggle').checked ? '1' : '0');
+  if($('useLetterheadToggle').checked) ensureLetterheadLoaded();
+});
+if(localStorage.getItem('useLetterhead') === '1'){
+  $('useLetterheadToggle').checked = true;
+  ensureLetterheadLoaded();
+}
+
+async function exportRxTemplateAsPdf(bodyHtml, filenamePrefix, btn, dateOverride){
   const name = $('fName').value.trim() || '—';
-  const todayStr = new Date().toLocaleDateString('ar-EG', {year:'numeric', month:'long', day:'numeric'});
+  const todayStr = dateOverride || new Date().toLocaleDateString('ar-EG', {year:'numeric', month:'long', day:'numeric'});
 
   const tpl = $('rxTemplate');
+  const letterheadImg = tpl.querySelector('.rx-letterhead-img');
+  const useLetterhead = $('useLetterheadToggle').checked;
+  let letterheadApplied = false;
+
+  if(useLetterhead){
+    await ensureLetterheadLoaded();
+    if(letterheadImageData && letterheadRatio){
+      letterheadImg.src = letterheadImageData;
+      letterheadImg.style.display = 'block';
+      // نخلي ارتفاع الورقة نفسه يتظبط على نفس نسبة الصورة بالظبط - عشان تظهر كاملة من غير قص ولا تمديد
+      tpl.style.height = (420 / letterheadRatio) + 'px';
+      tpl.style.padding = '0';
+      tpl.querySelector('.rx-header-spacer').style.height = '100px';
+      tpl.querySelector('.rx-header-line').style.borderTop = 'none';
+      tpl.querySelector('.rx-header-line').style.borderBottom = 'none';
+      tpl.querySelector('.rx-header-line').style.padding = '12px 32px 0';
+      tpl.querySelector('.rx-body').style.padding = '0 32px';
+      letterheadApplied = true;
+    } else {
+      showToast('الشعار مش متاح - هيتحمل من غير شعار', true);
+    }
+  }
+  if(!letterheadApplied){
+    letterheadImg.style.display = 'none';
+    tpl.style.height = 'auto';
+    tpl.style.padding = '36px 32px';
+    tpl.querySelector('.rx-header-spacer').style.height = '70px';
+    tpl.querySelector('.rx-header-line').style.borderTop = '2.5px solid #1F4A40';
+    tpl.querySelector('.rx-header-line').style.borderBottom = '1px solid #e2ddce';
+    tpl.querySelector('.rx-header-line').style.padding = '12px 2px';
+    tpl.querySelector('.rx-body').style.padding = '0';
+  }
+
   tpl.querySelector('.rx-name').textContent = name;
   tpl.querySelector('.rx-date').textContent = todayStr;
   tpl.querySelector('.rx-body').innerHTML = bodyHtml;
 
   btn.disabled = true; const orig = btn.textContent; btn.innerHTML = '<span class="spinner"></span> جاري التجهيز...';
   try{
-    const canvas = await html2canvas(tpl, {scale:2, backgroundColor:'#ffffff'});
-    const imgData = canvas.toDataURL('image/png');
+    // ننتظر فريمين عرض (render frames) عشان نتأكد إن صورة الخلفية اتعرضت فعليًا على الشاشة قبل التصوير
+    await new Promise(r => requestAnimationFrame(()=> requestAnimationFrame(r)));
+    const canvas = await html2canvas(tpl, {scale:2, backgroundColor:'#ffffff', useCORS:true});
+    const imgData = canvas.toDataURL('image/jpeg', 0.92);
     const { jsPDF } = window.jspdf;
     const pdf = new jsPDF({unit:'pt', format:'a5'});
     const pageWidth = pdf.internal.pageSize.getWidth();
@@ -2327,8 +2959,8 @@ async function exportRxTemplateAsPdf(bodyHtml, filenamePrefix, btn){
     let imgHeight = imgWidth / ratio;
     if(imgHeight > pageHeight){ imgHeight = pageHeight; imgWidth = imgHeight * ratio; }
     const x = (pageWidth - imgWidth) / 2;
-    pdf.addImage(imgData, 'PNG', x, 0, imgWidth, imgHeight);
-    pdf.save(`${filenamePrefix}-${name}.pdf`);
+    pdf.addImage(imgData, 'JPEG', x, 0, imgWidth, imgHeight);
+    pdf.save(`${filenamePrefix}-${name}${letterheadApplied ? '-بشعار' : ''}.pdf`);
   }catch(err){ showToast('تعذر إنشاء PDF', true); }
   finally{ btn.disabled = false; btn.textContent = orig; }
 }
