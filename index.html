@@ -318,6 +318,7 @@
     استخدام الشعار
   </label>
   <button class="btn btn-primary" id="newPatientBtn">+ مريض جديد</button>
+  <button class="btn btn-ghost" id="viewMessagesBtn">💬 رسائل</button>
   <button class="btn btn-ghost" id="logoutBtn" title="تسجيل خروج">🚪</button>
 </header>
 
@@ -422,6 +423,33 @@
     </div>
   </div>
 
+  <div id="messagesView" style="display:none;">
+    <div class="visits-head" style="margin-bottom:14px;">
+      <h2>إرسال رسالة واتساب</h2>
+      <button class="btn btn-ghost" id="closeMessagesViewBtn">✕ إغلاق</button>
+    </div>
+
+    <div class="exam-card" style="margin-bottom:16px;">
+      <label>نص الرسالة</label>
+      <textarea id="msgText" style="min-height:120px;">أهلاً بيك، يسعدنا زيارتك لعيادتنا. لو محتاج أي استفسار احنا في خدمتك.</textarea>
+    </div>
+
+    <div class="exam-card" style="margin-bottom:16px;">
+      <div class="card-actions" style="justify-content:flex-start; margin-top:0;">
+        <button class="btn btn-ghost" id="selectAllMsgBtn">تحديد الكل</button>
+        <button class="btn btn-ghost" id="clearAllMsgBtn">إلغاء التحديد</button>
+      </div>
+    </div>
+
+    <div id="msgPatientsList" class="visits-card" style="padding:8px; max-height:50vh; overflow-y:auto;"></div>
+
+    <div class="card-actions" style="margin-top:16px;">
+      <button class="btn btn-primary" id="prepareMessagesBtn">تجهيز روابط الإرسال</button>
+    </div>
+
+    <div id="msgSendLinks" style="margin-top:16px;"></div>
+  </div>
+
   <div id="workspace" style="display:none;">
     <div class="layout">
       <!-- Patient folder -->
@@ -439,7 +467,10 @@
             </div>
             <div class="field">
               <label>التليفون</label>
-              <input type="text" id="fPhone" placeholder="01xxxxxxxxx">
+              <div style="display:flex; gap:8px;">
+                <input type="text" id="fPhone" placeholder="01xxxxxxxxx" style="flex:1;">
+                <button type="button" class="btn btn-ghost" id="sendWhatsappBtn" title="ابعت رسالة واتساب لهذا المريض" style="padding:10px 14px;">💬</button>
+              </div>
             </div>
           </div>
           <div class="field">
@@ -820,7 +851,7 @@
               <h2>صور المريض</h2>
               <label class="btn btn-primary" style="cursor:pointer; margin:0;">
                 + إضافة صورة
-                <input type="file" id="imageUploadInput" accept="image/*" style="display:none;">
+                <input type="file" id="imageUploadInput" accept="image/*" multiple style="display:none;">
               </label>
             </div>
             <div class="hint" style="margin-bottom:14px;">أشعة، جروح، مستندات... الصورة بتتصغّر تلقائي قبل الرفع عشان توفر مساحة</div>
@@ -1604,28 +1635,39 @@ function renderPatientImages(images){
 }
 
 $('imageUploadInput').addEventListener('change', async (e)=>{
-  const file = e.target.files[0];
-  if(!file){ return; }
+  const files = Array.from(e.target.files || []);
+  if(!files.length){ return; }
   if(!currentPatientId){ showToast('احفظ بيانات المريض الأول', true); e.target.value = ''; return; }
-  showToast('جاري رفع الصورة...');
-  try{
-    const dataUrl = await resizeImageFile(file, 1000);
-    const base64 = dataUrl.split(',')[1];
-    const data = await apiPostReal({
-      action: 'addPatientImage',
-      PatientID: currentPatientId,
-      ImageDate: new Date().toISOString().slice(0,10),
-      base64: base64,
-      mimeType: 'image/jpeg'
-    });
-    if(data.error){ showToast(data.error, true); }
-    else{
-      showToast('اتضافت الصورة ✓');
-      const fresh = await apiGet({action:'getPatient', id: currentPatientId});
-      renderPatientImages(fresh.images || []);
-    }
-  }catch(err){ showToast('حصل خطأ أثناء رفع الصورة', true); }
-  finally{ e.target.value = ''; }
+
+  showToast(files.length > 1 ? `جاري رفع ${files.length} صورة...` : 'جاري رفع الصورة...');
+  let successCount = 0, failCount = 0;
+
+  for(const file of files){
+    try{
+      const dataUrl = await resizeImageFile(file, 1000);
+      const base64 = dataUrl.split(',')[1];
+      const data = await apiPostReal({
+        action: 'addPatientImage',
+        PatientID: currentPatientId,
+        ImageDate: new Date().toISOString().slice(0,10),
+        base64: base64,
+        mimeType: 'image/jpeg'
+      });
+      if(data.error){ failCount++; } else { successCount++; }
+    }catch(err){ failCount++; }
+  }
+
+  if(successCount && !failCount){
+    showToast(successCount > 1 ? `اترفعت ${successCount} صورة ✓` : 'اتضافت الصورة ✓');
+  } else if(successCount && failCount){
+    showToast(`اترفع ${successCount} وفشل ${failCount}`, true);
+  } else {
+    showToast('حصل خطأ أثناء رفع الصور', true);
+  }
+
+  const fresh = await apiGet({action:'getPatient', id: currentPatientId});
+  renderPatientImages(fresh.images || []);
+  e.target.value = '';
 });
 
 /* ================== المواعيد (الكالندر) ================== */
@@ -2060,6 +2102,7 @@ function openWorkspace(){
   $('casesView').style.display = 'none';
   $('statsView').style.display = 'none';
   $('calendarView').style.display = 'none';
+  $('messagesView').style.display = 'none';
   $('workspace').style.display = 'block';
   $('newVisitForm').classList.remove('open');
 }
@@ -2072,6 +2115,7 @@ $('viewOperationPatientsBtn').onclick = async ()=>{
   $('casesView').style.display = 'none';
   $('statsView').style.display = 'none';
   $('calendarView').style.display = 'none';
+  $('messagesView').style.display = 'none';
   $('operationsPatientsView').style.display = 'block';
   const box = $('operationsPatientsList');
   box.innerHTML = '<div class="no-visits">جاري التحميل...</div>';
@@ -2121,6 +2165,7 @@ $('viewRedFlagsBtn').onclick = async ()=>{
   $('casesView').style.display = 'none';
   $('statsView').style.display = 'none';
   $('calendarView').style.display = 'none';
+  $('messagesView').style.display = 'none';
   $('redFlagPatientsView').style.display = 'block';
   const box = $('redFlagPatientsList');
   box.innerHTML = '<div class="no-visits">جاري التحميل...</div>';
@@ -2209,6 +2254,7 @@ $('viewCasesBtn').onclick = async ()=>{
   $('redFlagPatientsView').style.display = 'none';
   $('statsView').style.display = 'none';
   $('calendarView').style.display = 'none';
+  $('messagesView').style.display = 'none';
   $('casesView').style.display = 'block';
   document.querySelectorAll('[data-cases-tab]').forEach(b=> b.classList.remove('active'));
   $('casesTabRecent').classList.add('active');
@@ -2319,6 +2365,7 @@ $('viewStatsBtn').onclick = ()=>{
   $('redFlagPatientsView').style.display = 'none';
   $('casesView').style.display = 'none';
   $('calendarView').style.display = 'none';
+  $('messagesView').style.display = 'none';
   $('statsView').style.display = 'block';
   loadStats();
 };
@@ -2335,6 +2382,7 @@ $('viewCalendarBtn').onclick = async ()=>{
   $('redFlagPatientsView').style.display = 'none';
   $('casesView').style.display = 'none';
   $('statsView').style.display = 'none';
+  $('messagesView').style.display = 'none';
   $('calendarView').style.display = 'block';
   calSelectedDateStr = null;
   document.querySelectorAll('[data-cal-view]').forEach(b=> b.classList.remove('active'));
@@ -2345,6 +2393,95 @@ $('viewCalendarBtn').onclick = async ()=>{
 };
 $('closeCalendarViewBtn').onclick = ()=>{
   $('calendarView').style.display = 'none';
+  if(currentPatientId){ $('workspace').style.display = 'block'; }
+  else{ $('placeholder').style.display = 'block'; loadDashboard(); }
+};
+
+/* رقم التليفون المصري بيبدأ بصفر (11 رقم) - واتساب محتاج كود الدولة بدل الصفر */
+function normalizePhoneForWhatsapp(phone){
+  let p = String(phone).replace(/[^\d]/g, '');
+  if(p.startsWith('0') && p.length === 11){
+    p = '20' + p.slice(1);
+  }
+  return p;
+}
+
+/* ---------- أيقونة واتساب فردية جوه ملف المريض ---------- */
+$('sendWhatsappBtn').onclick = ()=>{
+  const phone = $('fPhone').value.trim();
+  if(!phone){ showToast('اكتب رقم تليفون المريض الأول', true); return; }
+  const url = `https://wa.me/${normalizePhoneForWhatsapp(phone)}`;
+  window.open(url, '_blank');
+};
+
+/* ---------- الرسائل الجماعية ---------- */
+let allPatientsForMsg = [];
+
+function renderMsgPatientsList(list){
+  const box = $('msgPatientsList');
+  if(!list.length){
+    box.innerHTML = '<div class="no-visits">لا يوجد مرضى برقم تليفون</div>';
+    return;
+  }
+  box.innerHTML = list.map(p=>`
+    <label style="display:flex; align-items:center; gap:10px; padding:11px 8px; border-bottom:1px solid var(--line); cursor:pointer;">
+      <input type="checkbox" class="msg-patient-check" data-id="${escapeHtml(String(p.PatientID))}" data-phone="${escapeHtml(String(p.Phone))}" data-name="${escapeHtml(p.Name||'')}" style="width:18px;height:18px;">
+      <span style="flex:1; font-weight:600;">${escapeHtml(p.Name || '—')}</span>
+      <span style="color:var(--muted); font-size:13px;">${escapeHtml(String(p.Phone))}</span>
+    </label>`).join('');
+}
+
+async function loadMessagesPatients(){
+  const box = $('msgPatientsList');
+  box.innerHTML = '<div class="no-visits">جاري التحميل...</div>';
+  try{
+    const data = await apiGet({action:'getAllPatients'});
+    allPatientsForMsg = (data.results || []).filter(p => p.Phone);
+    renderMsgPatientsList(allPatientsForMsg);
+  }catch(err){ box.innerHTML = '<div class="no-visits">تعذر تحميل المرضى</div>'; }
+}
+
+$('selectAllMsgBtn').onclick = ()=>{
+  document.querySelectorAll('.msg-patient-check').forEach(cb=> cb.checked = true);
+};
+$('clearAllMsgBtn').onclick = ()=>{
+  document.querySelectorAll('.msg-patient-check').forEach(cb=> cb.checked = false);
+};
+
+$('prepareMessagesBtn').onclick = ()=>{
+  const text = $('msgText').value.trim();
+  if(!text){ showToast('اكتب نص الرسالة الأول', true); return; }
+  const checked = Array.from(document.querySelectorAll('.msg-patient-check:checked'));
+  if(!checked.length){ showToast('اختار مريض واحد على الأقل', true); return; }
+  const encoded = encodeURIComponent(text);
+  const box = $('msgSendLinks');
+  box.innerHTML = `<div class="visits-head" style="margin-bottom:10px;"><h2>روابط الإرسال (${checked.length})</h2></div>` +
+    checked.map(cb=>{
+      const phone = normalizePhoneForWhatsapp(cb.dataset.phone);
+      const name = cb.dataset.name;
+      const url = `https://wa.me/${phone}?text=${encoded}`;
+      return `<a href="${url}" target="_blank" class="btn btn-primary" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; text-decoration:none;">
+        <span>واتساب ${escapeHtml(name)}</span>
+        <span>↗</span>
+      </a>`;
+    }).join('');
+  showToast('الروابط جاهزة تحت - دوس على كل واحد يفتحلك واتساب بالرسالة جاهزة');
+};
+
+$('viewMessagesBtn').onclick = async ()=>{
+  $('placeholder').style.display = 'none';
+  $('workspace').style.display = 'none';
+  $('operationsPatientsView').style.display = 'none';
+  $('redFlagPatientsView').style.display = 'none';
+  $('casesView').style.display = 'none';
+  $('statsView').style.display = 'none';
+  $('calendarView').style.display = 'none';
+  $('messagesView').style.display = 'block';
+  $('msgSendLinks').innerHTML = '';
+  await loadMessagesPatients();
+};
+$('closeMessagesViewBtn').onclick = ()=>{
+  $('messagesView').style.display = 'none';
   if(currentPatientId){ $('workspace').style.display = 'block'; }
   else{ $('placeholder').style.display = 'block'; loadDashboard(); }
 };
