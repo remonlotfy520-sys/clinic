@@ -741,6 +741,12 @@
                 <textarea id="opFollowUps" style="min-height:100px;" placeholder="المتابعات..."></textarea>
               </div>
 
+              <div class="field" style="max-width:220px;">
+                <label>تاريخ المتابعة القادمة</label>
+                <input type="date" id="opNextFollowUp">
+                <div class="hint">لو حددت تاريخ، هيتضاف تلقائي في الكالندر وهيظهر في المتابعات المتأخرة لو فات معاده</div>
+              </div>
+
               <div class="field">
                 <label>ملاحظات</label>
                 <textarea id="opNotes" style="min-height:100px;" placeholder="ملاحظات..."></textarea>
@@ -1266,6 +1272,7 @@ function startEditOperation(o){
   $('opDressing2').value = o.Dressing2 || '';
   $('opDressing3').value = o.Dressing3 || '';
   $('opFollowUps').value = o.FollowUps || '';
+  $('opNextFollowUp').value = String(o.NextFollowUpDate || '').slice(0,10);
   $('opNotes').value = o.Notes || '';
   $('addOperationBtn').textContent = 'حفظ التعديل';
   $('newOperationForm').classList.add('open');
@@ -1288,7 +1295,7 @@ $('toggleOperationBtn').onclick = ()=>{
   editingOperationId = null;
   $('addOperationBtn').textContent = 'حفظ العملية';
   $('opDate').value = new Date().toISOString().slice(0,10);
-  ['opName','opCost','opFollowUps','opNotes'].forEach(id=> $(id).value='');
+  ['opName','opCost','opFollowUps','opNextFollowUp','opNotes'].forEach(id=> $(id).value='');
   ['opLocation','opDressing1','opDressing2','opDressing3'].forEach(id=> $(id).value='');
   $('newOperationForm').classList.add('open');
 };
@@ -1314,6 +1321,7 @@ $('addOperationBtn').onclick = async ()=>{
       Dressing2: $('opDressing2').value,
       Dressing3: $('opDressing3').value,
       FollowUps: $('opFollowUps').value,
+      NextFollowUpDate: $('opNextFollowUp').value,
       Notes: $('opNotes').value
     };
     let data;
@@ -1328,7 +1336,7 @@ $('addOperationBtn').onclick = async ()=>{
     else{
       showToast(isEditing ? 'اتحدثت العملية ✓' : 'اتسجلت العملية ✓');
       editingOperationId = null;
-      ['opName','opCost','opFollowUps','opNotes'].forEach(id=> $(id).value='');
+      ['opName','opCost','opFollowUps','opNextFollowUp','opNotes'].forEach(id=> $(id).value='');
       ['opLocation','opDressing1','opDressing2','opDressing3'].forEach(id=> $(id).value='');
       $('newOperationForm').classList.remove('open');
       const fresh = await apiGet({action:'getPatient', id: currentPatientId});
@@ -2221,6 +2229,19 @@ async function loadStats(){
     html += statBlock('مرضى ليهم تقرير طبي', data.withReport);
     html += statBlock('🚩 حالات Red Flag', data.redFlags);
 
+    html += `<div class="exam-card"><h2>💰 التقرير المالي</h2>`;
+    html += `<div class="visit-notes">دخل الأسبوع: <b>${escapeHtml(String(data.revenueWeek || 0))}</b></div>`;
+    html += `<div class="visit-notes">دخل الشهر: <b>${escapeHtml(String(data.revenueMonth || 0))}</b></div>`;
+    html += `<div class="visit-notes">إجمالي الدخل: <b>${escapeHtml(String(data.revenueAll || 0))}</b></div>`;
+    const topServices = data.topServicesByRevenue || [];
+    if(topServices.length){
+      html += `<div class="visit-date" style="margin-top:14px;">أكتر الخدمات دخلًا</div>`;
+      topServices.forEach(s=>{
+        html += `<div class="visit-notes">${escapeHtml(s.name)}: <b>${escapeHtml(String(s.total))}</b></div>`;
+      });
+    }
+    html += `</div>`;
+
     html += `<div class="exam-card"><h2>حسب السن</h2>`;
     Object.keys(data.ageGroups || {}).forEach(k=>{
       html += `<div class="visit-notes">${escapeHtml(k)}: <b>${data.ageGroups[k]}</b></div>`;
@@ -2391,11 +2412,37 @@ async function loadDashboard(){
     html += `<div class="dashboard-card"><h2>🚩 حالات Red Flag</h2><div class="dash-empty">تعذر التحميل</div></div>`;
   }
 
+  // متابعات متأخرة
+  try{
+    const overdueData = await apiGet({action:'getOverdueFollowUps'});
+    const overdue = overdueData.results || [];
+    html += `<div class="dashboard-card"><h2>⏰ متابعات متأخرة</h2>`;
+    if(!overdue.length){
+      html += `<div class="dash-empty">مفيش متابعات متأخرة</div>`;
+    } else {
+      overdue.forEach(o=>{
+        const dueDate = safeParseDate(o.NextFollowUpDate);
+        const daysLate = dueDate ? Math.floor((Date.now() - dueDate.getTime()) / (1000*60*60*24)) : 0;
+        html += `<div class="dash-row dash-patient-row" data-id="${escapeHtml(String(o.PatientID))}">
+          <span>${escapeHtml(o.PatientName||'—')} - ${escapeHtml(o.OperationName||'')}</span>
+          <span style="color:var(--red); font-size:12.5px; font-weight:700;">${daysLate > 0 ? 'متأخر ' + daysLate + ' يوم' : 'اليوم'}</span>
+        </div>`;
+      });
+    }
+    html += `</div>`;
+  }catch(err){
+    html += `<div class="dashboard-card"><h2>⏰ متابعات متأخرة</h2><div class="dash-empty">تعذر التحميل</div></div>`;
+  }
+
   html += '</div>';
   box.innerHTML = html;
   box.querySelectorAll('.dash-patient-row').forEach(row=>{
     row.addEventListener('click', ()=> loadPatient(row.dataset.id));
   });
+}
+function safeParseDate(v){
+  const d = new Date(v);
+  return isNaN(d) ? null : d;
 }
 
 /* ---------- تسجيل الدخول ---------- */
