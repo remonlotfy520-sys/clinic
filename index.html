@@ -1600,23 +1600,33 @@ function renderPatientImages(images){
     </div>`).join('');
 
   // نجيب كل صورة من السيرفر مباشرة (base64) بدل رابط جوجل درايف المباشر اللي مش موثوق دايمًا
-  box.querySelectorAll('.img-card').forEach(async (card)=>{
-    const fileId = card.dataset.fileId;
-    const thumbWrap = card.querySelector('.img-thumb-wrap');
-    try{
-      const data = await apiGet({action:'getPatientImageData', fileId});
+  // ومع محاولات إعادة تلقائية - عشان أحيانًا جوجل درايف بياخد ثانية أو اتنين لحد ما الصورة
+  // المرفوعة حديثًا تبقى جاهزة للقراءة فورًا
+  function loadThumb(thumbWrap, fileId, attemptsLeft){
+    apiGet({action:'getPatientImageData', fileId}).then(data=>{
       if(data.success){
         thumbWrap.innerHTML = `<img src="${data.dataUrl}" style="width:100%; height:100%; object-fit:cover;">`;
-        thumbWrap.addEventListener('click', ()=>{
+        thumbWrap.onclick = ()=>{
           const w = window.open('');
           w.document.write(`<img src="${data.dataUrl}" style="max-width:100%;">`);
-        });
+        };
+      } else if(attemptsLeft > 0){
+        setTimeout(()=> loadThumb(thumbWrap, fileId, attemptsLeft - 1), 1500);
       } else {
         thumbWrap.innerHTML = '<span style="font-size:11px; color:var(--muted);">تعذر التحميل</span>';
       }
-    }catch(err){
-      thumbWrap.innerHTML = '<span style="font-size:11px; color:var(--muted);">تعذر التحميل</span>';
-    }
+    }).catch(()=>{
+      if(attemptsLeft > 0){
+        setTimeout(()=> loadThumb(thumbWrap, fileId, attemptsLeft - 1), 1500);
+      } else {
+        thumbWrap.innerHTML = '<span style="font-size:11px; color:var(--muted);">تعذر التحميل</span>';
+      }
+    });
+  }
+  box.querySelectorAll('.img-card').forEach(card=>{
+    const fileId = card.dataset.fileId;
+    const thumbWrap = card.querySelector('.img-thumb-wrap');
+    loadThumb(thumbWrap, fileId, 3);
   });
 
   box.querySelectorAll('.img-card').forEach(card=>{
