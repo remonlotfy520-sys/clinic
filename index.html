@@ -886,7 +886,8 @@
     <div><span class="rx-date" style="font-weight:500;"></span></div>
   </div>
   <div class="rx-body" style="min-height:120px; position:relative; z-index:1;"></div>
-  <div style="margin-top:60px; display:flex; justify-content:flex-end; position:relative; z-index:1;">
+  <div style="margin-top:60px; display:flex; justify-content:space-between; align-items:flex-end; position:relative; z-index:1;">
+    <img class="rx-qrcode" style="width:70px; height:70px; display:none;">
     <div style="text-align:center; color:#555;">
       <div style="width:150px; border-top:1px solid #999; padding-top:6px;">توقيع الطبيب</div>
     </div>
@@ -2643,7 +2644,14 @@ function handleSessionExpired(){
 function initAppAfterLogin(){
   loadListsFromSheet();
   updateTitleBadge();
-  loadDashboard();
+
+  const params = new URLSearchParams(location.search);
+  const patientFromQr = params.get('patient');
+  if(patientFromQr){
+    loadPatient(patientFromQr);
+  } else {
+    loadDashboard();
+  }
 }
 
 async function attemptAutoLogin(){
@@ -3173,6 +3181,24 @@ async function exportRxTemplateAsPdf(bodyHtml, filenamePrefix, btn, dateOverride
   tpl.querySelector('.rx-name').textContent = name;
   tpl.querySelector('.rx-date').textContent = todayStr;
   tpl.querySelector('.rx-body').innerHTML = bodyHtml;
+
+  // كود QR بيوّدي مباشرة لملف المريض ده جوه الموقع - يفيد لو الورقة اتطبعت ومحتاج ترجع للملف بسرعة
+  const qrImg = tpl.querySelector('.rx-qrcode');
+  if(currentPatientId){
+    const patientUrl = location.origin + location.pathname + '?patient=' + encodeURIComponent(currentPatientId);
+    const qrApiUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=' + encodeURIComponent(patientUrl);
+    try{
+      await new Promise((resolve)=>{
+        qrImg.onload = resolve;
+        qrImg.onerror = resolve;
+        qrImg.src = qrApiUrl;
+        qrImg.crossOrigin = 'anonymous';
+      });
+      qrImg.style.display = 'block';
+    }catch(err){ qrImg.style.display = 'none'; }
+  } else {
+    qrImg.style.display = 'none';
+  }
 
   btn.disabled = true; const orig = btn.textContent; btn.innerHTML = '<span class="spinner"></span> جاري التجهيز...';
   try{
