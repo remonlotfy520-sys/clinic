@@ -1625,34 +1625,35 @@ function renderPatientImages(images){
       <button type="button" class="btn btn-outline-red img-delete-btn" style="width:100%; margin-top:4px; padding:5px; font-size:11px;">حذف</button>
     </div>`).join('');
 
-  // نجيب كل صورة من السيرفر مباشرة (base64) بدل رابط جوجل درايف المباشر اللي مش موثوق دايمًا
-  // ومع محاولات إعادة تلقائية - عشان أحيانًا جوجل درايف بياخد ثانية أو اتنين لحد ما الصورة
-  // المرفوعة حديثًا تبقى جاهزة للقراءة فورًا
-  function loadThumb(thumbWrap, fileId, attemptsLeft){
+  function showThumb(thumbWrap, dataUrl){
+    thumbWrap.innerHTML = `<img src="${dataUrl}" style="width:100%; height:100%; object-fit:cover;">`;
+    thumbWrap.onclick = ()=>{
+      const w = window.open('');
+      w.document.write(`<img src="${dataUrl}" style="max-width:100%;">`);
+    };
+  }
+
+  // احتياطي بس - يشتغل لو بيانات صورة معينة مجتش مدمجة مع رد getPatient لأي سبب
+  function loadThumbFallback(thumbWrap, fileId, attemptsLeft){
     apiGet({action:'getPatientImageData', fileId}).then(data=>{
-      if(data.success){
-        thumbWrap.innerHTML = `<img src="${data.dataUrl}" style="width:100%; height:100%; object-fit:cover;">`;
-        thumbWrap.onclick = ()=>{
-          const w = window.open('');
-          w.document.write(`<img src="${data.dataUrl}" style="max-width:100%;">`);
-        };
-      } else if(attemptsLeft > 0){
-        setTimeout(()=> loadThumb(thumbWrap, fileId, attemptsLeft - 1), 1500);
-      } else {
-        thumbWrap.innerHTML = '<span style="font-size:11px; color:var(--muted);">تعذر التحميل</span>';
-      }
+      if(data.success){ showThumb(thumbWrap, data.dataUrl); }
+      else if(attemptsLeft > 0){ setTimeout(()=> loadThumbFallback(thumbWrap, fileId, attemptsLeft - 1), 1500); }
+      else { thumbWrap.innerHTML = '<span style="font-size:11px; color:var(--muted);">تعذر التحميل</span>'; }
     }).catch(()=>{
-      if(attemptsLeft > 0){
-        setTimeout(()=> loadThumb(thumbWrap, fileId, attemptsLeft - 1), 1500);
-      } else {
-        thumbWrap.innerHTML = '<span style="font-size:11px; color:var(--muted);">تعذر التحميل</span>';
-      }
+      if(attemptsLeft > 0){ setTimeout(()=> loadThumbFallback(thumbWrap, fileId, attemptsLeft - 1), 1500); }
+      else { thumbWrap.innerHTML = '<span style="font-size:11px; color:var(--muted);">تعذر التحميل</span>'; }
     });
   }
-  box.querySelectorAll('.img-card').forEach(card=>{
-    const fileId = card.dataset.fileId;
+
+  box.querySelectorAll('.img-card').forEach((card, i)=>{
     const thumbWrap = card.querySelector('.img-thumb-wrap');
-    loadThumb(thumbWrap, fileId, 3);
+    const im = images[i];
+    // الصورة جايه مدمجة بالفعل مع بيانات المريض - نعرضها فورًا من غير أي طلب إضافي
+    if(im.dataUrl){
+      showThumb(thumbWrap, im.dataUrl);
+    } else {
+      loadThumbFallback(thumbWrap, card.dataset.fileId, 3);
+    }
   });
 
   box.querySelectorAll('.img-card').forEach(card=>{
