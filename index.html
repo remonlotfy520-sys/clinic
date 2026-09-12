@@ -500,6 +500,33 @@
             </div>
             <div class="chips" id="chronicChips" style="margin-top:8px;"></div>
           </div>
+
+          <div class="exam-card" style="background:#F6F3EC;">
+            <h2>📅 حجز ميعاد</h2>
+            <div class="field">
+              <label>التاريخ</label>
+              <input type="date" id="bookApptDate">
+            </div>
+            <div class="field">
+              <label>نوع الميعاد</label>
+              <select id="bookApptTypeSelect" class="dropdown-add-select">
+                <option value="">— اختر أو اكتب في الخانة تحت —</option>
+                <option value="كشف">كشف</option>
+                <option value="استشارة">استشارة</option>
+                <option value="عملية">عملية</option>
+                <option value="أخرى">أخرى</option>
+              </select>
+              <input type="text" id="bookApptType" placeholder="نوع الميعاد... (تقدر تعدل أو تكتب حاجة تانية)" style="margin-top:8px;">
+            </div>
+            <div class="field">
+              <label>ملحوظة</label>
+              <textarea id="bookApptNote" style="min-height:70px;" placeholder="أي ملحوظة عن الميعاد..."></textarea>
+            </div>
+            <div class="card-actions">
+              <button class="btn btn-primary" id="bookApptSaveBtn">💾 حفظ الميعاد</button>
+            </div>
+          </div>
+
           <div class="card-actions">
             <button class="btn btn-primary" id="savePatientBtn">حفظ بيانات المريض</button>
           </div>
@@ -2809,6 +2836,45 @@ async function savePatientData(btn, historyType){
   finally{ btn.disabled = false; btn.textContent = orig; }
 }
 $('savePatientBtn').onclick = ()=> savePatientData($('savePatientBtn'));
+
+/* ---------- سكشن حجز ميعاد (جوه بطاقة المريض) ---------- */
+$('bookApptTypeSelect').addEventListener('change', ()=>{
+  if($('bookApptTypeSelect').value) $('bookApptType').value = $('bookApptTypeSelect').value;
+});
+
+$('bookApptSaveBtn').onclick = async ()=>{
+  if(!currentPatientId){ showToast('احفظ بيانات المريض الأول', true); return; }
+  const date = $('bookApptDate').value;
+  const type = $('bookApptType').value.trim();
+  if(!date){ showToast('حدد تاريخ الميعاد الأول', true); return; }
+  if(!type){ showToast('اكتب أو اختار نوع الميعاد', true); return; }
+
+  const btn = $('bookApptSaveBtn');
+  btn.disabled = true; const orig = btn.textContent; btn.textContent = 'جاري الحفظ...';
+  try{
+    const patientName = $('fName').value.trim() || 'مريض';
+    const data = await apiPost({
+      action: 'addAppointment',
+      appointment: {
+        AppointmentDate: date,
+        AppointmentTime: '',
+        Subject: type + ' - ' + patientName,
+        Notes: $('bookApptNote').value,
+        PatientID: currentPatientId
+      }
+    });
+    if(data.error){ showToast(data.error, true); }
+    else{
+      showToast('اتحفظ الميعاد في الكالندر ✓');
+      $('bookApptDate').value = '';
+      $('bookApptTypeSelect').value = '';
+      $('bookApptType').value = '';
+      $('bookApptNote').value = '';
+      updateTitleBadge();
+    }
+  }catch(err){ showToast('حصل خطأ أثناء حفظ الميعاد', true); }
+  finally{ btn.disabled = false; btn.textContent = orig; }
+};
 $('saveExamBtn').onclick = ()=> savePatientData($('saveExamBtn'));
 $('saveRxBtn').onclick = ()=> savePatientData($('saveRxBtn'), 'rx');
 $('savePhysioBtn').onclick = ()=> savePatientData($('savePhysioBtn'), 'physio');
