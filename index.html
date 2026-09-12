@@ -518,10 +518,6 @@
               </select>
               <input type="text" id="bookApptType" placeholder="نوع الميعاد... (تقدر تعدل أو تكتب حاجة تانية)" style="margin-top:8px;">
             </div>
-            <div class="field">
-              <label>ملحوظة</label>
-              <textarea id="bookApptNote" style="min-height:70px;" placeholder="أي ملحوظة عن الميعاد..."></textarea>
-            </div>
             <div class="card-actions">
               <button class="btn btn-primary" id="bookApptSaveBtn">💾 حفظ الميعاد</button>
             </div>
@@ -579,15 +575,6 @@
               <input type="checkbox" id="fRedFlag" style="width:18px;height:18px;">
               🚩 المريض عنده مشكلة (Red Flag)
             </label>
-            <div class="field" style="max-width:280px; margin-top:14px;">
-              <label>موعد الكشف القادم</label>
-              <input type="date" id="fNextAppointment">
-              <div class="hint">لو حددت تاريخ، هيتضاف تلقائي في الكالندر</div>
-              <label style="display:flex; align-items:center; gap:8px; margin-top:8px; cursor:pointer; font-size:13px; font-weight:600;">
-                <input type="checkbox" id="fShowApptOnRx" style="width:16px;height:16px;">
-                إظهار الموعد ده في ورقة الروشتة
-              </label>
-            </div>
             <div class="card-actions">
               <button class="btn btn-primary" id="saveExamBtn">حفظ الكشف والأشعة والتحاليل</button>
             </div>
@@ -816,12 +803,6 @@
               <div class="field">
                 <label>المتابعات</label>
                 <textarea id="opFollowUps" style="min-height:100px;" placeholder="المتابعات..."></textarea>
-              </div>
-
-              <div class="field" style="max-width:220px;">
-                <label>تاريخ المتابعة القادمة</label>
-                <input type="date" id="opNextFollowUp">
-                <div class="hint">لو حددت تاريخ، هيتضاف تلقائي في الكالندر وهيظهر في المتابعات المتأخرة لو فات معاده</div>
               </div>
 
               <div class="field">
@@ -1350,7 +1331,6 @@ function startEditOperation(o){
   $('opDressing2').value = o.Dressing2 || '';
   $('opDressing3').value = o.Dressing3 || '';
   $('opFollowUps').value = o.FollowUps || '';
-  $('opNextFollowUp').value = String(o.NextFollowUpDate || '').slice(0,10);
   $('opNotes').value = o.Notes || '';
   $('addOperationBtn').textContent = 'حفظ التعديل';
   $('newOperationForm').classList.add('open');
@@ -1373,7 +1353,7 @@ $('toggleOperationBtn').onclick = ()=>{
   editingOperationId = null;
   $('addOperationBtn').textContent = 'حفظ العملية';
   $('opDate').value = new Date().toISOString().slice(0,10);
-  ['opName','opCost','opFollowUps','opNextFollowUp','opNotes'].forEach(id=> $(id).value='');
+  ['opName','opCost','opFollowUps','opNotes'].forEach(id=> $(id).value='');
   ['opLocation','opDressing1','opDressing2','opDressing3'].forEach(id=> $(id).value='');
   $('newOperationForm').classList.add('open');
 };
@@ -1399,7 +1379,6 @@ $('addOperationBtn').onclick = async ()=>{
       Dressing2: $('opDressing2').value,
       Dressing3: $('opDressing3').value,
       FollowUps: $('opFollowUps').value,
-      NextFollowUpDate: $('opNextFollowUp').value,
       Notes: $('opNotes').value
     };
     let data;
@@ -1414,7 +1393,7 @@ $('addOperationBtn').onclick = async ()=>{
     else{
       showToast(isEditing ? 'اتحدثت العملية ✓' : 'اتسجلت العملية ✓');
       editingOperationId = null;
-      ['opName','opCost','opFollowUps','opNextFollowUp','opNotes'].forEach(id=> $(id).value='');
+      ['opName','opCost','opFollowUps','opNotes'].forEach(id=> $(id).value='');
       ['opLocation','opDressing1','opDressing2','opDressing3'].forEach(id=> $(id).value='');
       $('newOperationForm').classList.remove('open');
       const fresh = await apiGet({action:'getPatient', id: currentPatientId});
@@ -2109,8 +2088,6 @@ async function loadPatient(id){
     $('fLabTests').value = data.patient.LabTests || '';
     $('fHasOperation').checked = String(data.patient.HasOperation).trim().toUpperCase() === 'TRUE';
     $('fRedFlag').checked = String(data.patient.RedFlag).trim().toUpperCase() === 'TRUE';
-    $('fNextAppointment').value = String(data.patient.NextAppointmentDate || '').slice(0,10);
-    $('fShowApptOnRx').checked = String(data.patient.ShowApptOnRx).trim().toUpperCase() === 'TRUE';
     loadPrescription(data.patient.Prescription);
     loadPhysio(data.patient.Physio);
     loadReport(data.patient.MedicalReport);
@@ -2142,8 +2119,6 @@ function newPatient(){
   $('fLabTests').value = '';
   $('fHasOperation').checked = false;
   $('fRedFlag').checked = false;
-  $('fNextAppointment').value = '';
-  $('fShowApptOnRx').checked = false;
   resetPrescriptionForm();
   resetPhysioForm();
   resetReportForm();
@@ -2794,8 +2769,6 @@ async function savePatientData(btn, historyType){
       LabTests: $('fLabTests').value,
       HasOperation: $('fHasOperation').checked ? 'TRUE' : '',
       RedFlag: $('fRedFlag').checked ? 'TRUE' : '',
-      NextAppointmentDate: $('fNextAppointment').value,
-      ShowApptOnRx: $('fShowApptOnRx').checked ? 'TRUE' : '',
       Prescription: JSON.stringify(collectPrescription()),
       Physio: JSON.stringify(collectPhysio()),
       MedicalReport: JSON.stringify(collectReport())
@@ -2859,7 +2832,6 @@ $('bookApptSaveBtn').onclick = async ()=>{
         AppointmentDate: date,
         AppointmentTime: '',
         Subject: type + ' - ' + patientName,
-        Notes: $('bookApptNote').value,
         PatientID: currentPatientId
       }
     });
@@ -2869,7 +2841,6 @@ $('bookApptSaveBtn').onclick = async ()=>{
       $('bookApptDate').value = '';
       $('bookApptTypeSelect').value = '';
       $('bookApptType').value = '';
-      $('bookApptNote').value = '';
       updateTitleBadge();
     }
   }catch(err){ showToast('حصل خطأ أثناء حفظ الميعاد', true); }
@@ -3320,12 +3291,6 @@ async function exportRxTemplateAsPdf(bodyHtml, filenamePrefix, btn, dateOverride
 $('downloadRxBtn').onclick = ()=>{
   if(!currentPatientId){ showToast('احفظ بيانات المريض الأول', true); return; }
   let bodyHtml = buildRxBodyHtml(collectPrescription());
-  const nextAppt = $('fNextAppointment').value;
-  if(nextAppt && $('fShowApptOnRx').checked){
-    bodyHtml += `<div style="margin-top:16px; padding-top:10px; border-top:1px solid #e2ddce; font-size:10pt; font-weight:700; color:#1F4A40;">
-      الكشف القادم: ${escapeHtml(formatDate(nextAppt))}
-    </div>`;
-  }
   exportRxTemplateAsPdf(bodyHtml, 'روشتة', $('downloadRxBtn'));
 };
 
