@@ -2336,9 +2336,12 @@ async function loadStats(){
     if(!duplicates.length){
       dupHtml += `<div class="no-visits">مفيش أسماء متكررة حاليًا</div>`;
     } else {
-      dupHtml += `<div class="hint" style="margin-bottom:10px;">دوس على أي مريض تحت عشان تفتح ملفه وتقرر تمسحه أو تعدله أو تدمجه</div>`;
+      dupHtml += `<div class="hint" style="margin-bottom:10px;">دوس على أي مريض تحت عشان تفتح ملفه، أو دوس "دمج" عشان تخلي الأقدم هو الملف الأساسي والأحدث يبقى زيارة جواه</div>`;
       duplicates.forEach((dup, di)=>{
-        dupHtml += `<div class="visit-date" style="margin-top:${di>0?'16px':'0'};">${escapeHtml(dup.name)} (${dup.patients.length})</div>`;
+        dupHtml += `<div class="visit-date" style="margin-top:${di>0?'16px':'0'}; display:flex; justify-content:space-between; align-items:center;">
+          <span>${escapeHtml(dup.name)} (${dup.patients.length})</span>
+          <button type="button" class="btn btn-outline-red dup-merge-btn" data-name="${escapeHtml(dup.name)}" style="padding:5px 12px; font-size:12px;">دمج</button>
+        </div>`;
         dup.patients.forEach(p=>{
           dupHtml += `<div class="result-item dup-patient-row" data-id="${escapeHtml(String(p.PatientID))}" style="cursor:pointer;">
             <div><div class="rname">${escapeHtml(p.Name||'')}</div>
@@ -2352,6 +2355,19 @@ async function loadStats(){
     box.insertAdjacentHTML('beforeend', dupHtml);
     box.querySelectorAll('.dup-patient-row').forEach(row=>{
       row.addEventListener('click', ()=> loadPatient(row.dataset.id));
+    });
+    box.querySelectorAll('.dup-merge-btn').forEach(btn=>{
+      btn.addEventListener('click', async (e)=>{
+        e.stopPropagation();
+        const name = btn.dataset.name;
+        if(!confirm(`هيتم اعتماد أقدم ملف باسم "${name}" كملف أساسي، وأي ملف تاني بنفس الاسم هيتحول لزيارة جواه ويتمسح. متأكد؟`)) return;
+        try{
+          const data = await apiGet({action:'mergeDuplicatesByName', name});
+          if(data.error){ showToast(data.error, true); return; }
+          showToast(`تم الدمج ✓ (${data.mergedCount} ملف اتنقل كزيارة)`);
+          loadStats();
+        }catch(err){ showToast('حصل خطأ أثناء الدمج', true); }
+      });
     });
   }catch(err){
     box.insertAdjacentHTML('beforeend', '<div class="exam-card"><h2>أسماء متكررة</h2><div class="no-visits">تعذر تحميل الأسماء المتكررة</div></div>');
@@ -2399,11 +2415,13 @@ $('closeCalendarViewBtn').onclick = ()=>{
 
 /* رقم التليفون المصري بيبدأ بصفر (11 رقم) - واتساب محتاج كود الدولة بدل الصفر */
 function normalizePhoneForWhatsapp(phone){
-  let p = String(phone).replace(/[^\d]/g, '');
-  if(p.startsWith('0') && p.length === 11){
-    p = '20' + p.slice(1);
-  }
-  return p;
+  let p = String(phone || '').replace(/[^\d]/g, '');
+  if(!p) return '';
+  if(p.startsWith('0020')) p = p.slice(2);          // 0020xxxxxxxxxx (غلطة شائعة) - نشيل الصفر الزيادة
+  if(p.startsWith('20') && p.length >= 12) return p; // أصلًا بصيغة دولية صح (20 + 10 أرقام)
+  if(p.startsWith('0') && p.length === 11) return '20' + p.slice(1); // 01xxxxxxxxx العادي
+  if(p.length === 10 && !p.startsWith('0')) return '20' + p;         // 1xxxxxxxxx من غير الصفر الأول
+  return p; // أي حالة تانية نسيبها زي ما هي ونجرب بيها
 }
 
 /* ---------- أيقونة واتساب فردية جوه ملف المريض ---------- */
