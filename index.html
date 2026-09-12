@@ -542,6 +542,11 @@
               <input type="checkbox" id="fRedFlag" style="width:18px;height:18px;">
               🚩 المريض عنده مشكلة (Red Flag)
             </label>
+            <div class="field" style="max-width:220px; margin-top:14px;">
+              <label>موعد الكشف القادم</label>
+              <input type="date" id="fNextAppointment">
+              <div class="hint">لو حددت تاريخ، هيتضاف تلقائي في الكالندر وهيظهر مكتوب في ورقة الروشتة</div>
+            </div>
             <div class="card-actions">
               <button class="btn btn-primary" id="saveExamBtn">حفظ الكشف والأشعة والتحاليل</button>
             </div>
@@ -2058,6 +2063,7 @@ async function loadPatient(id){
     $('fLabTests').value = data.patient.LabTests || '';
     $('fHasOperation').checked = String(data.patient.HasOperation).trim().toUpperCase() === 'TRUE';
     $('fRedFlag').checked = String(data.patient.RedFlag).trim().toUpperCase() === 'TRUE';
+    $('fNextAppointment').value = String(data.patient.NextAppointmentDate || '').slice(0,10);
     loadPrescription(data.patient.Prescription);
     loadPhysio(data.patient.Physio);
     loadReport(data.patient.MedicalReport);
@@ -2089,6 +2095,7 @@ function newPatient(){
   $('fLabTests').value = '';
   $('fHasOperation').checked = false;
   $('fRedFlag').checked = false;
+  $('fNextAppointment').value = '';
   resetPrescriptionForm();
   resetPhysioForm();
   resetReportForm();
@@ -2739,6 +2746,7 @@ async function savePatientData(btn, historyType){
       LabTests: $('fLabTests').value,
       HasOperation: $('fHasOperation').checked ? 'TRUE' : '',
       RedFlag: $('fRedFlag').checked ? 'TRUE' : '',
+      NextAppointmentDate: $('fNextAppointment').value,
       Prescription: JSON.stringify(collectPrescription()),
       Physio: JSON.stringify(collectPhysio()),
       MedicalReport: JSON.stringify(collectReport())
@@ -3223,7 +3231,14 @@ async function exportRxTemplateAsPdf(bodyHtml, filenamePrefix, btn, dateOverride
 
 $('downloadRxBtn').onclick = ()=>{
   if(!currentPatientId){ showToast('احفظ بيانات المريض الأول', true); return; }
-  exportRxTemplateAsPdf(buildRxBodyHtml(collectPrescription()), 'روشتة', $('downloadRxBtn'));
+  let bodyHtml = buildRxBodyHtml(collectPrescription());
+  const nextAppt = $('fNextAppointment').value;
+  if(nextAppt){
+    bodyHtml += `<div style="margin-top:16px; padding-top:10px; border-top:1px solid #e2ddce; font-size:10pt; font-weight:700; color:#1F4A40;">
+      الكشف القادم: ${escapeHtml(formatDate(nextAppt))}
+    </div>`;
+  }
+  exportRxTemplateAsPdf(bodyHtml, 'روشتة', $('downloadRxBtn'));
 };
 
 $('downloadPhysioBtn').onclick = ()=>{
