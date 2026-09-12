@@ -397,8 +397,18 @@
           </div>
         </div>
         <div class="field">
+          <label>نوع الحجز</label>
+          <select id="apptTypeSelect" class="dropdown-add-select">
+            <option value="">— اختر نوع أو اكتب في الخانة تحت —</option>
+            <option value="كشف">كشف</option>
+            <option value="استشارة">استشارة</option>
+            <option value="متابعة عملية">متابعة عملية</option>
+            <option value="أخرى">أخرى</option>
+          </select>
+        </div>
+        <div class="field">
           <label>الموضوع</label>
-          <input type="text" id="apptSubject" placeholder="موضوع الموعد...">
+          <input type="text" id="apptSubject" placeholder="موضوع الموعد... (تقدر تعدل فيه بحرية)">
         </div>
         <div class="card-actions" style="margin-top:4px;">
           <button class="btn btn-primary" id="saveAppointmentBtn">حفظ الموعد</button>
@@ -1823,6 +1833,7 @@ function startEditAppointment(appt){
   editingAppointmentId = appt.AppointmentID;
   $('apptDate').value = String(appt.AppointmentDate||'').slice(0,10);
   $('apptTime').value = appt.AppointmentTime || '';
+  $('apptTypeSelect').value = '';
   $('apptSubject').value = appt.Subject || '';
   $('saveAppointmentBtn').textContent = 'حفظ التعديل';
   $('newAppointmentForm').classList.add('open');
@@ -1845,9 +1856,13 @@ $('toggleAddAppointmentBtn').onclick = ()=>{
   $('saveAppointmentBtn').textContent = 'حفظ الموعد';
   $('apptDate').value = calSelectedDateStr || new Date().toISOString().slice(0,10);
   $('apptTime').value = '';
+  $('apptTypeSelect').value = '';
   $('apptSubject').value = '';
   $('newAppointmentForm').classList.add('open');
 };
+$('apptTypeSelect').addEventListener('change', ()=>{
+  if($('apptTypeSelect').value) $('apptSubject').value = $('apptTypeSelect').value;
+});
 $('cancelAppointmentBtn').onclick = ()=>{
   editingAppointmentId = null;
   $('saveAppointmentBtn').textContent = 'حفظ الموعد';
