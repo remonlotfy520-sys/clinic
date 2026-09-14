@@ -767,9 +767,29 @@
       <button class="btn btn-primary" id="runBackupBtn" style="text-align:right;">💾 عمل نسخة احتياطية دلوقتي</button>
       <button class="btn btn-outline-red" id="restoreBackupBtn" style="text-align:right;">♻️ استعادة آخر نسخة احتياطية</button>
       <button class="btn btn-ghost" id="importOldPatientsBtn" style="text-align:right;">📥 استيراد الأسماء من النظام القديم</button>
+      <button class="btn btn-ghost" id="openListsManagerBtn" style="text-align:right;">🗂️ إدارة القوايم (أدوية، خدمات، مستخدمين...)</button>
     </div>
     <div class="hint" style="margin-top:16px;">الاستعادة بتكتب فوق أي بيانات اتضافت بعد وقت آخر نسخة احتياطية - استخدمها بحذر.</div>
   </div>
+</div>
+
+<div id="listsManagerView" style="display:none;">
+  <div class="visits-head" style="margin-bottom:14px;">
+    <h2 style="margin:0;">🗂️ إدارة القوايم</h2>
+    <button class="btn btn-ghost" id="closeListsManagerBtn">✕ إغلاق</button>
+  </div>
+  <div class="hint" style="margin-bottom:14px;">أي تعديل هنا بيتكتب مباشرة في نفس الجوجل شيت القديم - زي ما لو عدّلته بإيدك من الشيت.</div>
+  <div class="tab-bar" style="margin-bottom:16px;">
+    <button class="tab-bar-btn active" data-mgr-tab="users">المستخدمين</button>
+    <button class="tab-bar-btn" data-mgr-tab="medicines">الأدوية</button>
+    <button class="tab-bar-btn" data-mgr-tab="presets">روشتات جاهزة</button>
+    <button class="tab-bar-btn" data-mgr-tab="recommendations">التوصيات</button>
+    <button class="tab-bar-btn" data-mgr-tab="physio">العلاج الطبيعي</button>
+    <button class="tab-bar-btn" data-mgr-tab="labs">التحاليل</button>
+    <button class="tab-bar-btn" data-mgr-tab="radiology">الأشعة</button>
+    <button class="tab-bar-btn" data-mgr-tab="services">الخدمات</button>
+  </div>
+  <div id="mgrContent"></div>
 </div>
 
 <div id="rxTemplate" style="position:fixed; left:-9999px; top:0; width:420px; background:#ffffff; padding:36px 32px; font-family:'Tajawal', sans-serif; color:#1c2420; direction:rtl; font-size:10pt; line-height:1;">
@@ -1611,6 +1631,7 @@ $('newPatientBtn').onclick = ()=>{
   $('messagesView').style.display = 'none';
   $('operationsPatientsView').style.display = 'none';
   $('redFlagPatientsView').style.display = 'none';
+  $('listsManagerView').style.display = 'none';
   $('workspace').style.display = 'block';
   resetToBasicTab();
 };
@@ -3100,6 +3121,7 @@ $('viewCalendarBtn').onclick = ()=>{
   $('messagesView').style.display = 'none';
   $('operationsPatientsView').style.display = 'none';
   $('redFlagPatientsView').style.display = 'none';
+  $('listsManagerView').style.display = 'none';
   $('calendarView').style.display = 'block';
   loadAppointments();
 };
@@ -3358,6 +3380,7 @@ $('viewStatsBtn').onclick = ()=>{
   $('messagesView').style.display = 'none';
   $('operationsPatientsView').style.display = 'none';
   $('redFlagPatientsView').style.display = 'none';
+  $('listsManagerView').style.display = 'none';
   $('statsView').style.display = 'block';
   loadStats();
 };
@@ -3441,6 +3464,7 @@ $('viewMessagesBtn').onclick = async ()=>{
   $('statsView').style.display = 'none';
   $('operationsPatientsView').style.display = 'none';
   $('redFlagPatientsView').style.display = 'none';
+  $('listsManagerView').style.display = 'none';
   $('messagesView').style.display = 'block';
   $('msgSendLinks').innerHTML = '';
   await loadMessagesPatients();
@@ -3523,6 +3547,7 @@ $('viewOperationPatientsBtn').onclick = ()=>{
   $('statsView').style.display = 'none';
   $('messagesView').style.display = 'none';
   $('redFlagPatientsView').style.display = 'none';
+  $('listsManagerView').style.display = 'none';
   $('operationsPatientsView').style.display = 'block';
   renderQuickPatientsList('operationsPatientsList', allPatients.filter(p => p.HasOperation));
 };
@@ -3539,6 +3564,7 @@ $('viewRedFlagsBtn').onclick = ()=>{
   $('statsView').style.display = 'none';
   $('messagesView').style.display = 'none';
   $('operationsPatientsView').style.display = 'none';
+  $('listsManagerView').style.display = 'none';
   $('redFlagPatientsView').style.display = 'block';
   renderQuickPatientsList('redFlagPatientsList', allPatients.filter(p => p.RedFlag));
 };
@@ -3649,6 +3675,364 @@ $('restoreBackupBtn').onclick = async ()=>{
   btn.disabled = false; btn.textContent = orig;
   $('settingsModal').style.display = 'none';
 };
+
+/* ---------- إدارة القوايم (أدوية، روشتات جاهزة، توصيات، علاج طبيعي، تحاليل، أشعة، خدمات، مستخدمين) ---------- */
+let currentMgrTab = 'users';
+let USERS_LIST = [];
+
+$('openListsManagerBtn').onclick = ()=>{
+  $('settingsModal').style.display = 'none';
+  $('listView').style.display = 'none';
+  $('workspace').style.display = 'none';
+  $('calendarView').style.display = 'none';
+  $('statsView').style.display = 'none';
+  $('messagesView').style.display = 'none';
+  $('operationsPatientsView').style.display = 'none';
+  $('redFlagPatientsView').style.display = 'none';
+  $('listsManagerView').style.display = 'block';
+  openListsManagerTab('users');
+};
+$('closeListsManagerBtn').onclick = ()=>{
+  $('listsManagerView').style.display = 'none';
+  $('listView').style.display = 'block';
+  loadPatientsList();
+};
+document.querySelectorAll('[data-mgr-tab]').forEach(btn=>{
+  btn.addEventListener('click', ()=> openListsManagerTab(btn.dataset.mgrTab));
+});
+
+function openListsManagerTab(tab){
+  currentMgrTab = tab;
+  document.querySelectorAll('[data-mgr-tab]').forEach(b => b.classList.toggle('active', b.dataset.mgrTab === tab));
+  if(tab === 'recommendations') renderSimpleListManager('recommendations', 'التوصيات العامة', RECOMMENDATIONS_LIST);
+  else if(tab === 'physio') renderSimpleListManager('physio', 'العلاج الطبيعي', PT_LIST);
+  else if(tab === 'labs') renderSimpleListManager('labs', 'التحاليل', LABS_LIST);
+  else if(tab === 'radiology') renderSimpleListManager('radiology', 'الأشعة', RADIOLOGY_LIST);
+  else if(tab === 'medicines') renderMedicinesManager();
+  else if(tab === 'presets') renderPresetsManager();
+  else if(tab === 'services') renderServicesManager();
+  else if(tab === 'users') renderUsersManager();
+}
+
+async function mgrBridgeCall(action, payload){
+  const token = await ensureAppsScriptLogin();
+  const res = await fetch(APPS_SCRIPT_URL, { method:'POST', body: JSON.stringify({ action, token, ...payload }) });
+  return res.json();
+}
+
+/* قوايم بسيطة (قيمة واحدة لكل عنصر): التوصيات / العلاج الطبيعي / التحاليل / الأشعة */
+function renderSimpleListManager(listKey, title, currentList){
+  const box = $('mgrContent');
+  box.innerHTML = `
+    <div class="exam-card">
+      <h2>${title}</h2>
+      <div style="display:flex; gap:8px; margin-bottom:14px;">
+        <input type="text" id="mgrNewValue" placeholder="عنصر جديد..." style="flex:1; padding:9px 12px; border-radius:9px; border:1px solid var(--line); font-family:'Tajawal'; font-size:13.5px;">
+        <button class="btn btn-primary" id="mgrAddBtn">إضافة</button>
+      </div>
+      <div id="mgrListRows"></div>
+    </div>`;
+  const rowsBox = $('mgrListRows');
+  rowsBox.innerHTML = currentList.length ? currentList.map(v => `
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:9px 6px; border-bottom:1px solid var(--line); gap:8px;">
+      <span style="flex:1;">${escapeHtml(v)}</span>
+      <div style="display:flex; gap:6px; flex-shrink:0;">
+        <button class="btn btn-ghost mgr-edit" data-value="${escapeHtml(v)}" style="padding:4px 10px; font-size:12px;">تعديل</button>
+        <button class="btn btn-outline-red mgr-del" data-value="${escapeHtml(v)}" style="padding:4px 10px; font-size:12px;">حذف</button>
+      </div>
+    </div>`).join('') : '<div class="no-visits">القايمة فاضية</div>';
+
+  $('mgrAddBtn').onclick = async ()=>{
+    const val = $('mgrNewValue').value.trim();
+    if(!val) return;
+    const result = await mgrBridgeCall('addSimpleListItem', { listKey, value: val });
+    if(result.error){ showToast(result.error, true); return; }
+    showToast('اتضاف ✓');
+    await tryFetchListsRemote();
+    openListsManagerTab(listKey);
+  };
+  rowsBox.querySelectorAll('.mgr-edit').forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
+      const oldVal = btn.dataset.value;
+      const newVal = prompt('عدّل القيمة:', oldVal);
+      if(!newVal || !newVal.trim() || newVal.trim() === oldVal) return;
+      const result = await mgrBridgeCall('updateSimpleListItem', { listKey, oldValue: oldVal, newValue: newVal.trim() });
+      if(result.error){ showToast(result.error, true); return; }
+      showToast('اتعدّل ✓');
+      await tryFetchListsRemote();
+      openListsManagerTab(listKey);
+    });
+  });
+  rowsBox.querySelectorAll('.mgr-del').forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
+      if(!confirm(`حذف "${btn.dataset.value}"؟`)) return;
+      const result = await mgrBridgeCall('deleteSimpleListItem', { listKey, value: btn.dataset.value });
+      if(result.error){ showToast(result.error, true); return; }
+      showToast('اتحذف ✓');
+      await tryFetchListsRemote();
+      openListsManagerTab(listKey);
+    });
+  });
+}
+
+/* الأدوية */
+function renderMedicinesManager(){
+  const box = $('mgrContent');
+  box.innerHTML = `
+    <div class="exam-card">
+      <h2>الأدوية</h2>
+      <div class="field-row">
+        <div class="field"><label>الاسم</label><input type="text" id="medName"></div>
+        <div class="field"><label>طريقة الإعطاء</label><input type="text" id="medInstr"></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>المدة</label><input type="text" id="medDuration"></div>
+        <div class="field"><label>التشخيص المرتبط</label><input type="text" id="medDiagnosis"></div>
+      </div>
+      <div style="display:flex; gap:10px;">
+        <button class="btn btn-primary" id="medSaveBtn">إضافة دواء</button>
+        <button class="btn btn-ghost" id="medCancelBtn" style="display:none;">إلغاء التعديل</button>
+      </div>
+    </div>
+    <div class="exam-card"><div id="medRows"></div></div>`;
+  let editingOldName = '';
+  const rows = $('medRows');
+  rows.innerHTML = MEDICINES_LIST.length ? MEDICINES_LIST.map(m => `
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:9px 6px; border-bottom:1px solid var(--line); gap:8px;">
+      <div style="flex:1;"><div style="font-weight:700;">${escapeHtml(m.name)}</div><div class="hint">${escapeHtml(m.instructions||'')}</div></div>
+      <div style="display:flex; gap:6px; flex-shrink:0;">
+        <button class="btn btn-ghost med-edit" data-name="${escapeHtml(m.name)}" style="padding:4px 10px; font-size:12px;">تعديل</button>
+        <button class="btn btn-outline-red med-del" data-name="${escapeHtml(m.name)}" style="padding:4px 10px; font-size:12px;">حذف</button>
+      </div>
+    </div>`).join('') : '<div class="no-visits">القايمة فاضية</div>';
+
+  $('medSaveBtn').onclick = async ()=>{
+    const name = $('medName').value.trim();
+    if(!name){ showToast('اكتب اسم الدواء', true); return; }
+    const data = { name, instructions: $('medInstr').value.trim(), duration: $('medDuration').value.trim(), diagnosis: $('medDiagnosis').value.trim() };
+    const result = editingOldName
+      ? await mgrBridgeCall('updateMedicine', { oldName: editingOldName, data })
+      : await mgrBridgeCall('addMedicine', { data });
+    if(result.error){ showToast(result.error, true); return; }
+    showToast(editingOldName ? 'اتعدّل ✓' : 'اتضاف ✓');
+    await tryFetchListsRemote();
+    openListsManagerTab('medicines');
+  };
+  $('medCancelBtn').onclick = ()=> openListsManagerTab('medicines');
+  rows.querySelectorAll('.med-edit').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const m = MEDICINES_LIST.find(x => x.name === btn.dataset.name);
+      if(!m) return;
+      $('medName').value = m.name; $('medInstr').value = m.instructions||''; $('medDuration').value = m.duration||''; $('medDiagnosis').value = m.diagnosis||'';
+      editingOldName = m.name;
+      $('medSaveBtn').textContent = 'حفظ التعديل';
+      $('medCancelBtn').style.display = 'inline-block';
+    });
+  });
+  rows.querySelectorAll('.med-del').forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
+      if(!confirm(`حذف دواء "${btn.dataset.name}"؟`)) return;
+      const result = await mgrBridgeCall('deleteMedicine', { name: btn.dataset.name });
+      if(result.error){ showToast(result.error, true); return; }
+      showToast('اتحذف ✓');
+      await tryFetchListsRemote();
+      openListsManagerTab('medicines');
+    });
+  });
+}
+
+/* روشتات جاهزة */
+function renderPresetsManager(){
+  const box = $('mgrContent');
+  box.innerHTML = `
+    <div class="exam-card">
+      <h2>روشتات جاهزة</h2>
+      <div class="field"><label>اسم الروشتة</label><input type="text" id="presetName"></div>
+      <div class="field"><label>الأدوية (سطر لكل دواء)</label><textarea id="presetMeds" style="min-height:120px;"></textarea></div>
+      <div style="display:flex; gap:10px;">
+        <button class="btn btn-primary" id="presetSaveBtn">إضافة روشتة</button>
+        <button class="btn btn-ghost" id="presetCancelBtn" style="display:none;">إلغاء التعديل</button>
+      </div>
+    </div>
+    <div class="exam-card"><div id="presetRows"></div></div>`;
+  let editingOldName = '';
+  const rows = $('presetRows');
+  rows.innerHTML = PRESET_PRESCRIPTIONS.length ? PRESET_PRESCRIPTIONS.map(p => `
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:9px 6px; border-bottom:1px solid var(--line); gap:8px;">
+      <div style="flex:1;"><div style="font-weight:700;">${escapeHtml(p.name)}</div><div class="hint">${p.medicines.length} دواء</div></div>
+      <div style="display:flex; gap:6px; flex-shrink:0;">
+        <button class="btn btn-ghost preset-edit" data-name="${escapeHtml(p.name)}" style="padding:4px 10px; font-size:12px;">تعديل</button>
+        <button class="btn btn-outline-red preset-del" data-name="${escapeHtml(p.name)}" style="padding:4px 10px; font-size:12px;">حذف</button>
+      </div>
+    </div>`).join('') : '<div class="no-visits">القايمة فاضية</div>';
+
+  $('presetSaveBtn').onclick = async ()=>{
+    const name = $('presetName').value.trim();
+    if(!name){ showToast('اكتب اسم الروشتة', true); return; }
+    const medicines = $('presetMeds').value.split('\n').map(s => s.trim()).filter(Boolean);
+    const data = editingOldName ? { oldName: editingOldName, name, medicines } : { name, medicines };
+    const result = await mgrBridgeCall(editingOldName ? 'updatePresetRx' : 'addPresetRx', { data });
+    if(result.error){ showToast(result.error, true); return; }
+    showToast(editingOldName ? 'اتعدّل ✓' : 'اتضاف ✓');
+    await tryFetchListsRemote();
+    openListsManagerTab('presets');
+  };
+  $('presetCancelBtn').onclick = ()=> openListsManagerTab('presets');
+  rows.querySelectorAll('.preset-edit').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const p = PRESET_PRESCRIPTIONS.find(x => x.name === btn.dataset.name);
+      if(!p) return;
+      $('presetName').value = p.name;
+      $('presetMeds').value = p.medicines.join('\n');
+      editingOldName = p.name;
+      $('presetSaveBtn').textContent = 'حفظ التعديل';
+      $('presetCancelBtn').style.display = 'inline-block';
+    });
+  });
+  rows.querySelectorAll('.preset-del').forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
+      if(!confirm(`حذف روشتة "${btn.dataset.name}"؟`)) return;
+      const result = await mgrBridgeCall('deletePresetRx', { name: btn.dataset.name });
+      if(result.error){ showToast(result.error, true); return; }
+      showToast('اتحذف ✓');
+      await tryFetchListsRemote();
+      openListsManagerTab('presets');
+    });
+  });
+}
+
+/* الخدمات */
+function renderServicesManager(){
+  const box = $('mgrContent');
+  box.innerHTML = `
+    <div class="exam-card">
+      <h2>الخدمات</h2>
+      <div class="field-row">
+        <div class="field"><label>اسم الخدمة</label><input type="text" id="svcName"></div>
+        <div class="field"><label>السعر</label><input type="text" id="svcPrice"></div>
+      </div>
+      <div style="display:flex; gap:10px;">
+        <button class="btn btn-primary" id="svcSaveBtn">إضافة خدمة</button>
+        <button class="btn btn-ghost" id="svcCancelBtn" style="display:none;">إلغاء التعديل</button>
+      </div>
+    </div>
+    <div class="exam-card"><div id="svcRows"></div></div>`;
+  let editingOldName = '';
+  const rows = $('svcRows');
+  rows.innerHTML = SERVICES_LIST.length ? SERVICES_LIST.map(s => `
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:9px 6px; border-bottom:1px solid var(--line); gap:8px;">
+      <span style="flex:1;">${escapeHtml(s.name)} - ${escapeHtml(String(s.price))}</span>
+      <div style="display:flex; gap:6px; flex-shrink:0;">
+        <button class="btn btn-ghost svc-edit" data-name="${escapeHtml(s.name)}" style="padding:4px 10px; font-size:12px;">تعديل</button>
+        <button class="btn btn-outline-red svc-del" data-name="${escapeHtml(s.name)}" style="padding:4px 10px; font-size:12px;">حذف</button>
+      </div>
+    </div>`).join('') : '<div class="no-visits">القايمة فاضية</div>';
+
+  $('svcSaveBtn').onclick = async ()=>{
+    const name = $('svcName').value.trim();
+    if(!name){ showToast('اكتب اسم الخدمة', true); return; }
+    const data = { name, price: $('svcPrice').value.trim() };
+    const result = editingOldName
+      ? await mgrBridgeCall('updateService', { oldName: editingOldName, data })
+      : await mgrBridgeCall('addService', { data });
+    if(result.error){ showToast(result.error, true); return; }
+    showToast(editingOldName ? 'اتعدّل ✓' : 'اتضاف ✓');
+    await tryFetchListsRemote();
+    openListsManagerTab('services');
+  };
+  $('svcCancelBtn').onclick = ()=> openListsManagerTab('services');
+  rows.querySelectorAll('.svc-edit').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const s = SERVICES_LIST.find(x => x.name === btn.dataset.name);
+      if(!s) return;
+      $('svcName').value = s.name; $('svcPrice').value = s.price;
+      editingOldName = s.name;
+      $('svcSaveBtn').textContent = 'حفظ التعديل';
+      $('svcCancelBtn').style.display = 'inline-block';
+    });
+  });
+  rows.querySelectorAll('.svc-del').forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
+      if(!confirm(`حذف خدمة "${btn.dataset.name}"؟`)) return;
+      const result = await mgrBridgeCall('deleteService', { name: btn.dataset.name });
+      if(result.error){ showToast(result.error, true); return; }
+      showToast('اتحذف ✓');
+      await tryFetchListsRemote();
+      openListsManagerTab('services');
+    });
+  });
+}
+
+/* المستخدمين (نظام الدخول القديم بتاع الصور/القوايم) */
+async function renderUsersManager(){
+  const box = $('mgrContent');
+  box.innerHTML = '<div class="no-visits">جاري التحميل...</div>';
+  try{
+    const token = await ensureAppsScriptLogin();
+    const res = await fetch(`${APPS_SCRIPT_URL}?action=getUsersList&token=${encodeURIComponent(token)}`);
+    const data = await res.json();
+    if(data.results) USERS_LIST = data.results;
+  }catch(e){}
+
+  box.innerHTML = `
+    <div class="exam-card">
+      <h2>المستخدمين</h2>
+      <div class="hint" style="margin-bottom:10px;">دول مستخدمين نظام الصور/القوايم القديم (Apps Script) - مش حسابات فايربيز بتاعة تسجيل الدخول للموقع الجديد.</div>
+      <div class="field-row">
+        <div class="field"><label>اسم المستخدم</label><input type="text" id="userUsername"></div>
+        <div class="field"><label>كلمة السر</label><input type="text" id="userPassword"></div>
+      </div>
+      <div class="field"><label>الاسم</label><input type="text" id="userName"></div>
+      <div style="display:flex; gap:10px;">
+        <button class="btn btn-primary" id="userSaveBtn">إضافة مستخدم</button>
+        <button class="btn btn-ghost" id="userCancelBtn" style="display:none;">إلغاء التعديل</button>
+      </div>
+    </div>
+    <div class="exam-card"><div id="userRows"></div></div>`;
+  let editingOldUsername = '';
+  const rows = $('userRows');
+  rows.innerHTML = USERS_LIST.length ? USERS_LIST.map(u => `
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:9px 6px; border-bottom:1px solid var(--line); gap:8px;">
+      <div style="flex:1;"><div style="font-weight:700;">${escapeHtml(u.Username)}</div><div class="hint">${escapeHtml(u.Name||'')}</div></div>
+      <div style="display:flex; gap:6px; flex-shrink:0;">
+        <button class="btn btn-ghost user-edit" data-username="${escapeHtml(u.Username)}" style="padding:4px 10px; font-size:12px;">تعديل</button>
+        <button class="btn btn-outline-red user-del" data-username="${escapeHtml(u.Username)}" style="padding:4px 10px; font-size:12px;">حذف</button>
+      </div>
+    </div>`).join('') : '<div class="no-visits">القايمة فاضية</div>';
+
+  $('userSaveBtn').onclick = async ()=>{
+    const username = $('userUsername').value.trim();
+    if(!username){ showToast('اكتب اسم المستخدم', true); return; }
+    if(!editingOldUsername && !$('userPassword').value.trim()){ showToast('اكتب كلمة سر للمستخدم الجديد', true); return; }
+    const data = { username, password: $('userPassword').value.trim(), name: $('userName').value.trim() };
+    const result = editingOldUsername
+      ? await mgrBridgeCall('updateUser', { oldUsername: editingOldUsername, data })
+      : await mgrBridgeCall('addUser', { data });
+    if(result.error){ showToast(result.error, true); return; }
+    showToast(editingOldUsername ? 'اتعدّل ✓' : 'اتضاف ✓');
+    renderUsersManager();
+  };
+  $('userCancelBtn').onclick = ()=> renderUsersManager();
+  rows.querySelectorAll('.user-edit').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const u = USERS_LIST.find(x => x.Username === btn.dataset.username);
+      if(!u) return;
+      $('userUsername').value = u.Username; $('userPassword').value = ''; $('userName').value = u.Name || '';
+      editingOldUsername = u.Username;
+      $('userSaveBtn').textContent = 'حفظ التعديل';
+      $('userCancelBtn').style.display = 'inline-block';
+    });
+  });
+  rows.querySelectorAll('.user-del').forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
+      if(!confirm(`حذف مستخدم "${btn.dataset.username}"؟`)) return;
+      const result = await mgrBridgeCall('deleteUser', { username: btn.dataset.username });
+      if(result.error){ showToast(result.error, true); return; }
+      showToast('اتحذف ✓');
+      renderUsersManager();
+    });
+  });
+}
 
 /* ---------- قائمة المهام (To-Do) ---------- */
 function getTodos(){
