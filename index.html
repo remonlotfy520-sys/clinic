@@ -786,7 +786,7 @@
       <button class="btn btn-primary" id="runBackupBtn" style="text-align:right;">💾 عمل نسخة احتياطية دلوقتي</button>
       <button class="btn btn-outline-red" id="restoreBackupBtn" style="text-align:right;">♻️ استعادة آخر نسخة احتياطية</button>
       <button class="btn btn-ghost" id="importOldPatientsBtn" style="text-align:right;">📥 استيراد الأسماء من النظام القديم</button>
-      <button class="btn btn-primary" id="exportPatientsCsvBtn" style="text-align:right;">📥 تصدير كل المرضى (Excel/CSV) - الطريقة الموثوقة</button>
+      <button class="btn btn-primary" id="exportPatientsCsvBtn" style="text-align:right;">📥 تصدير كل البيانات (مرضى، كشف، روشتات، عمليات، فواتير) - Excel/CSV</button>
       <button class="btn btn-ghost" id="openListsManagerBtn" style="text-align:right;">🗂️ إدارة القوايم (أدوية، خدمات، مستخدمين...)</button>
       <button class="btn btn-ghost" id="runClinicNumberMigrationBtn" style="text-align:right;">🔢 ترقيم المرضى تلقائيًا (رقم العيادة)</button>
     </div>
@@ -3910,48 +3910,77 @@ async function runClinicNumberMigration(){
   }
 }
 
-/* ---------- تصدير كل المرضى مباشرة من المتصفح لملف CSV (بدون المرور على Apps Script خالص) ---------- */
+/* ---------- تصدير كل بيانات العيادة مباشرة من المتصفح لملفات CSV (بدون المرور على Apps Script خالص) ---------- */
 function csvEscape(v){
   const s = String(v === undefined || v === null ? '' : v);
   if(/[",\n]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
   return s;
 }
 
+function objectsToCsv(objects){
+  const headerSet = new Set();
+  objects.forEach(o => Object.keys(o).forEach(k => headerSet.add(k)));
+  const headers = Array.from(headerSet);
+  const rows = [headers.map(csvEscape).join(',')];
+  objects.forEach(o=>{
+    rows.push(headers.map(h=>{
+      const v = o[h];
+      if(v && v.toDate) return csvEscape(v.toDate().toISOString());
+      if(typeof v === 'object' && v !== null) return csvEscape(JSON.stringify(v));
+      return csvEscape(v);
+    }).join(','));
+  });
+  return '\uFEFF' + rows.join('\r\n');
+}
+
+function downloadCsv(filenamePrefix, content){
+  const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const dateStr = new Date().toISOString().slice(0,16).replace(/[:T]/g,'-');
+  a.href = url;
+  a.download = `${filenamePrefix}-${dateStr}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
 async function exportPatientsToCsv(){
   const btn = $('exportPatientsCsvBtn');
-  btn.disabled = true; const orig = btn.textContent; btn.textContent = 'جاري التصدير...';
+  btn.disabled = true; const orig = btn.textContent;
   try{
-    const snap = await getDocs(patientsCol);
+    btn.textContent = 'جاري تصدير المرضى...';
+    const patSnap = await getDocs(patientsCol);
     const patients = [];
-    snap.forEach(d => patients.push({ id: d.id, ...d.data() }));
+    patSnap.forEach(d => patients.push({ id: d.id, ...d.data() }));
     if(!patients.length){ showToast('مفيش مرضى للتصدير', true); return; }
+    downloadCsv('مرضى-العيادة', objectsToCsv(patients));
 
-    const headerSet = new Set(['id']);
-    patients.forEach(p => Object.keys(p).forEach(k => headerSet.add(k)));
-    const headers = Array.from(headerSet);
+    btn.textContent = 'جاري تصدير الزيارات...';
+    const visitsSnap = await getDocs(collectionGroup(db, 'visits'));
+    const visits = []; visitsSnap.forEach(d => visits.push({ id: d.id, PatientID: d.ref.parent.parent.id, ...d.data() }));
+    if(visits.length) downloadCsv('زيارات-الكشف', objectsToCsv(visits));
+    await new Promise(r => setTimeout(r, 700));
 
-    const rows = [headers.map(csvEscape).join(',')];
-    patients.forEach(p=>{
-      rows.push(headers.map(h=>{
-        const v = p[h];
-        if(v && v.toDate) return csvEscape(v.toDate().toISOString());
-        if(typeof v === 'object' && v !== null) return csvEscape(JSON.stringify(v));
-        return csvEscape(v);
-      }).join(','));
-    });
+    btn.textContent = 'جاري تصدير العمليات...';
+    const opsSnap = await getDocs(collectionGroup(db, 'operations'));
+    const ops = []; opsSnap.forEach(d => ops.push({ id: d.id, PatientID: d.ref.parent.parent.id, ...d.data() }));
+    if(ops.length) downloadCsv('العمليات', objectsToCsv(ops));
+    await new Promise(r => setTimeout(r, 700));
 
-    const csvContent = '\uFEFF' + rows.join('\r\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    const dateStr = new Date().toISOString().slice(0,16).replace(/[:T]/g,'-');
-    a.href = url;
-    a.download = `مرضى-العيادة-${dateStr}.csv`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-    showToast(`تم تصدير ${patients.length} مريض ✓ - افتح الملف اللي اتنزّل وارفعه على جوجل درايف لو عايز`);
+    btn.textContent = 'جاري تصدير الروشتات والعلاج الطبيعي...';
+    const histSnap = await getDocs(collectionGroup(db, 'history'));
+    const hist = []; histSnap.forEach(d => hist.push({ id: d.id, PatientID: d.ref.parent.parent.id, ...d.data() }));
+    if(hist.length) downloadCsv('روشتات-وعلاج-طبيعي-وتقارير', objectsToCsv(hist));
+    await new Promise(r => setTimeout(r, 700));
+
+    btn.textContent = 'جاري تصدير الفواتير...';
+    const invSnap = await getDocs(collectionGroup(db, 'invoices'));
+    const invs = []; invSnap.forEach(d => invs.push({ id: d.id, PatientID: d.ref.parent.parent.id, ...d.data() }));
+    if(invs.length) downloadCsv('الفواتير', objectsToCsv(invs));
+
+    showToast(`تم تصدير ${patients.length} مريض + ${visits.length} زيارة + ${ops.length} عملية + ${hist.length} روشتة/علاج طبيعي/تقرير + ${invs.length} فاتورة ✓`);
   }catch(err){
     showToast('حصل خطأ أثناء التصدير', true);
   }
