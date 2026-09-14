@@ -2324,7 +2324,7 @@ function resetReportForm(){
 function buildRxBodyHtml(rx){
   const section = (title, innerHtml) => `<div style="margin-bottom:18px;"><div style="font-weight:700; font-size:10pt; color:#1F4A40; margin-bottom:6px;">${title}</div>${innerHtml}</div>`;
   let html = '';
-  if(rx.diagnosis) html += section('التشخيص', `<div>${escapeHtml(rx.diagnosis)}</div>`);
+  if(rx.diagnosis) html += section('التشخيص', renderArabicTextBlock(rx.diagnosis));
   if(rx.medicines.length){
     html += section('الأدوية', rx.medicines.map((m,i) => `<div style="margin-bottom:4px;">${i+1}. ${escapeHtml(m.name)}${m.instructions ? ' - ' + escapeHtml(m.instructions) : ''}</div>`).join(''));
   } else {
@@ -2342,14 +2342,21 @@ function buildRxBodyHtml(rx){
 function buildPhysioBodyHtml(pt){
   const section = (title, innerHtml) => `<div style="margin-bottom:18px;"><div style="font-weight:700; font-size:10pt; color:#1F4A40; margin-bottom:6px;">${title}</div>${innerHtml}</div>`;
   let html = '';
-  if(pt.diagnosis) html += section('التشخيص', `<div>${escapeHtml(pt.diagnosis)}</div>`);
+  if(pt.diagnosis) html += section('التشخيص', renderArabicTextBlock(pt.diagnosis));
   html += section('المطلوب من العلاج الطبيعي', pt.interventions.length ? pt.interventions.map(i => `<div>• ${escapeHtml(i)}</div>`).join('') : '<div style="color:#aaa;">لا يوجد</div>');
   if(pt.sessions) html += section('عدد الجلسات', `<div>${escapeHtml(pt.sessions)}</div>`);
   return html;
 }
+/* html2canvas أحيانًا بيلخبط شكل الحروف العربية لما سطر طويل يلف تلقائي على أكتر من سطر -
+   الحل إننا نقسّم النص لأسطر ونحط كل سطر في div لوحده بدل ما نسيبه يلف لوحده */
+function renderArabicTextBlock(text){
+  const lines = String(text || '').split('\n');
+  return lines.map(line => `<div style="direction:rtl; unicode-bidi:plaintext; text-align:right; margin-bottom:2px;">${escapeHtml(line) || '&nbsp;'}</div>`).join('');
+}
+
 function buildReportBodyHtml(rep){
   return `<div style="margin-bottom:14px;"><div style="font-weight:700; font-size:10pt; color:#1F4A40; margin-bottom:6px;">${escapeHtml(rep.type || 'تقرير طبي')}</div></div>
-    <div style="white-space:pre-wrap;">${escapeHtml(rep.body || '')}</div>`;
+    <div>${renderArabicTextBlock(rep.body || '')}</div>`;
 }
 
 function buildInvoiceBodyHtml(items, total, notes){
@@ -2371,8 +2378,8 @@ function buildInvoiceBodyHtml(items, total, notes){
   </tr>`;
   html += '</table>';
   if(notes && notes.trim()){
-    html += `<div style="margin-top:18px; padding-top:10px; border-top:1px solid #e2ddce; white-space:pre-wrap; font-size:9.5pt; color:#444;">
-      <b>ملاحظات:</b> ${escapeHtml(notes)}
+    html += `<div style="margin-top:18px; padding-top:10px; border-top:1px solid #e2ddce; font-size:9.5pt; color:#444;">
+      <b>ملاحظات:</b> ${renderArabicTextBlock(notes)}
     </div>`;
   }
   return html;
