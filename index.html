@@ -1872,6 +1872,7 @@ function renderVisits(visits){
       ${v.Radiology ? `<div class="visit-notes"><b class="visit-label">الأشعة:</b> ${escapeHtml(v.Radiology)}</div>` : ''}
       ${v.LabTests ? `<div class="visit-notes"><b class="visit-label">التحاليل:</b> ${escapeHtml(v.LabTests)}</div>` : ''}
       <div style="display:flex; gap:8px; margin-top:10px; flex-wrap:wrap;">
+        <button class="btn btn-ghost visit-view-btn" style="padding:6px 12px; font-size:12.5px;">عرض</button>
         <button class="btn btn-ghost visit-edit-btn" style="padding:6px 12px; font-size:12.5px;">تعديل</button>
         <button class="btn btn-outline-red visit-delete-btn" style="padding:6px 12px; font-size:12.5px;">حذف</button>
         <button class="btn btn-primary visit-pdf-btn" style="padding:6px 12px; font-size:12.5px;">تحميل PDF</button>
@@ -1881,6 +1882,7 @@ function renderVisits(visits){
     const id = item.dataset.id;
     const visit = currentVisits.find(v => v.id === id);
     if(!visit) return;
+    item.querySelector('.visit-view-btn').addEventListener('click', ()=> openVisitDetail(visit));
     item.querySelector('.visit-edit-btn').addEventListener('click', ()=> startEditVisit(visit));
     item.querySelector('.visit-delete-btn').addEventListener('click', ()=> deleteVisitEntry(visit.id));
     const pdfBtn = item.querySelector('.visit-pdf-btn');
@@ -2641,6 +2643,13 @@ function renderHistoryIcons(containerId, entries, icon, labelPrefix, buildBodyHt
   });
 }
 
+function openVisitDetail(visit){
+  currentHistoryEntry = { type: 'visit', entry: visit };
+  $('historyDetailTitle').textContent = 'كشف - ' + String(visit.VisitDate || '').slice(0,10);
+  $('historyDetailContent').innerHTML = buildVisitBodyHtml(visit);
+  $('historyDetailModal').style.display = 'flex';
+}
+
 function openHistoryDetail(type, entry, labelPrefix, buildBodyHtmlFn){
   let content = {};
   try{ content = JSON.parse(entry.Content || '{}'); }catch(e){}
@@ -2657,6 +2666,10 @@ $('closeHistoryDetailBtn').onclick = ()=>{
 $('downloadHistoryPdfBtn').onclick = ()=>{
   if(!currentHistoryEntry) return;
   const { type, entry, content, buildBodyHtmlFn } = currentHistoryEntry;
+  if(type === 'visit'){
+    exportRxTemplateAsPdf(buildVisitBodyHtml(entry), 'كشف', $('downloadHistoryPdfBtn'), String(entry.VisitDate || '').slice(0,10));
+    return;
+  }
   const bodyHtml = buildBodyHtmlFn(content);
   const dateStr = String(entry.HistoryDate || '').slice(0,10);
   const prefix = type === 'rx' ? 'روشتة' : type === 'physio' ? 'علاج-طبيعي' : 'تقرير-طبي';
@@ -2666,13 +2679,21 @@ $('downloadHistoryPdfBtn').onclick = ()=>{
 $('editHistoryBtn').onclick = ()=>{
   if(!currentHistoryEntry) return;
   const { type, entry } = currentHistoryEntry;
+  $('historyDetailModal').style.display = 'none';
+  currentHistoryEntry = null;
+  if(type === 'visit'){
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    document.querySelector('.tab-btn[data-tab="tab-kashf"]').classList.add('active');
+    $('tab-kashf').classList.add('active');
+    startEditVisit(entry);
+    return;
+  }
   editingHistoryId = entry.id;
   editingHistoryType = type;
   if(type === 'rx') loadPrescription(entry.Content);
   else if(type === 'physio') loadPhysio(entry.Content);
   else if(type === 'report') loadReport(entry.Content);
-  $('historyDetailModal').style.display = 'none';
-  currentHistoryEntry = null;
   const tabId = type === 'rx' ? 'tab-rx' : type === 'physio' ? 'tab-physio' : 'tab-reports';
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
@@ -2683,6 +2704,13 @@ $('editHistoryBtn').onclick = ()=>{
 
 $('deleteHistoryBtn').onclick = async ()=>{
   if(!currentHistoryEntry) return;
+  if(currentHistoryEntry.type === 'visit'){
+    const visitId = currentHistoryEntry.entry.id;
+    $('historyDetailModal').style.display = 'none';
+    currentHistoryEntry = null;
+    await deleteVisitEntry(visitId);
+    return;
+  }
   if(!confirm('حذف هذا السجل نهائيًا؟')) return;
   const historyId = currentHistoryEntry.entry.id;
   const isTemp = String(historyId).startsWith('temph_');
