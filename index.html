@@ -93,6 +93,13 @@
   .visit-label{color:var(--teal-dark);}
   .no-visits{color:var(--muted); text-align:center; padding:20px 0; font-size:13.5px;}
   .images-grid{display:grid; grid-template-columns:repeat(auto-fill, minmax(110px, 1fr)); gap:12px; margin-top:14px;}
+  .timeline-entry{border:1px solid var(--line); border-radius:12px; margin-bottom:10px; overflow:hidden;}
+  .timeline-header{display:flex; justify-content:space-between; align-items:center; padding:12px 14px; cursor:pointer; background:#FCFBF8;}
+  .timeline-header:hover{background:#F6F3EC;}
+  .timeline-date{font-weight:800; color:var(--teal-dark); font-family:'Cairo'; font-size:13.5px;}
+  .timeline-note{margin-right:10px; color:var(--ink); font-size:13px;}
+  .timeline-count{color:var(--muted); font-size:12.5px; white-space:nowrap;}
+  .timeline-images{padding:12px 14px;}
   .img-card{display:flex; flex-direction:column;}
   .img-thumb{width:100%; height:110px; border-radius:10px; border:1px solid var(--line); background:#F2F0E9; overflow:hidden; cursor:pointer; display:flex; align-items:center; justify-content:center;}
   .img-thumb img{width:100%; height:100%; object-fit:cover;}
@@ -215,6 +222,7 @@
       الشعار
     </label>
     <button class="btn btn-ghost" id="viewOperationPatientsBtn">🩺 عمليات</button>
+    <button class="btn btn-ghost" id="viewImagesPatientsBtn">🖼️ صور</button>
     <button class="btn btn-ghost" id="viewStatsBtn">📊 إحصائيات</button>
     <button class="btn btn-ghost" id="viewRedFlagsBtn" style="position:relative;">
       🚩
@@ -320,6 +328,14 @@
       <button class="btn btn-ghost" id="closeRedFlagsViewBtn">✕ إغلاق</button>
     </div>
     <div id="redFlagPatientsList" style="background:#FCFBF8; border:1px solid var(--line); border-radius:10px; padding:8px;"></div>
+  </div>
+
+  <div id="imagesPatientsView" style="display:none;">
+    <div class="visits-head" style="margin-bottom:16px;">
+      <h2 style="margin:0;">🖼️ مرضى ليهم صور</h2>
+      <button class="btn btn-ghost" id="closeImagesPatientsViewBtn">✕ إغلاق</button>
+    </div>
+    <div id="imagesPatientsList" style="background:#FCFBF8; border:1px solid var(--line); border-radius:10px; padding:8px;"></div>
   </div>
 
   <div id="messagesView" style="display:none;">
@@ -551,12 +567,12 @@
           <div class="visits-head">
             <h2 style="margin:0;">صور المريض</h2>
             <label class="btn btn-ghost" id="uploadImageLabel" style="cursor:pointer; margin:0;">
-              + رفع صورة
+              + رفع صور
               <input type="file" id="imageFileInput" accept="image/*" multiple style="display:none;">
             </label>
           </div>
-          <div class="hint">الصور بتتخزن في نفس نظام جوجل درايف القديم (منفصل عن باقي البيانات)</div>
-          <div id="imagesGrid" class="images-grid"></div>
+          <div class="hint">الصور بتتخزن في نفس نظام جوجل درايف القديم (منفصل عن باقي البيانات) - وبتتقسم كسجل زمني حسب وقت كل رفعة</div>
+          <div id="imagesTimeline"></div>
         </div>
       </div>
 
@@ -902,11 +918,11 @@ async function ensureAppsScriptLogin(){
   return d.token;
 }
 
-async function uploadPatientImageRemote(patientId, base64, mimeType){
+async function uploadPatientImageRemote(patientId, base64, mimeType, sessionNote, sessionDate){
   const token = await ensureAppsScriptLogin();
   const res = await fetch(APPS_SCRIPT_URL, {
     method: 'POST',
-    body: JSON.stringify({ action:'addPatientImage', token, PatientID: patientId, base64, mimeType, ImageDate: new Date().toISOString() })
+    body: JSON.stringify({ action:'addPatientImage', token, PatientID: patientId, base64, mimeType, ImageDate: sessionDate || new Date().toISOString(), SessionNote: sessionNote || '' })
   });
   return res.json();
 }
@@ -1590,7 +1606,7 @@ function openPatient(id){
     $('operationsList').innerHTML = '<div class="no-visits">لازم يتزامن ملف المريض مع الإنترنت الأول قبل تسجيل عمليات</div>';
     $('toggleOperationBtn').style.display = 'none';
     currentImages = [];
-    $('imagesGrid').innerHTML = '<div class="no-visits">لازم يتزامن ملف المريض مع الإنترنت الأول قبل رفع صور</div>';
+    $('imagesTimeline').innerHTML = '<div class="no-visits">لازم يتزامن ملف المريض مع الإنترنت الأول قبل رفع صور</div>';
     $('uploadImageLabel').style.display = 'none';
     currentHistory = [];
     resetPrescriptionForm(); resetPhysioForm(); resetReportForm();
@@ -1642,7 +1658,7 @@ $('newPatientBtn').onclick = ()=>{
   $('operationsList').innerHTML = '<div class="no-visits">احفظ بيانات المريض الأول قبل تسجيل عمليات</div>';
   $('toggleOperationBtn').style.display = 'none';
   currentImages = [];
-  $('imagesGrid').innerHTML = '<div class="no-visits">احفظ بيانات المريض الأول قبل رفع صور</div>';
+  $('imagesTimeline').innerHTML = '<div class="no-visits">احفظ بيانات المريض الأول قبل رفع صور</div>';
   $('uploadImageLabel').style.display = 'none';
   currentHistory = [];
   resetPrescriptionForm(); resetPhysioForm(); resetReportForm();
@@ -1659,6 +1675,7 @@ $('newPatientBtn').onclick = ()=>{
   $('operationsPatientsView').style.display = 'none';
   $('redFlagPatientsView').style.display = 'none';
   $('listsManagerView').style.display = 'none';
+  $('imagesPatientsView').style.display = 'none';
   $('workspace').style.display = 'block';
   resetToBasicTab();
 };
@@ -2174,40 +2191,75 @@ async function deleteOperationEntry(operationId){
 
 /* ---------- صور المريض (عن طريق نظام Apps Script القديم) ---------- */
 async function loadImages(patientId){
-  $('imagesGrid').innerHTML = '<div class="no-visits">جاري تحميل الصور...</div>';
+  $('imagesTimeline').innerHTML = '<div class="no-visits">جاري تحميل الصور...</div>';
   if(navigator.onLine === false){
-    $('imagesGrid').innerHTML = '<div class="no-visits">محتاج نت عشان يعرض الصور</div>';
+    $('imagesTimeline').innerHTML = '<div class="no-visits">محتاج نت عشان يعرض الصور</div>';
     return;
   }
   try{
     const data = await fetchPatientImagesRemote(patientId);
-    if(data.error){ $('imagesGrid').innerHTML = `<div class="no-visits">${escapeHtml(data.error)}</div>`; return; }
+    if(data.error){ $('imagesTimeline').innerHTML = `<div class="no-visits">${escapeHtml(data.error)}</div>`; return; }
     currentImages = data.images || [];
-    renderImages(currentImages);
+    renderImagesTimeline(currentImages);
   }catch(err){
-    $('imagesGrid').innerHTML = '<div class="no-visits">تعذر تحميل الصور - جرب تاني</div>';
+    $('imagesTimeline').innerHTML = '<div class="no-visits">تعذر تحميل الصور - جرب تاني</div>';
   }
 }
 
-function renderImages(images){
-  const box = $('imagesGrid');
+/* بنجمّع الصور في مجموعات (سجل زمني) - كل مجموعة إما بعنوان كتبه المستخدم وقت الرفع أو بتاريخ الرفع */
+function groupImagesForTimeline(images){
+  const groups = {};
+  const order = [];
+  images.forEach(im=>{
+    const key = (im.SessionNote && String(im.SessionNote).trim()) ? ('note:' + im.SessionNote.trim()) : ('date:' + String(im.ImageDate || '').slice(0,10));
+    if(!groups[key]){ groups[key] = { note: im.SessionNote || '', date: im.ImageDate || '', items: [] }; order.push(key); }
+    groups[key].items.push(im);
+  });
+  return order.map(k => groups[k]);
+}
+
+function renderImagesTimeline(images){
+  const box = $('imagesTimeline');
   if(!images.length){ box.innerHTML = '<div class="no-visits">لسه مفيش صور مرفوعة</div>'; return; }
-  box.innerHTML = images.map(im => `
-    <div class="img-card" data-id="${escapeHtml(String(im.ImageID))}">
-      <div class="img-thumb">${im.dataUrl ? `<img src="${im.dataUrl}">` : '<span style="font-size:11px;color:var(--muted);">تعذر التحميل</span>'}</div>
-      <div class="img-date">${escapeHtml(String(im.ImageDate || '').slice(0,10))}</div>
-      <button class="btn btn-outline-red img-delete-btn">حذف</button>
+  const groups = groupImagesForTimeline(images);
+  box.innerHTML = groups.map((g, gi) => `
+    <div class="timeline-entry" data-idx="${gi}">
+      <div class="timeline-header">
+        <div>
+          <span class="timeline-date">${escapeHtml(String(g.date || '').slice(0,10))}</span>
+          ${g.note ? `<span class="timeline-note">${escapeHtml(g.note)}</span>` : ''}
+        </div>
+        <span class="timeline-count">${g.items.length} صورة ▾</span>
+      </div>
+      <div class="images-grid timeline-images" style="display:none;"></div>
     </div>`).join('');
-  box.querySelectorAll('.img-card').forEach(card=>{
-    const id = card.dataset.id;
-    const im = images.find(x => String(x.ImageID) === id);
-    if(!im) return;
-    card.querySelector('.img-thumb').addEventListener('click', ()=>{
-      if(!im.dataUrl) return;
-      const w = window.open('');
-      w.document.write(`<img src="${im.dataUrl}" style="max-width:100%;">`);
+  box.querySelectorAll('.timeline-entry').forEach(entry=>{
+    const gi = Number(entry.dataset.idx);
+    const group = groups[gi];
+    const header = entry.querySelector('.timeline-header');
+    const gridBox = entry.querySelector('.timeline-images');
+    header.addEventListener('click', ()=>{
+      const isOpen = gridBox.style.display !== 'none';
+      gridBox.style.display = isOpen ? 'none' : 'grid';
+      if(isOpen || gridBox.dataset.rendered) return;
+      gridBox.innerHTML = group.items.map(im => `
+        <div class="img-card" data-id="${escapeHtml(String(im.ImageID))}">
+          <div class="img-thumb">${im.dataUrl ? `<img src="${im.dataUrl}">` : '<span style="font-size:11px;color:var(--muted);">تعذر التحميل</span>'}</div>
+          <button class="btn btn-outline-red img-delete-btn">حذف</button>
+        </div>`).join('');
+      gridBox.querySelectorAll('.img-card').forEach(card=>{
+        const id = card.dataset.id;
+        const im = group.items.find(x => String(x.ImageID) === id);
+        if(!im) return;
+        card.querySelector('.img-thumb').addEventListener('click', ()=>{
+          if(!im.dataUrl) return;
+          const w = window.open('');
+          w.document.write(`<img src="${im.dataUrl}" style="max-width:100%;">`);
+        });
+        card.querySelector('.img-delete-btn').addEventListener('click', ()=> deleteImageEntry(im.ImageID));
+      });
+      gridBox.dataset.rendered = '1';
     });
-    card.querySelector('.img-delete-btn').addEventListener('click', ()=> deleteImageEntry(im.ImageID));
   });
 }
 
@@ -2223,13 +2275,15 @@ $('imageFileInput').addEventListener('change', async (e)=>{
     showToast('رفع الصور محتاج نت - جرب تاني وانت أونلاين', true);
     return;
   }
+  const sessionNote = (prompt('اكتب عنوان/ملاحظة لهذه المجموعة من الصور (اختياري - زي "قبل العملية" أو "الكشف الأول"):') || '').trim();
+  const sessionDate = new Date().toISOString();
   let successCount = 0, failCount = 0;
   for(let i = 0; i < files.length; i++){
     showToast(`جاري رفع الصورة ${i+1} من ${files.length}...`);
     try{
       const dataUrl = await resizeImageFile(files[i], 1000);
       const base64 = dataUrl.split(',')[1];
-      const result = await uploadPatientImageRemote(currentPatientId, base64, 'image/jpeg');
+      const result = await uploadPatientImageRemote(currentPatientId, base64, 'image/jpeg', sessionNote, sessionDate);
       if(result.error) failCount++; else successCount++;
     }catch(err){ failCount++; }
   }
@@ -3156,6 +3210,7 @@ $('viewCalendarBtn').onclick = ()=>{
   $('operationsPatientsView').style.display = 'none';
   $('redFlagPatientsView').style.display = 'none';
   $('listsManagerView').style.display = 'none';
+  $('imagesPatientsView').style.display = 'none';
   $('calendarView').style.display = 'block';
   loadAppointments();
 };
@@ -3415,6 +3470,7 @@ $('viewStatsBtn').onclick = ()=>{
   $('operationsPatientsView').style.display = 'none';
   $('redFlagPatientsView').style.display = 'none';
   $('listsManagerView').style.display = 'none';
+  $('imagesPatientsView').style.display = 'none';
   $('statsView').style.display = 'block';
   loadStats();
 };
@@ -3499,6 +3555,7 @@ $('viewMessagesBtn').onclick = async ()=>{
   $('operationsPatientsView').style.display = 'none';
   $('redFlagPatientsView').style.display = 'none';
   $('listsManagerView').style.display = 'none';
+  $('imagesPatientsView').style.display = 'none';
   $('messagesView').style.display = 'block';
   $('msgSendLinks').innerHTML = '';
   await loadMessagesPatients();
@@ -3582,6 +3639,7 @@ $('viewOperationPatientsBtn').onclick = ()=>{
   $('messagesView').style.display = 'none';
   $('redFlagPatientsView').style.display = 'none';
   $('listsManagerView').style.display = 'none';
+  $('imagesPatientsView').style.display = 'none';
   $('operationsPatientsView').style.display = 'block';
   renderQuickPatientsList('operationsPatientsList', allPatients.filter(p => p.HasOperation));
 };
@@ -3599,11 +3657,45 @@ $('viewRedFlagsBtn').onclick = ()=>{
   $('messagesView').style.display = 'none';
   $('operationsPatientsView').style.display = 'none';
   $('listsManagerView').style.display = 'none';
+  $('imagesPatientsView').style.display = 'none';
   $('redFlagPatientsView').style.display = 'block';
   renderQuickPatientsList('redFlagPatientsList', allPatients.filter(p => p.RedFlag));
 };
 $('closeRedFlagsViewBtn').onclick = ()=>{
   $('redFlagPatientsView').style.display = 'none';
+  $('listView').style.display = 'block';
+  loadPatientsList();
+};
+
+$('viewImagesPatientsBtn').onclick = async ()=>{
+  $('listView').style.display = 'none';
+  $('workspace').style.display = 'none';
+  $('calendarView').style.display = 'none';
+  $('statsView').style.display = 'none';
+  $('messagesView').style.display = 'none';
+  $('operationsPatientsView').style.display = 'none';
+  $('redFlagPatientsView').style.display = 'none';
+  $('listsManagerView').style.display = 'none';
+  $('imagesPatientsView').style.display = 'block';
+  $('imagesPatientsList').innerHTML = '<div class="no-visits">جاري التحميل...</div>';
+  if(navigator.onLine === false){
+    $('imagesPatientsList').innerHTML = '<div class="no-visits">محتاج نت</div>';
+    return;
+  }
+  try{
+    const token = await ensureAppsScriptLogin();
+    const res = await fetch(`${APPS_SCRIPT_URL}?action=getPatientIdsWithImages&token=${encodeURIComponent(token)}`);
+    const data = await res.json();
+    if(data.error){ $('imagesPatientsList').innerHTML = `<div class="no-visits">${escapeHtml(data.error)}</div>`; return; }
+    const ids = new Set(data.patientIds || []);
+    const patients = allPatients.filter(p => ids.has(p.id));
+    renderQuickPatientsList('imagesPatientsList', patients);
+  }catch(err){
+    $('imagesPatientsList').innerHTML = '<div class="no-visits">تعذر التحميل - جرب تاني</div>';
+  }
+};
+$('closeImagesPatientsViewBtn').onclick = ()=>{
+  $('imagesPatientsView').style.display = 'none';
   $('listView').style.display = 'block';
   loadPatientsList();
 };
@@ -3723,6 +3815,7 @@ $('openListsManagerBtn').onclick = ()=>{
   $('messagesView').style.display = 'none';
   $('operationsPatientsView').style.display = 'none';
   $('redFlagPatientsView').style.display = 'none';
+  $('imagesPatientsView').style.display = 'none';
   $('listsManagerView').style.display = 'block';
   openListsManagerTab('users');
 };
