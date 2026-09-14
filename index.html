@@ -786,6 +786,7 @@
       <button class="btn btn-primary" id="runBackupBtn" style="text-align:right;">💾 عمل نسخة احتياطية دلوقتي</button>
       <button class="btn btn-outline-red" id="restoreBackupBtn" style="text-align:right;">♻️ استعادة آخر نسخة احتياطية</button>
       <button class="btn btn-ghost" id="importOldPatientsBtn" style="text-align:right;">📥 استيراد الأسماء من النظام القديم</button>
+      <button class="btn btn-primary" id="exportPatientsCsvBtn" style="text-align:right;">📥 تصدير كل المرضى (Excel/CSV) - الطريقة الموثوقة</button>
       <button class="btn btn-ghost" id="openListsManagerBtn" style="text-align:right;">🗂️ إدارة القوايم (أدوية، خدمات، مستخدمين...)</button>
       <button class="btn btn-ghost" id="runClinicNumberMigrationBtn" style="text-align:right;">🔢 ترقيم المرضى تلقائيًا (رقم العيادة)</button>
     </div>
@@ -3908,6 +3909,55 @@ async function runClinicNumberMigration(){
     showToast('حصل خطأ أثناء الترقيم', true);
   }
 }
+
+/* ---------- تصدير كل المرضى مباشرة من المتصفح لملف CSV (بدون المرور على Apps Script خالص) ---------- */
+function csvEscape(v){
+  const s = String(v === undefined || v === null ? '' : v);
+  if(/[",\n]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
+  return s;
+}
+
+async function exportPatientsToCsv(){
+  const btn = $('exportPatientsCsvBtn');
+  btn.disabled = true; const orig = btn.textContent; btn.textContent = 'جاري التصدير...';
+  try{
+    const snap = await getDocs(patientsCol);
+    const patients = [];
+    snap.forEach(d => patients.push({ id: d.id, ...d.data() }));
+    if(!patients.length){ showToast('مفيش مرضى للتصدير', true); return; }
+
+    const headerSet = new Set(['id']);
+    patients.forEach(p => Object.keys(p).forEach(k => headerSet.add(k)));
+    const headers = Array.from(headerSet);
+
+    const rows = [headers.map(csvEscape).join(',')];
+    patients.forEach(p=>{
+      rows.push(headers.map(h=>{
+        const v = p[h];
+        if(v && v.toDate) return csvEscape(v.toDate().toISOString());
+        if(typeof v === 'object' && v !== null) return csvEscape(JSON.stringify(v));
+        return csvEscape(v);
+      }).join(','));
+    });
+
+    const csvContent = '\uFEFF' + rows.join('\r\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const dateStr = new Date().toISOString().slice(0,16).replace(/[:T]/g,'-');
+    a.href = url;
+    a.download = `مرضى-العيادة-${dateStr}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    showToast(`تم تصدير ${patients.length} مريض ✓ - افتح الملف اللي اتنزّل وارفعه على جوجل درايف لو عايز`);
+  }catch(err){
+    showToast('حصل خطأ أثناء التصدير', true);
+  }
+  btn.disabled = false; btn.textContent = orig;
+}
+$('exportPatientsCsvBtn').onclick = exportPatientsToCsv;
 
 /* ---------- إدارة القوايم (أدوية، روشتات جاهزة، توصيات، علاج طبيعي، تحاليل، أشعة، خدمات، مستخدمين) ---------- */
 let currentMgrTab = 'users';
