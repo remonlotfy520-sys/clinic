@@ -8,6 +8,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@500;700;800&family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
   :root{
     --teal:#2C6E63; --teal-dark:#1F4A40; --bg:#F7F4EC; --card:#FFFFFF;
@@ -786,7 +787,7 @@
       <button class="btn btn-primary" id="runBackupBtn" style="text-align:right;">💾 عمل نسخة احتياطية دلوقتي</button>
       <button class="btn btn-outline-red" id="restoreBackupBtn" style="text-align:right;">♻️ استعادة آخر نسخة احتياطية</button>
       <button class="btn btn-ghost" id="importOldPatientsBtn" style="text-align:right;">📥 استيراد الأسماء من النظام القديم</button>
-      <button class="btn btn-primary" id="exportPatientsCsvBtn" style="text-align:right;">📥 تصدير كل البيانات (مرضى، كشف، روشتات، عمليات، فواتير) - Excel/CSV</button>
+      <button class="btn btn-primary" id="exportPatientsCsvBtn" style="text-align:right;">📥 تصدير كل البيانات لملف Excel واحد (مرضى، كشف، روشتات، عمليات، فواتير)</button>
       <button class="btn btn-ghost" id="openListsManagerBtn" style="text-align:right;">🗂️ إدارة القوايم (أدوية، خدمات، مستخدمين...)</button>
       <button class="btn btn-ghost" id="runClinicNumberMigrationBtn" style="text-align:right;">🔢 ترقيم المرضى تلقائيًا (رقم العيادة)</button>
     </div>
@@ -3910,77 +3911,58 @@ async function runClinicNumberMigration(){
   }
 }
 
-/* ---------- تصدير كل بيانات العيادة مباشرة من المتصفح لملفات CSV (بدون المرور على Apps Script خالص) ---------- */
-function csvEscape(v){
-  const s = String(v === undefined || v === null ? '' : v);
-  if(/[",\n]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
-  return s;
-}
-
-function objectsToCsv(objects){
+/* ---------- تصدير كل بيانات العيادة مباشرة من المتصفح لملف Excel حقيقي بتابات (بدون Apps Script خالص) ---------- */
+function objectsToSheetRows(objects){
   const headerSet = new Set();
   objects.forEach(o => Object.keys(o).forEach(k => headerSet.add(k)));
   const headers = Array.from(headerSet);
-  const rows = [headers.map(csvEscape).join(',')];
+  const rows = [headers];
   objects.forEach(o=>{
     rows.push(headers.map(h=>{
       const v = o[h];
-      if(v && v.toDate) return csvEscape(v.toDate().toISOString());
-      if(typeof v === 'object' && v !== null) return csvEscape(JSON.stringify(v));
-      return csvEscape(v);
-    }).join(','));
+      if(v && v.toDate) return v.toDate().toISOString();
+      if(typeof v === 'object' && v !== null) return JSON.stringify(v);
+      if(v === undefined || v === null) return '';
+      return v;
+    }));
   });
-  return '\uFEFF' + rows.join('\r\n');
-}
-
-function downloadCsv(filenamePrefix, content){
-  const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  const dateStr = new Date().toISOString().slice(0,16).replace(/[:T]/g,'-');
-  a.href = url;
-  a.download = `${filenamePrefix}-${dateStr}.csv`;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
+  return rows;
 }
 
 async function exportPatientsToCsv(){
   const btn = $('exportPatientsCsvBtn');
   btn.disabled = true; const orig = btn.textContent;
   try{
-    btn.textContent = 'جاري تصدير المرضى...';
+    btn.textContent = 'جاري تجميع البيانات...';
     const patSnap = await getDocs(patientsCol);
     const patients = [];
     patSnap.forEach(d => patients.push({ id: d.id, ...d.data() }));
     if(!patients.length){ showToast('مفيش مرضى للتصدير', true); return; }
-    downloadCsv('مرضى-العيادة', objectsToCsv(patients));
 
-    btn.textContent = 'جاري تصدير الزيارات...';
     const visitsSnap = await getDocs(collectionGroup(db, 'visits'));
     const visits = []; visitsSnap.forEach(d => visits.push({ id: d.id, PatientID: d.ref.parent.parent.id, ...d.data() }));
-    if(visits.length) downloadCsv('زيارات-الكشف', objectsToCsv(visits));
-    await new Promise(r => setTimeout(r, 700));
 
-    btn.textContent = 'جاري تصدير العمليات...';
     const opsSnap = await getDocs(collectionGroup(db, 'operations'));
     const ops = []; opsSnap.forEach(d => ops.push({ id: d.id, PatientID: d.ref.parent.parent.id, ...d.data() }));
-    if(ops.length) downloadCsv('العمليات', objectsToCsv(ops));
-    await new Promise(r => setTimeout(r, 700));
 
-    btn.textContent = 'جاري تصدير الروشتات والعلاج الطبيعي...';
     const histSnap = await getDocs(collectionGroup(db, 'history'));
     const hist = []; histSnap.forEach(d => hist.push({ id: d.id, PatientID: d.ref.parent.parent.id, ...d.data() }));
-    if(hist.length) downloadCsv('روشتات-وعلاج-طبيعي-وتقارير', objectsToCsv(hist));
-    await new Promise(r => setTimeout(r, 700));
 
-    btn.textContent = 'جاري تصدير الفواتير...';
     const invSnap = await getDocs(collectionGroup(db, 'invoices'));
     const invs = []; invSnap.forEach(d => invs.push({ id: d.id, PatientID: d.ref.parent.parent.id, ...d.data() }));
-    if(invs.length) downloadCsv('الفواتير', objectsToCsv(invs));
 
-    showToast(`تم تصدير ${patients.length} مريض + ${visits.length} زيارة + ${ops.length} عملية + ${hist.length} روشتة/علاج طبيعي/تقرير + ${invs.length} فاتورة ✓`);
+    btn.textContent = 'جاري تجهيز ملف الإكسل...';
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(objectsToSheetRows(patients)), 'المرضى');
+    if(visits.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(objectsToSheetRows(visits)), 'الزيارات');
+    if(ops.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(objectsToSheetRows(ops)), 'العمليات');
+    if(hist.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(objectsToSheetRows(hist)), 'روشتات وعلاج طبيعي وتقارير');
+    if(invs.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(objectsToSheetRows(invs)), 'الفواتير');
+
+    const dateStr = new Date().toISOString().slice(0,16).replace(/[:T]/g,'-');
+    XLSX.writeFile(wb, `نسخة-احتياطية-العيادة-${dateStr}.xlsx`);
+
+    showToast(`تم تصدير ${patients.length} مريض + ${visits.length} زيارة + ${ops.length} عملية + ${hist.length} روشتة/علاج طبيعي/تقرير + ${invs.length} فاتورة في ملف واحد ✓`);
   }catch(err){
     showToast('حصل خطأ أثناء التصدير', true);
   }
