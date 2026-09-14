@@ -8,7 +8,6 @@
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@500;700;800&family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
   :root{
     --teal:#2C6E63; --teal-dark:#1F4A40; --bg:#F7F4EC; --card:#FFFFFF;
@@ -786,8 +785,6 @@
     <div style="display:flex; flex-direction:column; gap:10px;">
       <button class="btn btn-primary" id="runBackupBtn" style="text-align:right;">💾 عمل نسخة احتياطية دلوقتي</button>
       <button class="btn btn-outline-red" id="restoreBackupBtn" style="text-align:right;">♻️ استعادة آخر نسخة احتياطية</button>
-      <button class="btn btn-ghost" id="importOldPatientsBtn" style="text-align:right;">📥 استيراد الأسماء من النظام القديم</button>
-      <button class="btn btn-ghost" id="exportPatientsCsvBtn" style="text-align:right;">📥 تنزيل نسخة Excel على جهازك (بديل سريع)</button>
       <button class="btn btn-ghost" id="openListsManagerBtn" style="text-align:right;">🗂️ إدارة القوايم (أدوية، خدمات، مستخدمين...)</button>
       <button class="btn btn-ghost" id="runClinicNumberMigrationBtn" style="text-align:right;">🔢 ترقيم المرضى تلقائيًا (رقم العيادة)</button>
     </div>
@@ -3768,65 +3765,6 @@ $('closeImagesPatientsViewBtn').onclick = ()=>{
   loadPatientsList();
 };
 
-/* ---------- استيراد المرضى من النظام القديم (Apps Script/Google Sheet) ---------- */
-async function fetchOldPatientsRemote(){
-  const token = await ensureAppsScriptLogin();
-  const res = await fetch(`${APPS_SCRIPT_URL}?action=getAllPatients&token=${encodeURIComponent(token)}`);
-  return res.json();
-}
-
-$('importOldPatientsBtn').onclick = async ()=>{
-  if(navigator.onLine === false){ showToast('الاستيراد محتاج نت', true); return; }
-  if(!confirm('هيتم جلب كل المرضى من النظام القديم وإضافة أي مريض مش موجود بالاسم في النظام الجديد. متأكد؟')) return;
-
-  const btn = $('importOldPatientsBtn');
-  btn.disabled = true; const orig = btn.textContent; btn.textContent = 'جاري الاستيراد...';
-  try{
-    const data = await fetchOldPatientsRemote();
-    if(data.error){ showToast(data.error, true); return; }
-    const oldPatients = data.results || [];
-    if(!oldPatients.length){ showToast('مفيش مرضى في النظام القديم', true); return; }
-
-    const freshSnap = await getDocs(patientsCol);
-    const existingNames = new Set();
-    freshSnap.forEach(d => existingNames.add(normalizeArabic(d.data().Name)));
-
-    let importedCount = 0, skippedCount = 0;
-    for(const old of oldPatients){
-      const normalized = normalizeArabic(old.Name);
-      if(!normalized || existingNames.has(normalized)){ skippedCount++; continue; }
-      let createdAt = null;
-      if(old.CreatedAt){
-        const d = new Date(old.CreatedAt);
-        if(!isNaN(d)) createdAt = Timestamp.fromDate(d);
-      }
-      await addDoc(patientsCol, {
-        Name: old.Name || '',
-        Age: old.Age || '',
-        Phone: old.Phone || '',
-        ClinicNumber: old.ClinicNumber || '',
-        Note: old.Note || '',
-        ExamNotes: old.ExamNotes || '',
-        Radiology: old.Radiology || '',
-        RadiologyLink: old.RadiologyLink || '',
-        LabTests: old.LabTests || '',
-        HasOperation: String(old.HasOperation).trim().toUpperCase() === 'TRUE',
-        RedFlag: String(old.RedFlag).trim().toUpperCase() === 'TRUE',
-        CreatedAt: createdAt || serverTimestamp(),
-        UpdatedAt: serverTimestamp()
-      });
-      existingNames.add(normalized);
-      importedCount++;
-    }
-    showToast(`تم الاستيراد ✓ (${importedCount} مريض جديد، ${skippedCount} كانوا موجودين بالفعل)`);
-    localStorage.removeItem('cachedPatientsList');
-    await loadPatientsList();
-  }catch(err){
-    showToast('حصل خطأ أثناء الاستيراد', true);
-  }
-  btn.disabled = false; btn.textContent = orig;
-};
-
 $('runBackupBtn').onclick = async ()=>{
   if(navigator.onLine === false){ showToast('النسخة الاحتياطية محتاجة نت', true); return; }
   if(!confirm('هيتعمل نسخة احتياطية كاملة من كل البيانات دلوقتي وتتحفظ في جوجل درايف. ممكن ياخد شوية وقت لو المرضى كتير. تكمل؟')) return;
@@ -3954,65 +3892,6 @@ async function runClinicNumberMigration(){
     showToast('حصل خطأ أثناء الترقيم', true);
   }
 }
-
-/* ---------- تصدير كل بيانات العيادة مباشرة من المتصفح لملف Excel حقيقي بتابات (بدون Apps Script خالص) ---------- */
-function objectsToSheetRows(objects){
-  const headerSet = new Set();
-  objects.forEach(o => Object.keys(o).forEach(k => headerSet.add(k)));
-  const headers = Array.from(headerSet);
-  const rows = [headers];
-  objects.forEach(o=>{
-    rows.push(headers.map(h=>{
-      const v = o[h];
-      if(v && v.toDate) return v.toDate().toISOString();
-      if(typeof v === 'object' && v !== null) return JSON.stringify(v);
-      if(v === undefined || v === null) return '';
-      return v;
-    }));
-  });
-  return rows;
-}
-
-async function exportPatientsToCsv(){
-  const btn = $('exportPatientsCsvBtn');
-  btn.disabled = true; const orig = btn.textContent;
-  try{
-    btn.textContent = 'جاري تجميع البيانات...';
-    const patSnap = await getDocs(patientsCol);
-    const patients = [];
-    patSnap.forEach(d => patients.push({ id: d.id, ...d.data() }));
-    if(!patients.length){ showToast('مفيش مرضى للتصدير', true); return; }
-
-    const visitsSnap = await getDocs(collectionGroup(db, 'visits'));
-    const visits = []; visitsSnap.forEach(d => visits.push({ id: d.id, PatientID: d.ref.parent.parent.id, ...d.data() }));
-
-    const opsSnap = await getDocs(collectionGroup(db, 'operations'));
-    const ops = []; opsSnap.forEach(d => ops.push({ id: d.id, PatientID: d.ref.parent.parent.id, ...d.data() }));
-
-    const histSnap = await getDocs(collectionGroup(db, 'history'));
-    const hist = []; histSnap.forEach(d => hist.push({ id: d.id, PatientID: d.ref.parent.parent.id, ...d.data() }));
-
-    const invSnap = await getDocs(collectionGroup(db, 'invoices'));
-    const invs = []; invSnap.forEach(d => invs.push({ id: d.id, PatientID: d.ref.parent.parent.id, ...d.data() }));
-
-    btn.textContent = 'جاري تجهيز ملف الإكسل...';
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(objectsToSheetRows(patients)), 'المرضى');
-    if(visits.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(objectsToSheetRows(visits)), 'الزيارات');
-    if(ops.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(objectsToSheetRows(ops)), 'العمليات');
-    if(hist.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(objectsToSheetRows(hist)), 'روشتات وعلاج طبيعي وتقارير');
-    if(invs.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(objectsToSheetRows(invs)), 'الفواتير');
-
-    const dateStr = new Date().toISOString().slice(0,16).replace(/[:T]/g,'-');
-    XLSX.writeFile(wb, `نسخة-احتياطية-العيادة-${dateStr}.xlsx`);
-
-    showToast(`تم تصدير ${patients.length} مريض + ${visits.length} زيارة + ${ops.length} عملية + ${hist.length} روشتة/علاج طبيعي/تقرير + ${invs.length} فاتورة في ملف واحد ✓`);
-  }catch(err){
-    showToast('حصل خطأ أثناء التصدير', true);
-  }
-  btn.disabled = false; btn.textContent = orig;
-}
-$('exportPatientsCsvBtn').onclick = exportPatientsToCsv;
 
 /* ---------- إدارة القوايم (أدوية، روشتات جاهزة، توصيات، علاج طبيعي، تحاليل، أشعة، خدمات، مستخدمين) ---------- */
 let currentMgrTab = 'users';
