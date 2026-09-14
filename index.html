@@ -166,7 +166,7 @@
   .fab-btn{display:none; position:fixed; bottom:20px; width:52px; height:52px; border-radius:50%; background:var(--teal); color:#fff; border:none; font-size:22px; align-items:center; justify-content:center; cursor:pointer; box-shadow:0 4px 14px rgba(0,0,0,.25); z-index:99998;}
   .fab-badge{position:absolute; top:-4px; left:-4px; background:var(--red); color:#fff; border-radius:999px; font-size:11px; font-weight:800; padding:2px 6px; min-width:18px; text-align:center; line-height:1.3; font-family:'Tajawal';}
   #todoFabBtn{width:38px; height:38px; font-size:16px;}
-  #stickyFabBtn{left:20px; background:#E8B923;}
+  #stickyFabBtn{left:20px; background:#E8B923; width:38px; height:38px; font-size:16px;}
 
   .todo-panel{display:none; position:fixed; width:300px; max-height:70vh; overflow-y:auto; background:#fff; border:1px solid var(--line); border-radius:14px; box-shadow:0 8px 28px rgba(0,0,0,.22); z-index:99998; padding:16px;}
   .todo-item{display:flex; align-items:center; gap:8px; padding:8px 4px; border-bottom:1px solid var(--line); font-size:13.5px;}
@@ -449,61 +449,42 @@
 
       <div class="tab-panel" id="tab-kashf">
         <div class="exam-card">
-          <h2>الشكوى والكشف</h2>
-          <div class="hint">القالب بيتحط تلقائي - كمّل في الفراغات وعدّل زي ما يريحك</div>
-          <textarea id="fExam" dir="ltr" style="text-align:left;" placeholder="الشكوى، الفحص، التشخيص، العلاج..."></textarea>
-        </div>
+          <h2 style="margin:0 0 4px;">تسجيل كشف / زيارة جديدة</h2>
+          <div class="hint" style="margin-bottom:14px;">أي حفظ هنا بيتسجل كزيارة جديدة تحت بتاريخها - الخانات هنا دايمًا فاضية لتسجيل حاجة جديدة</div>
 
-        <div class="exam-card">
-          <h2>الأشعة</h2>
-          <textarea id="fRadiology" style="min-height:110px;" placeholder="الأشعة المطلوبة أو نتائجها..."></textarea>
-          <div class="field" style="margin-top:14px;">
+          <div class="field" style="max-width:200px;">
+            <label>تاريخ الزيارة</label>
+            <input type="date" id="vDate">
+          </div>
+          <div class="field">
+            <label>الشكوى والكشف</label>
+            <textarea id="vNotes" dir="ltr" style="min-height:180px; text-align:left;" placeholder="الشكوى، الفحص، التشخيص، العلاج..."></textarea>
+          </div>
+          <div class="field">
+            <label>الأشعة</label>
+            <textarea id="vRadiology" style="min-height:80px;" placeholder="الأشعة المطلوبة أو نتائجها..."></textarea>
+          </div>
+          <div class="field">
             <label>رابط أرشيف الأشعة</label>
             <input type="text" id="fRadiologyLink" placeholder="https://...">
           </div>
-        </div>
-
-        <div class="exam-card">
-          <h2>التحاليل</h2>
-          <textarea id="fLabTests" style="min-height:110px;" placeholder="التحاليل المطلوبة أو نتائجها..."></textarea>
+          <div class="field">
+            <label>التحاليل</label>
+            <textarea id="vLabTests" style="min-height:80px;" placeholder="التحاليل المطلوبة أو نتائجها..."></textarea>
+          </div>
           <label style="display:flex; align-items:center; gap:8px; margin:16px 0 4px; cursor:pointer; font-size:14px; font-weight:700; color:var(--ink);">
             <input type="checkbox" id="fHasOperation" style="width:18px;height:18px;">
             المريض له عملية / عمل عملية
           </label>
-          <div style="margin-top:14px;">
-            <button class="btn btn-primary" id="saveExamBtn">حفظ الكشف والأشعة والتحاليل</button>
+
+          <div style="display:flex; gap:10px; margin-top:14px;">
+            <button class="btn btn-primary" id="addVisitBtn">حفظ الزيارة</button>
+            <button class="btn btn-ghost" id="cancelVisitBtn" style="display:none;">إلغاء التعديل</button>
           </div>
         </div>
 
         <div class="exam-card">
-          <div class="visits-head">
-            <h2 style="margin:0;">سجل الزيارات</h2>
-            <button class="btn btn-ghost" id="toggleVisitBtn">+ تسجيل زيارة جديدة</button>
-          </div>
-
-          <div class="new-visit-form" id="newVisitForm">
-            <div class="field" style="max-width:200px;">
-              <label>تاريخ الزيارة</label>
-              <input type="date" id="vDate">
-            </div>
-            <div class="field">
-              <label>الشكوى والكشف</label>
-              <textarea id="vNotes" dir="ltr" style="min-height:180px; text-align:left;" placeholder="الشكوى، الفحص، التشخيص، العلاج..."></textarea>
-            </div>
-            <div class="field">
-              <label>الأشعة</label>
-              <textarea id="vRadiology" style="min-height:80px;" placeholder="الأشعة المطلوبة أو نتائجها..."></textarea>
-            </div>
-            <div class="field">
-              <label>التحاليل</label>
-              <textarea id="vLabTests" style="min-height:80px;" placeholder="التحاليل المطلوبة أو نتائجها..."></textarea>
-            </div>
-            <div style="display:flex; gap:10px;">
-              <button class="btn btn-primary" id="addVisitBtn">حفظ الزيارة</button>
-              <button class="btn btn-ghost" id="cancelVisitBtn">إلغاء</button>
-            </div>
-          </div>
-
+          <h2 style="margin:0 0 14px;">سجل الزيارات</h2>
           <div id="visitsList"></div>
         </div>
       </div>
@@ -806,6 +787,7 @@
       <button class="btn btn-outline-red" id="restoreBackupBtn" style="text-align:right;">♻️ استعادة آخر نسخة احتياطية</button>
       <button class="btn btn-ghost" id="importOldPatientsBtn" style="text-align:right;">📥 استيراد الأسماء من النظام القديم</button>
       <button class="btn btn-ghost" id="openListsManagerBtn" style="text-align:right;">🗂️ إدارة القوايم (أدوية، خدمات، مستخدمين...)</button>
+      <button class="btn btn-ghost" id="runClinicNumberMigrationBtn" style="text-align:right;">🔢 ترقيم المرضى تلقائيًا (رقم العيادة)</button>
     </div>
     <div class="hint" style="margin-top:16px;">الاستعادة بتكتب فوق أي بيانات اتضافت بعد وقت آخر نسخة احتياطية - استخدمها بحذر.</div>
   </div>
@@ -882,7 +864,7 @@ import {
   getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut
 } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-auth.js";
 import {
-  getFirestore, collection, collectionGroup, doc, addDoc, updateDoc, deleteDoc, Timestamp,
+  getFirestore, collection, collectionGroup, doc, addDoc, updateDoc, deleteDoc, setDoc, Timestamp,
   getDoc, getDocs, query, orderBy, serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore.js";
 
@@ -1610,11 +1592,15 @@ function openPatient(id){
   $('fClinicNumber').value = p.ClinicNumber || '';
   $('fNote').value = p.Note || '';
   $('fRedFlag').checked = !!p.RedFlag;
-  $('fExam').value = p.ExamNotes || EXAM_TEMPLATE;
-  $('fRadiology').value = p.Radiology || '';
   $('fRadiologyLink').value = p.RadiologyLink || '';
-  $('fLabTests').value = p.LabTests || '';
   $('fHasOperation').checked = !!p.HasOperation;
+  $('vDate').value = new Date().toISOString().slice(0,10);
+  $('vNotes').value = EXAM_TEMPLATE;
+  $('vRadiology').value = '';
+  $('vLabTests').value = '';
+  editingVisitId = null;
+  $('addVisitBtn').textContent = 'حفظ الزيارة';
+  $('cancelVisitBtn').style.display = 'none';
   $('deletePatientBtn').style.display = 'inline-block';
   $('listView').style.display = 'none';
   $('workspace').style.display = 'block';
@@ -1623,7 +1609,6 @@ function openPatient(id){
   if(isTemp){
     currentVisits = [];
     $('visitsList').innerHTML = '<div class="no-visits">لازم يتزامن ملف المريض مع الإنترنت الأول قبل تسجيل زيارات</div>';
-    $('toggleVisitBtn').style.display = 'none';
     currentOperations = [];
     $('operationsList').innerHTML = '<div class="no-visits">لازم يتزامن ملف المريض مع الإنترنت الأول قبل تسجيل عمليات</div>';
     $('toggleOperationBtn').style.display = 'none';
@@ -1638,7 +1623,7 @@ function openPatient(id){
     $('toggleInvoiceBtn').style.display = 'none';
     $('bookApptCard').style.display = 'none';
   } else {
-    $('toggleVisitBtn').style.display = 'inline-block';
+    migrateOldExamDataToVisit(id, p);
     loadVisits(id);
     $('toggleOperationBtn').style.display = 'inline-block';
     loadOperations(id);
@@ -1658,9 +1643,7 @@ function resetToBasicTab(){
   document.querySelectorAll('.tab-panel').forEach(p=> p.classList.remove('active'));
   document.querySelector('.tab-btn[data-tab="tab-basic"]').classList.add('active');
   $('tab-basic').classList.add('active');
-  $('newVisitForm').classList.remove('open');
   $('newOperationForm').classList.remove('open');
-  editingVisitId = null;
   editingOperationId = null;
 }
 
@@ -1671,11 +1654,14 @@ $('newPatientBtn').onclick = ()=>{
   $('folderTitle').textContent = 'ملف جديد';
   $('fName').value = ''; $('fAge').value = ''; $('fPhone').value = '';
   $('fClinicNumber').value = ''; $('fNote').value = ''; $('fRedFlag').checked = false;
-  $('fExam').value = EXAM_TEMPLATE; $('fRadiology').value = ''; $('fRadiologyLink').value = '';
-  $('fLabTests').value = ''; $('fHasOperation').checked = false;
+  $('fRadiologyLink').value = ''; $('fHasOperation').checked = false;
+  $('vDate').value = new Date().toISOString().slice(0,10);
+  $('vNotes').value = EXAM_TEMPLATE; $('vRadiology').value = ''; $('vLabTests').value = '';
+  editingVisitId = null;
+  $('addVisitBtn').textContent = 'حفظ الزيارة';
+  $('cancelVisitBtn').style.display = 'none';
   currentVisits = [];
   $('visitsList').innerHTML = '<div class="no-visits">احفظ بيانات المريض الأول قبل تسجيل زيارات</div>';
-  $('toggleVisitBtn').style.display = 'none';
   currentOperations = [];
   $('operationsList').innerHTML = '<div class="no-visits">احفظ بيانات المريض الأول قبل تسجيل عمليات</div>';
   $('toggleOperationBtn').style.display = 'none';
@@ -1756,11 +1742,18 @@ $('savePatientBtn').onclick = async ()=>{
   const name = $('fName').value.trim();
   if(!name){ showToast('اكتب اسم المريض الأول', true); return; }
 
+  const isNewPatient = !currentPatientId;
+  let clinicNumber = $('fClinicNumber').value.trim();
+  if(isNewPatient && !clinicNumber && navigator.onLine !== false){
+    clinicNumber = await getNextClinicNumber();
+    if(clinicNumber) $('fClinicNumber').value = clinicNumber;
+  }
+
   const data = {
     Name: name,
     Age: $('fAge').value.trim(),
     Phone: $('fPhone').value.trim(),
-    ClinicNumber: $('fClinicNumber').value.trim(),
+    ClinicNumber: clinicNumber,
     Note: $('fNote').value,
     RedFlag: $('fRedFlag').checked
   };
@@ -1823,45 +1816,23 @@ $('deletePatientBtn').onclick = async ()=>{
 };
 
 /* ---------- حفظ تاب الكشف والأشعة والتحاليل ---------- */
-$('saveExamBtn').onclick = async ()=>{
-  if(!currentPatientId || String(currentPatientId).startsWith('temp_')){
-    showToast('احفظ بيانات المريض الأول من تاب البيانات الأساسية', true);
-    return;
-  }
-  const data = {
-    ExamNotes: $('fExam').value,
-    Radiology: $('fRadiology').value.trim(),
-    RadiologyLink: $('fRadiologyLink').value.trim(),
-    LabTests: $('fLabTests').value.trim(),
-    HasOperation: $('fHasOperation').checked
-  };
-  const btn = $('saveExamBtn');
-  btn.disabled = true; const orig = btn.textContent; btn.textContent = 'جاري الحفظ...';
-
-  const applyLocally = ()=>{
-    const idx = allPatients.findIndex(p => p.id === currentPatientId);
-    if(idx !== -1){ allPatients[idx] = { ...allPatients[idx], ...data }; setCachedPatients(allPatients); }
-  };
-
-  if(navigator.onLine === false){
-    applyLocally();
-    addToWriteQueue({ type:'saveExam', id: currentPatientId, data });
-    showToast('النت مقطوع - اتحفظ مؤقتًا وهيتزامن تلقائي', true);
-    btn.disabled = false; btn.textContent = orig;
-    return;
-  }
+/* لو المريض عنده بيانات كشف قديمة (اتسجلت قبل ما تاب الكشف يتحول لزيارات)، ننقلها لزيارة
+   مرة واحدة بس عشان مفيش بيانات تضيع - وبعدين نمسحها من ملف المريض نفسه */
+async function migrateOldExamDataToVisit(patientId, p){
+  const hasOldData = (p.ExamNotes && p.ExamNotes.trim() && p.ExamNotes.trim() !== EXAM_TEMPLATE.trim()) || (p.Radiology && p.Radiology.trim()) || (p.LabTests && p.LabTests.trim());
+  if(!hasOldData || navigator.onLine === false) return;
   try{
-    await updateDoc(doc(db, "patients", currentPatientId), { ...data, UpdatedAt: serverTimestamp() });
-    applyLocally();
-    showToast('اتحفظ الكشف ✓');
-  }catch(err){
-    applyLocally();
-    addToWriteQueue({ type:'saveExam', id: currentPatientId, data });
-    showToast('حصل خطأ في الاتصال - اتحفظ مؤقتًا وهيتزامن تلقائي', true);
-  }finally{
-    btn.disabled = false; btn.textContent = orig;
-  }
-};
+    const visitDate = p.CreatedAt && p.CreatedAt.toDate ? p.CreatedAt.toDate().toISOString().slice(0,10) : new Date().toISOString().slice(0,10);
+    await addDoc(collection(db, "patients", patientId, "visits"), {
+      VisitDate: visitDate,
+      VisitNotes: p.ExamNotes || '',
+      Radiology: p.Radiology || '',
+      LabTests: p.LabTests || '',
+      CreatedAt: serverTimestamp()
+    });
+    await updateDoc(doc(db, "patients", patientId), { ExamNotes: '', Radiology: '', LabTests: '' });
+  }catch(err){ /* لو حصل خطأ هنحاول تاني المرة الجاية اللي هيفتح فيها الملف */ }
+}
 
 /* ---------- سجل الزيارات ---------- */
 async function loadVisits(patientId){
@@ -1883,6 +1854,15 @@ async function loadVisits(patientId){
   }
 }
 
+function buildVisitBodyHtml(visit){
+  const section = (title, innerHtml) => `<div style="margin-bottom:18px;"><div style="font-weight:700; font-size:10pt; color:#1F4A40; margin-bottom:6px;">${title}</div>${innerHtml}</div>`;
+  let html = '';
+  html += section('الشكوى والكشف', renderArabicTextBlock(visit.VisitNotes || '—'));
+  if(visit.Radiology) html += section('الأشعة', renderArabicTextBlock(visit.Radiology));
+  if(visit.LabTests) html += section('التحاليل', renderArabicTextBlock(visit.LabTests));
+  return html;
+}
+
 function renderVisits(visits){
   const box = $('visitsList');
   if(!visits.length){ box.innerHTML = '<div class="no-visits">لسه مفيش زيارات مسجلة</div>'; return; }
@@ -1892,9 +1872,10 @@ function renderVisits(visits){
       <div class="visit-notes">${escapeHtml(v.VisitNotes || '—')}</div>
       ${v.Radiology ? `<div class="visit-notes"><b class="visit-label">الأشعة:</b> ${escapeHtml(v.Radiology)}</div>` : ''}
       ${v.LabTests ? `<div class="visit-notes"><b class="visit-label">التحاليل:</b> ${escapeHtml(v.LabTests)}</div>` : ''}
-      <div style="display:flex; gap:8px; margin-top:10px;">
+      <div style="display:flex; gap:8px; margin-top:10px; flex-wrap:wrap;">
         <button class="btn btn-ghost visit-edit-btn" style="padding:6px 12px; font-size:12.5px;">تعديل</button>
         <button class="btn btn-outline-red visit-delete-btn" style="padding:6px 12px; font-size:12.5px;">حذف</button>
+        <button class="btn btn-primary visit-pdf-btn" style="padding:6px 12px; font-size:12.5px;">تحميل PDF</button>
       </div>
     </div>`).join('');
   box.querySelectorAll('.visit-item').forEach(item=>{
@@ -1903,6 +1884,10 @@ function renderVisits(visits){
     if(!visit) return;
     item.querySelector('.visit-edit-btn').addEventListener('click', ()=> startEditVisit(visit));
     item.querySelector('.visit-delete-btn').addEventListener('click', ()=> deleteVisitEntry(visit.id));
+    const pdfBtn = item.querySelector('.visit-pdf-btn');
+    pdfBtn.addEventListener('click', ()=>{
+      exportRxTemplateAsPdf(buildVisitBodyHtml(visit), 'كشف', pdfBtn, String(visit.VisitDate || '').slice(0,10));
+    });
   });
 }
 
@@ -1913,43 +1898,44 @@ function startEditVisit(visit){
   $('vRadiology').value = visit.Radiology || '';
   $('vLabTests').value = visit.LabTests || '';
   $('addVisitBtn').textContent = 'حفظ التعديل';
-  $('newVisitForm').classList.add('open');
-  $('newVisitForm').scrollIntoView({behavior:'smooth', block:'nearest'});
+  $('cancelVisitBtn').style.display = 'inline-block';
+  $('vDate').scrollIntoView({behavior:'smooth', block:'start'});
 }
 
-$('toggleVisitBtn').onclick = ()=>{
-  if(!currentPatientId || String(currentPatientId).startsWith('temp_')){
-    showToast('احفظ بيانات المريض الأول', true);
-    return;
-  }
+$('cancelVisitBtn').onclick = ()=>{
   editingVisitId = null;
   $('addVisitBtn').textContent = 'حفظ الزيارة';
+  $('cancelVisitBtn').style.display = 'none';
   $('vDate').value = new Date().toISOString().slice(0,10);
   $('vNotes').value = EXAM_TEMPLATE;
   $('vRadiology').value = '';
   $('vLabTests').value = '';
-  $('newVisitForm').classList.add('open');
-};
-$('cancelVisitBtn').onclick = ()=>{
-  editingVisitId = null;
-  $('addVisitBtn').textContent = 'حفظ الزيارة';
-  $('newVisitForm').classList.remove('open');
 };
 
 $('addVisitBtn').onclick = async ()=>{
+  if(!currentPatientId || String(currentPatientId).startsWith('temp_')){
+    showToast('احفظ بيانات المريض الأول من تاب البيانات الأساسية', true);
+    return;
+  }
   const date = $('vDate').value;
   const notes = $('vNotes').value.trim();
   const radiology = $('vRadiology').value.trim();
   const labTests = $('vLabTests').value.trim();
   if(!date){ showToast('اختار تاريخ الزيارة', true); return; }
   const data = { VisitDate: date, VisitNotes: notes, Radiology: radiology, LabTests: labTests };
+  const patientFlags = { RadiologyLink: $('fRadiologyLink').value.trim(), HasOperation: $('fHasOperation').checked };
   const isEditing = !!editingVisitId;
   const btn = $('addVisitBtn');
   btn.disabled = true; const orig = btn.textContent; btn.textContent = 'جاري الحفظ...';
 
   const finishUi = ()=>{
     editingVisitId = null;
-    $('newVisitForm').classList.remove('open');
+    $('addVisitBtn').textContent = 'حفظ الزيارة';
+    $('cancelVisitBtn').style.display = 'none';
+    $('vDate').value = new Date().toISOString().slice(0,10);
+    $('vNotes').value = EXAM_TEMPLATE;
+    $('vRadiology').value = '';
+    $('vLabTests').value = '';
     btn.disabled = false; btn.textContent = 'حفظ الزيارة';
   };
 
@@ -1963,6 +1949,7 @@ $('addVisitBtn').onclick = async ()=>{
       currentVisits.unshift({ id: tempId, ...data, _pending:true });
       addToWriteQueue({ type:'addVisit', patientId: currentPatientId, data, tempId });
     }
+    addToWriteQueue({ type:'saveExam', id: currentPatientId, data: patientFlags });
     setCachedVisits(currentPatientId, currentVisits);
     renderVisits(currentVisits);
     showToast('النت مقطوع - اتحفظت الزيارة مؤقتًا وهتتزامن تلقائي', true);
@@ -1976,6 +1963,9 @@ $('addVisitBtn').onclick = async ()=>{
     } else {
       await addDoc(collection(db, "patients", currentPatientId, "visits"), { ...data, CreatedAt: serverTimestamp() });
     }
+    await updateDoc(doc(db, "patients", currentPatientId), { ...patientFlags, UpdatedAt: serverTimestamp() });
+    const idx = allPatients.findIndex(p => p.id === currentPatientId);
+    if(idx !== -1){ allPatients[idx] = { ...allPatients[idx], ...patientFlags }; setCachedPatients(allPatients); }
     showToast(isEditing ? 'اتحدثت الزيارة ✓' : 'اتسجلت الزيارة ✓');
     await loadVisits(currentPatientId);
   }catch(err){
@@ -1988,6 +1978,7 @@ $('addVisitBtn').onclick = async ()=>{
       currentVisits.unshift({ id: tempId, ...data, _pending:true });
       addToWriteQueue({ type:'addVisit', patientId: currentPatientId, data, tempId });
     }
+    addToWriteQueue({ type:'saveExam', id: currentPatientId, data: patientFlags });
     setCachedVisits(currentPatientId, currentVisits);
     renderVisits(currentVisits);
     showToast('حصل خطأ في الاتصال - اتحفظت الزيارة مؤقتًا', true);
@@ -3877,10 +3868,55 @@ $('restoreBackupBtn').onclick = async ()=>{
   $('settingsModal').style.display = 'none';
 };
 
+/* ---------- رقم العيادة التلقائي (استكمال ترقيم الشيت القديم) ---------- */
+async function getNextClinicNumber(){
+  try{
+    const ref = doc(db, "meta", "counters");
+    const snap = await getDoc(ref);
+    const next = (snap.exists() && snap.data().nextClinicNumber) ? snap.data().nextClinicNumber : 1192;
+    await setDoc(ref, { nextClinicNumber: next + 1 }, { merge: true });
+    return 'P' + next;
+  }catch(e){ return ''; }
+}
+
+async function runClinicNumberMigration(){
+  if(navigator.onLine === false){ showToast('الترقيم محتاج نت', true); return; }
+  if(!confirm('هيتم إعطاء رقم عيادة تلقائي لكل مريض مالوش رقم حاليًا، بالترتيب الزمني، استكمالًا من P1191. تكمل؟')) return;
+  try{
+    const snap = await getDocs(patientsCol);
+    const patients = [];
+    snap.forEach(d => patients.push({ id: d.id, ...d.data() }));
+
+    let counter = 1192;
+    patients.forEach(p=>{
+      const m = String(p.ClinicNumber || '').match(/^P(\d+)$/);
+      if(m){ const n = parseInt(m[1], 10); if(n >= counter) counter = n + 1; }
+    });
+
+    const withoutNumber = patients.filter(p => !p.ClinicNumber || !String(p.ClinicNumber).trim());
+    withoutNumber.sort((a,b) => getComparableDate(a.CreatedAt) - getComparableDate(b.CreatedAt));
+
+    for(const p of withoutNumber){
+      await updateDoc(doc(db, "patients", p.id), { ClinicNumber: 'P' + counter });
+      counter++;
+    }
+    await setDoc(doc(db, "meta", "counters"), { nextClinicNumber: counter }, { merge: true });
+    showToast(`تم ترقيم ${withoutNumber.length} مريض ✓ - آخر رقم P${counter - 1}`);
+    localStorage.removeItem('cachedPatientsList');
+    await loadPatientsList();
+  }catch(err){
+    showToast('حصل خطأ أثناء الترقيم', true);
+  }
+}
+
 /* ---------- إدارة القوايم (أدوية، روشتات جاهزة، توصيات، علاج طبيعي، تحاليل، أشعة، خدمات، مستخدمين) ---------- */
 let currentMgrTab = 'users';
 let USERS_LIST = [];
 
+$('runClinicNumberMigrationBtn').onclick = ()=>{
+  $('settingsModal').style.display = 'none';
+  runClinicNumberMigration();
+};
 $('openListsManagerBtn').onclick = ()=>{
   $('settingsModal').style.display = 'none';
   $('listView').style.display = 'none';
