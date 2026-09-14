@@ -566,10 +566,8 @@
         <div class="exam-card">
           <div class="visits-head">
             <h2 style="margin:0;">صور المريض</h2>
-            <label class="btn btn-ghost" id="uploadImageLabel" style="cursor:pointer; margin:0;">
-              + رفع صور
-              <input type="file" id="imageFileInput" accept="image/*" multiple style="display:none;">
-            </label>
+            <button type="button" class="btn btn-ghost" id="uploadImageLabel" style="margin:0;">+ رفع صور</button>
+            <input type="file" id="imageFileInput" accept="image/*" multiple style="display:none;">
           </div>
           <div class="hint">الصور بتتخزن في نفس نظام جوجل درايف القديم (منفصل عن باقي البيانات) - وبتتقسم كسجل زمني حسب وقت كل رفعة</div>
           <div id="imagesTimeline"></div>
@@ -772,6 +770,30 @@
       <button class="btn btn-outline-red" id="deleteHistoryBtn">حذف</button>
       <button class="btn btn-primary" id="downloadHistoryPdfBtn">تحميل PDF</button>
     </div>
+  </div>
+</div>
+
+<div id="imageSectionModal" style="display:none; position:fixed; inset:0; background:rgba(31,74,64,.45); z-index:200; align-items:center; justify-content:center; padding:20px;">
+  <div class="card" style="max-width:420px; width:100%; position:relative;">
+    <button id="closeImageSectionModalBtn" class="btn btn-ghost" style="position:absolute; top:14px; left:14px; padding:6px 12px;">✕</button>
+    <h2 style="margin:0 0 16px;">رفع صور</h2>
+    <div class="field">
+      <label>السكشن</label>
+      <select id="imgSectionSelect" class="dropdown-add-select">
+        <option value="__new__">+ سكشن جديد</option>
+      </select>
+    </div>
+    <div id="imgNewSectionFields">
+      <div class="field">
+        <label>عنوان السكشن</label>
+        <input type="text" id="imgSectionTitle" placeholder="زي: قبل العملية / متابعة أسبوع">
+      </div>
+      <div class="field">
+        <label>التاريخ</label>
+        <input type="date" id="imgSectionDate">
+      </div>
+    </div>
+    <button class="btn btn-primary" id="imgSectionContinueBtn" style="width:100%; margin-top:6px;">اختار الصور</button>
   </div>
 </div>
 
@@ -2211,8 +2233,10 @@ function groupImagesForTimeline(images){
   const groups = {};
   const order = [];
   images.forEach(im=>{
-    const key = (im.SessionNote && String(im.SessionNote).trim()) ? ('note:' + im.SessionNote.trim()) : ('date:' + String(im.ImageDate || '').slice(0,10));
-    if(!groups[key]){ groups[key] = { note: im.SessionNote || '', date: im.ImageDate || '', items: [] }; order.push(key); }
+    const noteKey = (im.SessionNote && String(im.SessionNote).trim()) ? im.SessionNote.trim() : '';
+    const dateKey = String(im.ImageDate || '').slice(0,10);
+    const key = noteKey + '|' + dateKey;
+    if(!groups[key]){ groups[key] = { note: noteKey, date: im.ImageDate || '', items: [] }; order.push(key); }
     groups[key].items.push(im);
   });
   return order.map(k => groups[k]);
@@ -2263,10 +2287,60 @@ function renderImagesTimeline(images){
   });
 }
 
+let pendingUploadSection = null;
+
+$('uploadImageLabel').onclick = ()=>{
+  if(!currentPatientId || String(currentPatientId).startsWith('temp_')){
+    showToast('احفظ بيانات المريض الأول', true);
+    return;
+  }
+  const sections = getExistingImageSections(currentImages);
+  const select = $('imgSectionSelect');
+  select.innerHTML = '<option value="__new__">+ سكشن جديد</option>' +
+    sections.map((s, i) => `<option value="${i}">${escapeHtml(s.note)} - ${escapeHtml(String(s.date).slice(0,10))}</option>`).join('');
+  select.dataset.sections = JSON.stringify(sections);
+  select.value = '__new__';
+  $('imgNewSectionFields').style.display = 'block';
+  $('imgSectionTitle').value = '';
+  $('imgSectionDate').value = new Date().toISOString().slice(0,10);
+  $('imageSectionModal').style.display = 'flex';
+};
+$('closeImageSectionModalBtn').onclick = ()=>{ $('imageSectionModal').style.display = 'none'; };
+$('imgSectionSelect').addEventListener('change', ()=>{
+  $('imgNewSectionFields').style.display = $('imgSectionSelect').value === '__new__' ? 'block' : 'none';
+});
+$('imgSectionContinueBtn').onclick = ()=>{
+  const select = $('imgSectionSelect');
+  if(select.value === '__new__'){
+    const title = $('imgSectionTitle').value.trim();
+    const date = $('imgSectionDate').value;
+    if(!title){ showToast('اكتب عنوان السكشن', true); return; }
+    if(!date){ showToast('حدد تاريخ السكشن', true); return; }
+    pendingUploadSection = { note: title, date: date };
+  } else {
+    const sections = JSON.parse(select.dataset.sections || '[]');
+    pendingUploadSection = sections[Number(select.value)];
+    if(!pendingUploadSection){ showToast('اختار سكشن صحيح', true); return; }
+  }
+  $('imageSectionModal').style.display = 'none';
+  $('imageFileInput').click();
+};
+
+/* بنجيب قايمة السكاشن (عنوان + تاريخ) اللي المريض ده استخدمها قبل كده، عشان يقدر يضيف عليها تاني */
+function getExistingImageSections(images){
+  const seen = new Map();
+  images.forEach(im=>{
+    if(!im.SessionNote || !String(im.SessionNote).trim()) return;
+    const key = im.SessionNote.trim() + '|' + String(im.ImageDate || '').slice(0,10);
+    if(!seen.has(key)) seen.set(key, { note: im.SessionNote.trim(), date: String(im.ImageDate || '').slice(0,10) });
+  });
+  return Array.from(seen.values()).sort((a,b) => (b.date || '').localeCompare(a.date || ''));
+}
+
 $('imageFileInput').addEventListener('change', async (e)=>{
   const files = Array.from(e.target.files || []);
   e.target.value = '';
-  if(!files.length) return;
+  if(!files.length || !pendingUploadSection) return;
   if(!currentPatientId || String(currentPatientId).startsWith('temp_')){
     showToast('احفظ بيانات المريض الأول', true);
     return;
@@ -2275,8 +2349,8 @@ $('imageFileInput').addEventListener('change', async (e)=>{
     showToast('رفع الصور محتاج نت - جرب تاني وانت أونلاين', true);
     return;
   }
-  const sessionNote = (prompt('اكتب عنوان/ملاحظة لهذه المجموعة من الصور (اختياري - زي "قبل العملية" أو "الكشف الأول"):') || '').trim();
-  const sessionDate = new Date().toISOString();
+  const sessionNote = pendingUploadSection.note;
+  const sessionDate = pendingUploadSection.date;
   let successCount = 0, failCount = 0;
   for(let i = 0; i < files.length; i++){
     showToast(`جاري رفع الصورة ${i+1} من ${files.length}...`);
@@ -2288,6 +2362,7 @@ $('imageFileInput').addEventListener('change', async (e)=>{
     }catch(err){ failCount++; }
   }
   showToast(failCount ? `اتحفظ ${successCount} صورة، وفشل ${failCount}` : `اتحفظت ${successCount} صورة ✓`, !!failCount);
+  pendingUploadSection = null;
   await loadImages(currentPatientId);
 });
 
