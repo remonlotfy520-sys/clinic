@@ -3908,12 +3908,23 @@ async function runClinicNumberMigration(){
     const withoutNumber = patients.filter(p => !p.ClinicNumber || !String(p.ClinicNumber).trim());
     withoutNumber.sort((a,b) => getComparableDate(a.CreatedAt) - getComparableDate(b.CreatedAt));
 
+    let successCount = 0;
+    const failedNames = [];
     for(const p of withoutNumber){
-      await updateDoc(doc(db, "patients", p.id), { ClinicNumber: 'P' + counter });
-      counter++;
+      try{
+        await updateDoc(doc(db, "patients", p.id), { ClinicNumber: 'P' + counter });
+        counter++;
+        successCount++;
+      }catch(e){
+        failedNames.push(p.Name || p.id);
+      }
     }
     await setDoc(doc(db, "meta", "counters"), { nextClinicNumber: counter }, { merge: true });
-    showToast(`تم ترقيم ${withoutNumber.length} مريض ✓ - آخر رقم P${counter - 1}`);
+    if(failedNames.length){
+      showToast(`اترقّم ${successCount} مريض ✓ - وفشل ${failedNames.length} (${failedNames.slice(0,3).join('، ')}${failedNames.length > 3 ? '...' : ''}) - جرب تاني`, true);
+    } else {
+      showToast(`تم ترقيم ${successCount} مريض ✓ - آخر رقم P${counter - 1}`);
+    }
     localStorage.removeItem('cachedPatientsList');
     await loadPatientsList();
   }catch(err){
