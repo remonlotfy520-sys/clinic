@@ -970,6 +970,7 @@ function setAppsScriptCreds(username, password){
 function getAppsScriptToken(){ return localStorage.getItem('appsScriptToken') || ''; }
 function setAppsScriptToken(t){ localStorage.setItem('appsScriptToken', t); }
 
+let appsScriptLoginPromise = null;
 async function ensureAppsScriptLogin(){
   const existing = getAppsScriptToken();
   if(existing){
@@ -979,22 +980,34 @@ async function ensureAppsScriptLogin(){
       if(d && d.valid) return existing;
     }catch(e){ /* هنحاول نعمل لوجين تاني تحت */ }
   }
-  let creds = getAppsScriptCreds();
-  if(!creds){
-    const username = prompt('اسم المستخدم لنظام الصور القديم:');
-    const password = username ? prompt('كلمة المرور:') : null;
-    if(!username || !password) throw new Error('محتاجين بيانات دخول نظام الصور');
-    creds = { username, password };
-  }
-  const r = await fetch(`${APPS_SCRIPT_URL}?action=login&username=${encodeURIComponent(creds.username)}&password=${encodeURIComponent(creds.password)}`);
-  const d = await r.json();
-  if(!d || !d.success){
-    localStorage.removeItem('appsScriptCreds');
-    throw new Error('بيانات دخول نظام الصور غلط');
-  }
-  setAppsScriptCreds(creds.username, creds.password);
-  setAppsScriptToken(d.token);
-  return d.token;
+  // لو فيه محاولة تسجيل دخول شغالة بالفعل (من ميزة تانية طلبتها في نفس اللحظة)، نستنى نتيجتها
+  // بدل ما نفتح مربع يوزر/باسورد جديد لكل ميزة على حدة
+  if(appsScriptLoginPromise) return appsScriptLoginPromise;
+
+  appsScriptLoginPromise = (async ()=>{
+    try{
+      let creds = getAppsScriptCreds();
+      if(!creds){
+        const username = prompt('اسم المستخدم لنظام الصور القديم:');
+        const password = username ? prompt('كلمة المرور:') : null;
+        if(!username || !password) throw new Error('محتاجين بيانات دخول نظام الصور');
+        creds = { username, password };
+      }
+      const r = await fetch(`${APPS_SCRIPT_URL}?action=login&username=${encodeURIComponent(creds.username)}&password=${encodeURIComponent(creds.password)}`);
+      const d = await r.json();
+      if(!d || !d.success){
+        localStorage.removeItem('appsScriptCreds');
+        throw new Error('بيانات دخول نظام الصور غلط');
+      }
+      setAppsScriptCreds(creds.username, creds.password);
+      setAppsScriptToken(d.token);
+      return d.token;
+    } finally {
+      appsScriptLoginPromise = null;
+    }
+  })();
+
+  return appsScriptLoginPromise;
 }
 
 async function uploadPatientImageRemote(patientId, base64, mimeType, sessionNote, sessionDate){
@@ -2339,6 +2352,7 @@ function renderImagesTimeline(images, targetElId){
       gridBox.innerHTML = group.items.map(im => `
         <div class="img-card" data-id="${escapeHtml(String(im.ImageID))}">
           <div class="img-thumb">${im.dataUrl ? `<img src="${im.dataUrl}">` : '<span style="font-size:11px;color:var(--muted);">تعذر التحميل</span>'}</div>
+          <button class="btn btn-ghost img-download-btn" style="margin-top:4px;">⬇ تنزيل</button>
           <button class="btn btn-outline-red img-delete-btn">حذف</button>
         </div>`).join('');
       gridBox.querySelectorAll('.img-card').forEach(card=>{
@@ -2349,6 +2363,16 @@ function renderImagesTimeline(images, targetElId){
           if(!im.dataUrl) return;
           const w = window.open('');
           w.document.write(`<img src="${im.dataUrl}" style="max-width:100%;">`);
+        });
+        card.querySelector('.img-download-btn').addEventListener('click', ()=>{
+          if(!im.dataUrl){ showToast('الصورة دي متعذر تحميلها', true); return; }
+          const a = document.createElement('a');
+          a.href = im.dataUrl;
+          const dateStr = String(im.ImageDate || '').slice(0,10) || 'صورة';
+          a.download = `${dateStr}-${im.ImageID}.jpg`;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
         });
         card.querySelector('.img-delete-btn').addEventListener('click', ()=> deleteImageEntry(im.ImageID));
       });
