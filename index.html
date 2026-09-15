@@ -336,9 +336,12 @@
 
   <div id="imagesPatientsView" style="display:none;">
     <div class="visits-head" style="margin-bottom:16px;">
-      <h2 style="margin:0;">🖼️ مرضى ليهم صور</h2>
+      <h2 style="margin:0;">🖼️ صور</h2>
       <button class="btn btn-ghost" id="closeImagesPatientsViewBtn">✕ إغلاق</button>
     </div>
+    <h2 style="margin:0 0 10px; font-size:15px;">حالات عمليات ليها صور</h2>
+    <div id="imagesCasesList" style="background:#FCFBF8; border:1px solid var(--line); border-radius:10px; padding:8px; margin-bottom:20px;"></div>
+    <h2 style="margin:0 0 10px; font-size:15px;">مرضى ليهم صور</h2>
     <div id="imagesPatientsList" style="background:#FCFBF8; border:1px solid var(--line); border-radius:10px; padding:8px;"></div>
   </div>
 
@@ -790,8 +793,34 @@
   <div class="card" style="max-width:520px; width:100%; max-height:88vh; overflow-y:auto; position:relative;">
     <button id="closeOperationCaseDetailBtn" class="btn btn-ghost" style="position:absolute; top:14px; left:14px; padding:6px 12px;">✕</button>
     <h2 id="caseDetailTitle" style="margin:0 0 12px;">حالة عملية</h2>
-    <div id="caseDetailInfo" style="margin-bottom:16px;"></div>
-    <button class="btn btn-outline-red" id="deleteOperationCaseBtn" style="margin-bottom:16px;">حذف الحالة</button>
+    <div id="caseDetailInfo" style="margin-bottom:12px;"></div>
+    <div id="caseEditFields" style="display:none; margin-bottom:16px;">
+      <div class="field">
+        <label>اسم الحالة</label>
+        <input type="text" id="caseEditName">
+      </div>
+      <div class="field">
+        <label>التاريخ</label>
+        <input type="date" id="caseEditDate">
+      </div>
+      <div class="field">
+        <label>ملاحظة قصيرة</label>
+        <textarea id="caseEditNote" style="min-height:70px;"></textarea>
+      </div>
+      <div class="field">
+        <label>مكان العملية</label>
+        <div style="display:flex; gap:8px;">
+          <select id="caseEditLocationSelect" class="dropdown-add-select" style="flex:1;"></select>
+          <button type="button" class="btn btn-ghost" id="addCaseEditLocationBtn" style="padding:9px 14px;">+</button>
+          <button type="button" class="btn btn-outline-red" id="removeCaseEditLocationBtn" style="padding:9px 14px;">🗑</button>
+        </div>
+      </div>
+      <button class="btn btn-primary" id="saveCaseEditBtn" style="width:100%;">حفظ التعديل</button>
+    </div>
+    <div style="display:flex; gap:10px; margin-bottom:16px;">
+      <button class="btn btn-ghost" id="editOperationCaseBtn">تعديل بيانات الحالة</button>
+      <button class="btn btn-outline-red" id="deleteOperationCaseBtn">حذف الحالة</button>
+    </div>
 
     <div class="visits-head" style="margin-bottom:10px;">
       <h2 style="margin:0; font-size:15px;">الصور</h2>
@@ -3840,6 +3869,27 @@ $('viewImagesPatientsBtn').onclick = async ()=>{
     const ids = new Set(data.patientIds || []);
     const patients = allPatients.filter(p => ids.has(p.id));
     renderQuickPatientsList('imagesPatientsList', patients);
+
+    if(!currentCases.length) await loadOperationCases();
+    const casesWithImages = currentCases.filter(c => ids.has(c.id));
+    const casesBox = $('imagesCasesList');
+    if(!casesWithImages.length){ casesBox.innerHTML = '<div class="no-visits">لا يوجد حالات عمليات ليها صور</div>'; }
+    else{
+      casesBox.innerHTML = casesWithImages.map(c => `
+        <div class="patient-row" data-id="${c.id}">
+          <div>
+            <div class="pname">🩹 ${escapeHtml(c.Name || '—')}</div>
+            <div class="pmeta">${escapeHtml(String(c.CaseDate || '').slice(0,10))}</div>
+          </div>
+        </div>`).join('');
+      casesBox.querySelectorAll('.patient-row').forEach(row=>{
+        row.addEventListener('click', ()=>{
+          $('imagesPatientsView').style.display = 'none';
+          const c = currentCases.find(x => x.id === row.dataset.id);
+          if(c) openOperationCaseDetail(c);
+        });
+      });
+    }
   }catch(err){
     $('imagesPatientsList').innerHTML = '<div class="no-visits">تعذر التحميل - جرب تاني</div>';
   }
@@ -4674,6 +4724,8 @@ function openOperationCaseDetail(caseObj){
     ${caseObj.Location ? `<div class="visit-notes"><b class="visit-label">المكان:</b> ${escapeHtml(caseObj.Location)}</div>` : ''}
     ${caseObj.Note ? `<div class="visit-notes"><b class="visit-label">ملاحظة:</b> ${escapeHtml(caseObj.Note)}</div>` : ''}
   `;
+  $('caseEditFields').style.display = 'none';
+  $('editOperationCaseBtn').textContent = 'تعديل بيانات الحالة';
   $('operationCaseDetailModal').style.display = 'flex';
   loadImages(caseObj.id, 'caseImagesTimeline');
 }
@@ -4683,6 +4735,71 @@ $('closeOperationCaseDetailBtn').onclick = ()=>{
   currentPatientId = null;
   currentImagesTargetElId = 'imagesTimeline';
 };
+
+$('editOperationCaseBtn').onclick = ()=>{
+  const isOpen = $('caseEditFields').style.display !== 'none';
+  if(isOpen){
+    $('caseEditFields').style.display = 'none';
+    $('editOperationCaseBtn').textContent = 'تعديل بيانات الحالة';
+    return;
+  }
+  const c = currentCases.find(x => x.id === currentCaseId);
+  if(!c) return;
+  $('caseEditName').value = c.Name || '';
+  $('caseEditDate').value = String(c.CaseDate || '').slice(0,10);
+  $('caseEditNote').value = c.Note || '';
+  const locations = getOperationCaseLocations();
+  $('caseEditLocationSelect').innerHTML = locations.map(l => `<option value="${escapeHtml(l)}">${escapeHtml(l)}</option>`).join('');
+  if(c.Location && locations.includes(c.Location)) $('caseEditLocationSelect').value = c.Location;
+  $('caseEditFields').style.display = 'block';
+  $('editOperationCaseBtn').textContent = 'إلغاء التعديل';
+};
+$('addCaseEditLocationBtn').onclick = ()=>{
+  const name = prompt('اكتب اسم مكان جديد:');
+  if(!name || !name.trim()) return;
+  const locations = getOperationCaseLocations();
+  if(locations.includes(name.trim())){ showToast('المكان ده موجود بالفعل', true); return; }
+  locations.push(name.trim());
+  setOperationCaseLocations(locations);
+  $('caseEditLocationSelect').innerHTML = locations.map(l => `<option value="${escapeHtml(l)}">${escapeHtml(l)}</option>`).join('');
+  $('caseEditLocationSelect').value = name.trim();
+};
+$('removeCaseEditLocationBtn').onclick = ()=>{
+  const current = $('caseEditLocationSelect').value;
+  if(!current) return;
+  const locations = getOperationCaseLocations();
+  if(locations.length <= 1){ showToast('لازم يفضل مكان واحد على الأقل', true); return; }
+  if(!confirm(`حذف "${current}" من القايمة؟`)) return;
+  setOperationCaseLocations(locations.filter(l => l !== current));
+  $('caseEditLocationSelect').innerHTML = getOperationCaseLocations().map(l => `<option value="${escapeHtml(l)}">${escapeHtml(l)}</option>`).join('');
+};
+$('saveCaseEditBtn').onclick = async ()=>{
+  if(!currentCaseId) return;
+  const name = $('caseEditName').value.trim();
+  if(!name){ showToast('اكتب اسم الحالة', true); return; }
+  const date = $('caseEditDate').value;
+  if(!date){ showToast('حدد التاريخ', true); return; }
+  const data = {
+    Name: name,
+    CaseDate: date,
+    Note: $('caseEditNote').value.trim(),
+    Location: $('caseEditLocationSelect').value || ''
+  };
+  const btn = $('saveCaseEditBtn');
+  btn.disabled = true; const orig = btn.textContent; btn.textContent = 'جاري الحفظ...';
+  try{
+    await updateDoc(doc(db, "operationCases", currentCaseId), data);
+    showToast('اتحدّثت بيانات الحالة ✓');
+    const idx = currentCases.findIndex(c => c.id === currentCaseId);
+    if(idx !== -1) currentCases[idx] = { ...currentCases[idx], ...data };
+    openOperationCaseDetail({ id: currentCaseId, ...data });
+    renderOperationCasesList();
+  }catch(err){
+    showToast('حصل خطأ أثناء الحفظ', true);
+  }
+  btn.disabled = false; btn.textContent = orig;
+};
+
 $('caseUploadImageBtn').onclick = ()=>{
   if(!currentCaseId) return;
   currentPatientId = currentCaseId;
