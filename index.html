@@ -237,6 +237,7 @@
     <button class="btn btn-ghost" id="logoutBtn" title="تسجيل خروج">🚪</button>
   </div>
   <button class="btn btn-primary" id="newPatientBtn">+ مريض جديد</button>
+  <button class="btn btn-ghost" id="newOperationCaseBtn">🩹 حالة عملية جديدة</button>
 </header>
 
 <main>
@@ -316,9 +317,12 @@
 
   <div id="operationsPatientsView" style="display:none;">
     <div class="visits-head" style="margin-bottom:16px;">
-      <h2 style="margin:0;">مرضى العمليات</h2>
+      <h2 style="margin:0;">العمليات</h2>
       <button class="btn btn-ghost" id="closeOperationsViewBtn">✕ إغلاق</button>
     </div>
+    <h2 style="margin:0 0 10px; font-size:15px;">حالات مستقلة</h2>
+    <div id="operationCasesList" style="background:#FCFBF8; border:1px solid var(--line); border-radius:10px; padding:8px; margin-bottom:20px;"></div>
+    <h2 style="margin:0 0 10px; font-size:15px;">مرضى ليهم عملية في ملفهم</h2>
     <div id="operationsPatientsList" style="background:#FCFBF8; border:1px solid var(--line); border-radius:10px; padding:8px;"></div>
   </div>
 
@@ -751,6 +755,49 @@
       <button class="btn btn-outline-red" id="deleteHistoryBtn">حذف</button>
       <button class="btn btn-primary" id="downloadHistoryPdfBtn">تحميل PDF</button>
     </div>
+  </div>
+</div>
+
+<div id="newOperationCaseModal" style="display:none; position:fixed; inset:0; background:rgba(31,74,64,.45); z-index:200; align-items:center; justify-content:center; padding:20px;">
+  <div class="card" style="max-width:440px; width:100%; max-height:85vh; overflow-y:auto; position:relative;">
+    <button id="closeNewOperationCaseBtn" class="btn btn-ghost" style="position:absolute; top:14px; left:14px; padding:6px 12px;">✕</button>
+    <h2 style="margin:0 0 16px;">🩹 حالة عملية جديدة</h2>
+    <div class="field">
+      <label>اسم الحالة</label>
+      <input type="text" id="caseName" placeholder="اسم حر يميّز الحالة...">
+    </div>
+    <div class="field">
+      <label>التاريخ</label>
+      <input type="date" id="caseDate">
+    </div>
+    <div class="field">
+      <label>ملاحظة قصيرة</label>
+      <textarea id="caseNote" style="min-height:80px;" placeholder="ملاحظة قصيرة عن الحالة..."></textarea>
+    </div>
+    <div class="field">
+      <label>مكان العملية</label>
+      <div style="display:flex; gap:8px;">
+        <select id="caseLocationSelect" class="dropdown-add-select" style="flex:1;"></select>
+        <button type="button" class="btn btn-ghost" id="addCaseLocationBtn" style="padding:9px 14px;">+</button>
+        <button type="button" class="btn btn-outline-red" id="removeCaseLocationBtn" style="padding:9px 14px;">🗑</button>
+      </div>
+    </div>
+    <button class="btn btn-primary" id="saveOperationCaseBtn" style="width:100%; margin-top:8px;">حفظ الحالة</button>
+  </div>
+</div>
+
+<div id="operationCaseDetailModal" style="display:none; position:fixed; inset:0; background:rgba(31,74,64,.45); z-index:200; align-items:center; justify-content:center; padding:20px;">
+  <div class="card" style="max-width:520px; width:100%; max-height:88vh; overflow-y:auto; position:relative;">
+    <button id="closeOperationCaseDetailBtn" class="btn btn-ghost" style="position:absolute; top:14px; left:14px; padding:6px 12px;">✕</button>
+    <h2 id="caseDetailTitle" style="margin:0 0 12px;">حالة عملية</h2>
+    <div id="caseDetailInfo" style="margin-bottom:16px;"></div>
+    <button class="btn btn-outline-red" id="deleteOperationCaseBtn" style="margin-bottom:16px;">حذف الحالة</button>
+
+    <div class="visits-head" style="margin-bottom:10px;">
+      <h2 style="margin:0; font-size:15px;">الصور</h2>
+      <button type="button" class="btn btn-ghost" id="caseUploadImageBtn">+ رفع صور</button>
+    </div>
+    <div id="caseImagesTimeline"></div>
   </div>
 </div>
 
@@ -1631,6 +1678,7 @@ function openPatient(id){
     $('toggleInvoiceBtn').style.display = 'inline-block';
     loadInvoices(id);
     $('uploadImageLabel').style.display = 'inline-flex';
+    currentImagesTargetElId = 'imagesTimeline';
     loadImages(id);
     $('bookApptCard').style.display = 'block';
     $('bookApptDate').value = ''; $('bookApptTypeSelect').value = ''; $('bookApptType').value = '';
@@ -2204,19 +2252,20 @@ async function deleteOperationEntry(operationId){
 }
 
 /* ---------- صور المريض (عن طريق نظام Apps Script القديم) ---------- */
-async function loadImages(patientId){
-  $('imagesTimeline').innerHTML = '<div class="no-visits">جاري تحميل الصور...</div>';
+async function loadImages(ownerId, targetElId){
+  targetElId = targetElId || 'imagesTimeline';
+  $(targetElId).innerHTML = '<div class="no-visits">جاري تحميل الصور...</div>';
   if(navigator.onLine === false){
-    $('imagesTimeline').innerHTML = '<div class="no-visits">محتاج نت عشان يعرض الصور</div>';
+    $(targetElId).innerHTML = '<div class="no-visits">محتاج نت عشان يعرض الصور</div>';
     return;
   }
   try{
-    const data = await fetchPatientImagesRemote(patientId);
-    if(data.error){ $('imagesTimeline').innerHTML = `<div class="no-visits">${escapeHtml(data.error)}</div>`; return; }
+    const data = await fetchPatientImagesRemote(ownerId);
+    if(data.error){ $(targetElId).innerHTML = `<div class="no-visits">${escapeHtml(data.error)}</div>`; return; }
     currentImages = data.images || [];
-    renderImagesTimeline(currentImages);
+    renderImagesTimeline(currentImages, targetElId);
   }catch(err){
-    $('imagesTimeline').innerHTML = '<div class="no-visits">تعذر تحميل الصور - جرب تاني</div>';
+    $(targetElId).innerHTML = '<div class="no-visits">تعذر تحميل الصور - جرب تاني</div>';
   }
 }
 
@@ -2234,8 +2283,8 @@ function groupImagesForTimeline(images){
   return order.map(k => groups[k]);
 }
 
-function renderImagesTimeline(images){
-  const box = $('imagesTimeline');
+function renderImagesTimeline(images, targetElId){
+  const box = $(targetElId || 'imagesTimeline');
   if(!images.length){ box.innerHTML = '<div class="no-visits">لسه مفيش صور مرفوعة</div>'; return; }
   const groups = groupImagesForTimeline(images);
   box.innerHTML = groups.map((g, gi) => `
@@ -2279,13 +2328,10 @@ function renderImagesTimeline(images){
   });
 }
 
+let currentImagesTargetElId = 'imagesTimeline';
 let pendingUploadSection = null;
 
-$('uploadImageLabel').onclick = ()=>{
-  if(!currentPatientId || String(currentPatientId).startsWith('temp_')){
-    showToast('احفظ بيانات المريض الأول', true);
-    return;
-  }
+function openImageSectionPicker(){
   const sections = getExistingImageSections(currentImages);
   const select = $('imgSectionSelect');
   select.innerHTML = '<option value="__new__">+ سكشن جديد</option>' +
@@ -2296,6 +2342,14 @@ $('uploadImageLabel').onclick = ()=>{
   $('imgSectionTitle').value = '';
   $('imgSectionDate').value = new Date().toISOString().slice(0,10);
   $('imageSectionModal').style.display = 'flex';
+}
+$('uploadImageLabel').onclick = ()=>{
+  if(!currentPatientId || String(currentPatientId).startsWith('temp_')){
+    showToast('احفظ بيانات المريض الأول', true);
+    return;
+  }
+  currentImagesTargetElId = 'imagesTimeline';
+  openImageSectionPicker();
 };
 $('closeImageSectionModalBtn').onclick = ()=>{ $('imageSectionModal').style.display = 'none'; };
 $('imgSectionSelect').addEventListener('change', ()=>{
@@ -2355,7 +2409,7 @@ $('imageFileInput').addEventListener('change', async (e)=>{
   }
   showToast(failCount ? `اتحفظ ${successCount} صورة، وفشل ${failCount}` : `اتحفظت ${successCount} صورة ✓`, !!failCount);
   pendingUploadSection = null;
-  await loadImages(currentPatientId);
+  await loadImages(currentPatientId, currentImagesTargetElId);
 });
 
 async function deleteImageEntry(imageId){
@@ -2368,7 +2422,7 @@ async function deleteImageEntry(imageId){
     const result = await deletePatientImageRemote(imageId);
     if(result.error){ showToast(result.error, true); return; }
     showToast('اتحذفت الصورة ✓');
-    await loadImages(currentPatientId);
+    await loadImages(currentPatientId, currentImagesTargetElId);
   }catch(err){
     showToast('حصل خطأ أثناء الحذف', true);
   }
@@ -3724,7 +3778,7 @@ function updateRedFlagBadge(){
   else{ badge.style.display = 'none'; }
 }
 
-$('viewOperationPatientsBtn').onclick = ()=>{
+$('viewOperationPatientsBtn').onclick = async ()=>{
   $('listView').style.display = 'none';
   $('workspace').style.display = 'none';
   $('calendarView').style.display = 'none';
@@ -3735,6 +3789,9 @@ $('viewOperationPatientsBtn').onclick = ()=>{
   $('imagesPatientsView').style.display = 'none';
   $('operationsPatientsView').style.display = 'block';
   renderQuickPatientsList('operationsPatientsList', allPatients.filter(p => p.HasOperation));
+  $('operationCasesList').innerHTML = '<div class="no-visits">جاري التحميل...</div>';
+  await loadOperationCases();
+  renderOperationCasesList();
 };
 $('closeOperationsViewBtn').onclick = ()=>{
   $('operationsPatientsView').style.display = 'none';
@@ -4533,6 +4590,146 @@ $('closeStickyBtn').onclick = ()=>{
     localStorage.setItem('clinicStickyPos', JSON.stringify({ left: win.style.left, top: win.style.top }));
   });
 })();
+
+/* ---------- حالات العمليات المستقلة (مش مرتبطة بملف مريض) ---------- */
+const DEFAULT_CASE_LOCATIONS = ['غرفة عمليات 1', 'غرفة عمليات 2', 'مستشفى التعاون', 'العيادة'];
+function getOperationCaseLocations(){
+  try{
+    const saved = JSON.parse(localStorage.getItem('operationCaseLocations') || 'null');
+    return (saved && saved.length) ? saved : DEFAULT_CASE_LOCATIONS.slice();
+  }catch(e){ return DEFAULT_CASE_LOCATIONS.slice(); }
+}
+function setOperationCaseLocations(list){ localStorage.setItem('operationCaseLocations', JSON.stringify(list)); }
+function populateCaseLocationSelect(selectedValue){
+  const locations = getOperationCaseLocations();
+  const select = $('caseLocationSelect');
+  select.innerHTML = locations.map(l => `<option value="${escapeHtml(l)}">${escapeHtml(l)}</option>`).join('');
+  if(selectedValue && locations.includes(selectedValue)) select.value = selectedValue;
+}
+$('addCaseLocationBtn').onclick = ()=>{
+  const name = prompt('اكتب اسم مكان جديد:');
+  if(!name || !name.trim()) return;
+  const locations = getOperationCaseLocations();
+  if(locations.includes(name.trim())){ showToast('المكان ده موجود بالفعل', true); return; }
+  locations.push(name.trim());
+  setOperationCaseLocations(locations);
+  populateCaseLocationSelect(name.trim());
+  showToast('اتضاف ✓');
+};
+$('removeCaseLocationBtn').onclick = ()=>{
+  const current = $('caseLocationSelect').value;
+  if(!current) return;
+  const locations = getOperationCaseLocations();
+  if(locations.length <= 1){ showToast('لازم يفضل مكان واحد على الأقل', true); return; }
+  if(!confirm(`حذف "${current}" من القايمة؟`)) return;
+  setOperationCaseLocations(locations.filter(l => l !== current));
+  populateCaseLocationSelect();
+  showToast('اتحذف ✓');
+};
+
+let currentCaseId = null;
+let currentCases = [];
+
+$('newOperationCaseBtn').onclick = ()=>{
+  $('caseName').value = '';
+  $('caseDate').value = new Date().toISOString().slice(0,10);
+  $('caseNote').value = '';
+  populateCaseLocationSelect();
+  $('newOperationCaseModal').style.display = 'flex';
+};
+$('closeNewOperationCaseBtn').onclick = ()=>{ $('newOperationCaseModal').style.display = 'none'; };
+
+$('saveOperationCaseBtn').onclick = async ()=>{
+  if(navigator.onLine === false){ showToast('محتاج نت عشان تحفظ الحالة', true); return; }
+  const name = $('caseName').value.trim();
+  if(!name){ showToast('اكتب اسم الحالة', true); return; }
+  const date = $('caseDate').value;
+  if(!date){ showToast('حدد التاريخ', true); return; }
+  const data = {
+    Name: name,
+    CaseDate: date,
+    Note: $('caseNote').value.trim(),
+    Location: $('caseLocationSelect').value || ''
+  };
+  const btn = $('saveOperationCaseBtn');
+  btn.disabled = true; const orig = btn.textContent; btn.textContent = 'جاري الحفظ...';
+  try{
+    const ref = await addDoc(collection(db, "operationCases"), { ...data, CreatedAt: serverTimestamp() });
+    showToast('اتحفظت الحالة ✓ - دلوقتي تقدر ترفع صورها');
+    $('newOperationCaseModal').style.display = 'none';
+    openOperationCaseDetail({ id: ref.id, ...data });
+  }catch(err){
+    showToast('حصل خطأ أثناء الحفظ', true);
+  }
+  btn.disabled = false; btn.textContent = orig;
+};
+
+function openOperationCaseDetail(caseObj){
+  currentCaseId = caseObj.id;
+  currentPatientId = caseObj.id;
+  currentImagesTargetElId = 'caseImagesTimeline';
+  $('caseDetailTitle').textContent = '🩹 ' + (caseObj.Name || '');
+  $('caseDetailInfo').innerHTML = `
+    <div class="visit-notes"><b class="visit-label">التاريخ:</b> ${escapeHtml(String(caseObj.CaseDate || '').slice(0,10))}</div>
+    ${caseObj.Location ? `<div class="visit-notes"><b class="visit-label">المكان:</b> ${escapeHtml(caseObj.Location)}</div>` : ''}
+    ${caseObj.Note ? `<div class="visit-notes"><b class="visit-label">ملاحظة:</b> ${escapeHtml(caseObj.Note)}</div>` : ''}
+  `;
+  $('operationCaseDetailModal').style.display = 'flex';
+  loadImages(caseObj.id, 'caseImagesTimeline');
+}
+$('closeOperationCaseDetailBtn').onclick = ()=>{
+  $('operationCaseDetailModal').style.display = 'none';
+  currentCaseId = null;
+  currentPatientId = null;
+  currentImagesTargetElId = 'imagesTimeline';
+};
+$('caseUploadImageBtn').onclick = ()=>{
+  if(!currentCaseId) return;
+  currentPatientId = currentCaseId;
+  currentImagesTargetElId = 'caseImagesTimeline';
+  openImageSectionPicker();
+};
+$('deleteOperationCaseBtn').onclick = async ()=>{
+  if(!currentCaseId) return;
+  if(!confirm('حذف هذه الحالة نهائيًا؟ (الصور المرفوعة ليها هتفضل على درايف بس مش هتظهر تاني هنا)')) return;
+  try{
+    await deleteDoc(doc(db, "operationCases", currentCaseId));
+    showToast('اتحذفت الحالة ✓');
+    $('operationCaseDetailModal').style.display = 'none';
+    currentCaseId = null;
+    currentPatientId = null;
+    currentImagesTargetElId = 'imagesTimeline';
+  }catch(err){
+    showToast('حصل خطأ أثناء الحذف', true);
+  }
+};
+
+async function loadOperationCases(){
+  try{
+    const snap = await getDocs(collection(db, "operationCases"));
+    currentCases = [];
+    snap.forEach(d => currentCases.push({ id: d.id, ...d.data() }));
+    currentCases.sort((a,b) => (b.CaseDate || '').localeCompare(a.CaseDate || ''));
+  }catch(err){ currentCases = []; }
+}
+
+function renderOperationCasesList(){
+  const box = $('operationCasesList');
+  if(!currentCases.length){ box.innerHTML = '<div class="no-visits">لا يوجد حالات مستقلة مسجلة</div>'; return; }
+  box.innerHTML = currentCases.map(c => `
+    <div class="patient-row" data-id="${c.id}">
+      <div>
+        <div class="pname">🩹 ${escapeHtml(c.Name || '—')}</div>
+        <div class="pmeta">${escapeHtml(String(c.CaseDate || '').slice(0,10))} ${c.Location ? '· ' + escapeHtml(c.Location) : ''}</div>
+      </div>
+    </div>`).join('');
+  box.querySelectorAll('.patient-row').forEach(row=>{
+    row.addEventListener('click', ()=>{
+      const c = currentCases.find(x => x.id === row.dataset.id);
+      if(c) openOperationCaseDetail(c);
+    });
+  });
+}
 
 /* ---------- مراقبة الاتصال بالإنترنت ---------- */
 window.addEventListener('offline', ()=>{
