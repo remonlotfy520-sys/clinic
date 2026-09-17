@@ -88,6 +88,11 @@
   .tab-panel{display:none;}
   .tab-panel.active{display:block;}
   .exam-card{margin-bottom:18px;}
+  .collapsible-header{cursor:pointer; display:flex; align-items:center; justify-content:space-between; user-select:none;}
+  .collapsible-header .collapse-arrow{transition:transform .15s ease; font-size:12px; color:var(--muted); flex-shrink:0; margin-right:8px;}
+  .collapsible-header.open .collapse-arrow{transform:rotate(180deg);}
+  .collapsible-content{display:none; margin-top:12px;}
+  .collapsible-content.open{display:block;}
   .exam-card textarea, .exam-card input[type="text"]{
     width:100%; padding:10px 12px; border-radius:9px; border:1px solid var(--line);
     font-family:'Tajawal'; font-size:14.5px; background:#FCFBF8; outline:none; color:#1450C4;
@@ -452,28 +457,33 @@
         </div>
 
         <div class="exam-card" id="bookApptCard" style="display:none;">
-          <h2>📅 حجز ميعاد للمريض ده</h2>
-          <div class="field-row">
-            <div class="field">
-              <label>التاريخ</label>
-              <input type="date" id="bookApptDate">
+          <div class="collapsible-header" id="bookApptHeader">
+            <h2 style="margin:0;">📅 حجز ميعاد للمريض ده</h2>
+            <span class="collapse-arrow">▾</span>
+          </div>
+          <div class="collapsible-content" id="bookApptContent">
+            <div class="field-row">
+              <div class="field">
+                <label>التاريخ</label>
+                <input type="date" id="bookApptDate">
+              </div>
+              <div class="field">
+                <label>نوع الحجز</label>
+                <select id="bookApptTypeSelect" class="dropdown-add-select">
+                  <option value="">— اختر —</option>
+                  <option value="كشف">كشف</option>
+                  <option value="استشارة">استشارة</option>
+                  <option value="متابعة عملية">متابعة عملية</option>
+                  <option value="أخرى">أخرى</option>
+                </select>
+              </div>
             </div>
             <div class="field">
-              <label>نوع الحجز</label>
-              <select id="bookApptTypeSelect" class="dropdown-add-select">
-                <option value="">— اختر —</option>
-                <option value="كشف">كشف</option>
-                <option value="استشارة">استشارة</option>
-                <option value="متابعة عملية">متابعة عملية</option>
-                <option value="أخرى">أخرى</option>
-              </select>
+              <label>الموضوع</label>
+              <input type="text" id="bookApptType" placeholder="اكتب أو اختار نوع الحجز فوق...">
             </div>
+            <button class="btn btn-primary" id="bookApptSaveBtn">حفظ الميعاد في الكالندر</button>
           </div>
-          <div class="field">
-            <label>الموضوع</label>
-            <input type="text" id="bookApptType" placeholder="اكتب أو اختار نوع الحجز فوق...">
-          </div>
-          <button class="btn btn-primary" id="bookApptSaveBtn">حفظ الميعاد في الكالندر</button>
         </div>
 
         <div style="display:flex; gap:10px;">
@@ -495,18 +505,26 @@
             <label>الشكوى والكشف</label>
             <textarea id="vNotes" dir="ltr" style="min-height:180px; text-align:left;" placeholder="الشكوى، الفحص، التشخيص، العلاج..."></textarea>
           </div>
-          <div class="field">
-            <label>الأشعة</label>
-            <textarea id="vRadiology" style="min-height:80px;" placeholder="الأشعة المطلوبة أو نتائجها..."></textarea>
+
+          <div class="collapsible-header" id="kashfRadLabsHeader" style="margin:14px 0 4px;">
+            <h2 style="margin:0; font-size:15px;">الأشعة والتحاليل</h2>
+            <span class="collapse-arrow">▾</span>
           </div>
-          <div class="field">
-            <label>رابط أرشيف الأشعة</label>
-            <input type="text" id="fRadiologyLink" placeholder="https://...">
+          <div class="collapsible-content" id="kashfRadLabsContent">
+            <div class="field">
+              <label>الأشعة</label>
+              <textarea id="vRadiology" style="min-height:80px;" placeholder="الأشعة المطلوبة أو نتائجها..."></textarea>
+            </div>
+            <div class="field">
+              <label>رابط أرشيف الأشعة</label>
+              <input type="text" id="fRadiologyLink" placeholder="https://...">
+            </div>
+            <div class="field">
+              <label>التحاليل</label>
+              <textarea id="vLabTests" style="min-height:80px;" placeholder="التحاليل المطلوبة أو نتائجها..."></textarea>
+            </div>
           </div>
-          <div class="field">
-            <label>التحاليل</label>
-            <textarea id="vLabTests" style="min-height:80px;" placeholder="التحاليل المطلوبة أو نتائجها..."></textarea>
-          </div>
+
           <label style="display:flex; align-items:center; gap:8px; margin:16px 0 4px; cursor:pointer; font-size:14px; font-weight:700; color:var(--ink);">
             <input type="checkbox" id="fHasOperation" style="width:18px;height:18px;">
             المريض له عملية / عمل عملية
@@ -607,8 +625,9 @@
           </div>
 
           <div class="field">
-            <label>الأدوية (حتى 7)</label>
+            <label>الأدوية</label>
             <div id="rxMedicines"></div>
+            <button type="button" class="btn btn-ghost" id="addMedicineRowBtn" style="margin-top:4px;">+ إضافة دواء</button>
           </div>
 
           <div class="field">
@@ -617,24 +636,36 @@
             <div class="chips" id="diagnosisRecsList"></div>
           </div>
 
-          <div class="field">
-            <label>التوصيات العامة</label>
-            <select id="rxRecommendationsSelect" class="dropdown-add-select"></select>
-            <div class="chips" id="rxRecommendations" style="margin-top:8px;"></div>
+          <div class="collapsible-header" id="rxRecsHeader" style="margin-bottom:4px;">
+            <h2 style="margin:0; font-size:15px;">التوصيات</h2>
+            <span class="collapse-arrow">▾</span>
+          </div>
+          <div class="collapsible-content" id="rxRecsContent">
+            <div class="field">
+              <label>التوصيات العامة</label>
+              <select id="rxRecommendationsSelect" class="dropdown-add-select"></select>
+              <div class="chips" id="rxRecommendations" style="margin-top:8px;"></div>
+            </div>
           </div>
 
-          <div class="field">
-            <label>الأشعة المطلوبة</label>
-            <div class="hint" style="margin-bottom:6px;">اكتب بحرية أو اختار من القايمة عشان تضاف كسطر جديد</div>
-            <select id="rxRadiologyReqSelect" class="dropdown-add-select"></select>
-            <textarea id="rxRadiologyReq" style="min-height:80px; margin-top:8px;" placeholder="الأشعة المطلوبة..."></textarea>
+          <div class="collapsible-header" id="rxRadLabsHeader" style="margin:14px 0 4px;">
+            <h2 style="margin:0; font-size:15px;">الأشعة والتحاليل</h2>
+            <span class="collapse-arrow">▾</span>
           </div>
+          <div class="collapsible-content" id="rxRadLabsContent">
+            <div class="field">
+              <label>الأشعة المطلوبة</label>
+              <div class="hint" style="margin-bottom:6px;">اكتب بحرية أو اختار من القايمة عشان تضاف كسطر جديد</div>
+              <select id="rxRadiologyReqSelect" class="dropdown-add-select"></select>
+              <textarea id="rxRadiologyReq" style="min-height:80px; margin-top:8px;" placeholder="الأشعة المطلوبة..."></textarea>
+            </div>
 
-          <div class="field">
-            <label>التحاليل المطلوبة</label>
-            <div class="hint" style="margin-bottom:6px;">اكتب بحرية أو اختار من القايمة عشان تضاف كسطر جديد</div>
-            <select id="rxLabsReqSelect" class="dropdown-add-select"></select>
-            <textarea id="rxLabsReq" style="min-height:80px; margin-top:8px;" placeholder="التحاليل المطلوبة..."></textarea>
+            <div class="field">
+              <label>التحاليل المطلوبة</label>
+              <div class="hint" style="margin-bottom:6px;">اكتب بحرية أو اختار من القايمة عشان تضاف كسطر جديد</div>
+              <select id="rxLabsReqSelect" class="dropdown-add-select"></select>
+              <textarea id="rxLabsReq" style="min-height:80px; margin-top:8px;" placeholder="التحاليل المطلوبة..."></textarea>
+            </div>
           </div>
 
           <div style="display:flex; gap:10px;">
@@ -1311,6 +1342,7 @@ function attachAutocomplete(input, getOptions){
   input.addEventListener('blur', ()=> setTimeout(()=> list.style.display = 'none', 150));
 }
 
+let medicineRowsVisibleCount = 1;
 function buildMedicineRows(){
   const box = $('rxMedicines');
   const prevValues = Array.from(document.querySelectorAll('.rx-med-select')).map(s => s.value);
@@ -1319,6 +1351,7 @@ function buildMedicineRows(){
   for(let i = 0; i < 7; i++){
     const row = document.createElement('div');
     row.className = 'rx-med-row';
+    row.style.display = i < medicineRowsVisibleCount ? '' : 'none';
     row.innerHTML = `
       <input type="text" class="rx-med-select" data-idx="${i}" placeholder="اختر دواء أو اكتب اسم جديد..." autocomplete="off">
       <input type="text" class="rx-med-instructions" data-idx="${i}" placeholder="طريقة الإعطاء - اختار أو اكتب..." autocomplete="off">
@@ -1337,7 +1370,16 @@ function buildMedicineRows(){
       if(med && med.diagnosis && !$('rxDiagnosis').value.trim()) $('rxDiagnosis').value = med.diagnosis;
     });
   }
+  const addBtn = $('addMedicineRowBtn');
+  if(addBtn) addBtn.style.display = medicineRowsVisibleCount >= 7 ? 'none' : 'inline-block';
 }
+$('addMedicineRowBtn').onclick = ()=>{
+  if(medicineRowsVisibleCount >= 7) return;
+  medicineRowsVisibleCount++;
+  const rows = document.querySelectorAll('#rxMedicines .rx-med-row');
+  if(rows[medicineRowsVisibleCount-1]) rows[medicineRowsVisibleCount-1].style.display = '';
+  $('addMedicineRowBtn').style.display = medicineRowsVisibleCount >= 7 ? 'none' : 'inline-block';
+};
 
 function renderPresetRxList(){
   const box = $('presetRxList');
@@ -1428,6 +1470,11 @@ function renderChronicDiseaseRows(diseases){
 function getChronicDiseasesFromForm(){
   return Array.from(document.querySelectorAll('.chronic-disease-input')).map(inp => inp.value.trim()).filter(Boolean);
 }
+
+initCollapsible('bookApptHeader', 'bookApptContent');
+initCollapsible('kashfRadLabsHeader', 'kashfRadLabsContent');
+initCollapsible('rxRecsHeader', 'rxRecsContent');
+initCollapsible('rxRadLabsHeader', 'rxRadLabsContent');
 
 buildMedicineRows();
 renderDropdownAdd('rxRecommendationsSelect', 'rxRecommendations', RECOMMENDATIONS_LIST);
@@ -2563,6 +2610,8 @@ function collectPrescription(){
 function loadPrescription(raw){
   let rx; try{ rx = raw ? JSON.parse(raw) : null; }catch(e){ rx = null; }
   rx = rx || { diagnosis:'', medicines:[], recommendations:[], radiologyRequested:[], labsRequested:[] };
+  medicineRowsVisibleCount = Math.max(1, (rx.medicines || []).length);
+  buildMedicineRows();
   $('rxDiagnosis').value = rx.diagnosis || '';
   document.querySelectorAll('.rx-med-select').forEach((sel, i)=>{
     const m = rx.medicines && rx.medicines[i];
@@ -2574,6 +2623,8 @@ function loadPrescription(raw){
   $('rxLabsReq').value = (rx.labsRequested || []).join('\n');
 }
 function resetPrescriptionForm(){
+  medicineRowsVisibleCount = 1;
+  buildMedicineRows();
   $('rxDiagnosis').value = '';
   document.querySelectorAll('.rx-med-select').forEach(sel => sel.value = '');
   document.querySelectorAll('.rx-med-instructions').forEach(inp => inp.value = '');
@@ -4959,6 +5010,17 @@ window.addEventListener('online', ()=>{
   showToast('رجع الاتصال ✓ - بنحفظ أي تعديلات كانت متأخرة');
   flushWriteQueue();
 });
+
+function initCollapsible(headerId, contentId, startOpen){
+  const header = $(headerId);
+  const content = $(contentId);
+  if(!header || !content) return;
+  if(startOpen){ header.classList.add('open'); content.classList.add('open'); }
+  header.addEventListener('click', ()=>{
+    header.classList.toggle('open');
+    content.classList.toggle('open');
+  });
+}
 
 function escapeHtml(str){
   return String(str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
