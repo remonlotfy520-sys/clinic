@@ -442,6 +442,15 @@
           🚩 المريض عنده مشكلة (Red Flag)
         </label>
 
+        <div class="exam-card" id="chronicDiseasesCard">
+          <h2>التاريخ المرضي</h2>
+          <div class="field">
+            <label>إضافة مرض من القايمة</label>
+            <select id="chronicDiseaseSelect" class="dropdown-add-select"></select>
+          </div>
+          <div id="chronicDiseasesRows" style="margin-top:10px;"></div>
+        </div>
+
         <div class="exam-card" id="bookApptCard" style="display:none;">
           <h2>📅 حجز ميعاد للمريض ده</h2>
           <div class="field-row">
@@ -901,6 +910,7 @@
     <button class="tab-bar-btn" data-mgr-tab="physio">العلاج الطبيعي</button>
     <button class="tab-bar-btn" data-mgr-tab="labs">التحاليل</button>
     <button class="tab-bar-btn" data-mgr-tab="radiology">الأشعة</button>
+    <button class="tab-bar-btn" data-mgr-tab="chronicDiseases">الأمراض المزمنة</button>
     <button class="tab-bar-btn" data-mgr-tab="services">الخدمات</button>
   </div>
   <div id="mgrContent"></div>
@@ -1082,6 +1092,7 @@ let RECOMMENDATIONS_LIST = ['الراحة التامة', 'شرب سوائل بك
 let RADIOLOGY_LIST = ['أشعة عادية', 'سونار'];
 let LABS_LIST = ['صورة دم كاملة (CBC)'];
 let PT_LIST = ['تقوية عضلية (Muscle Strengthening)', 'تمارين إطالة (Stretching)'];
+let CHRONIC_DISEASES_LIST = ['ضغط', 'سكر', 'قلب', 'روماتويد', 'حساسية', 'كلى', 'كبد'];
 let ADMINISTRATION_LIST = ['مرة يوميًا', 'مرتين يوميًا', 'عند اللزوم'];
 let REPORT_PHRASES_LIST = [];
 let PRESET_PRESCRIPTIONS = [];
@@ -1141,6 +1152,7 @@ async function tryFetchListsRemote(){
     if(data.radiology && data.radiology.length) RADIOLOGY_LIST = data.radiology;
     if(data.labs && data.labs.length) LABS_LIST = data.labs;
     if(data.physio && data.physio.length) PT_LIST = data.physio;
+    if(data.chronicDiseases && data.chronicDiseases.length) CHRONIC_DISEASES_LIST = data.chronicDiseases;
     if(data.administration && data.administration.length) ADMINISTRATION_LIST = data.administration;
     if(data.reportPhrases && data.reportPhrases.length) REPORT_PHRASES_LIST = data.reportPhrases;
     if(data.presets) PRESET_PRESCRIPTIONS = data.presets;
@@ -1167,6 +1179,7 @@ function refreshAllListUi(){
   renderPresetReportsList();
   renderReportPhraseSelect();
   renderServiceSelect();
+  populateChronicDiseaseSelect();
 }
 
 let letterheadImageData = null;
@@ -1386,6 +1399,36 @@ function renderServiceSelect(){
   };
 }
 
+/* ---------- التاريخ المرضي (الأمراض المزمنة) ---------- */
+function populateChronicDiseaseSelect(){
+  const select = $('chronicDiseaseSelect');
+  select.innerHTML = `<option value="">— اختر مرض من القايمة —</option>` + CHRONIC_DISEASES_LIST.map(d => `<option value="${escapeHtml(d)}">${escapeHtml(d)}</option>`).join('');
+  select.onchange = ()=>{
+    if(!select.value) return;
+    addChronicDiseaseRow(select.value);
+    select.value = '';
+  };
+}
+function addChronicDiseaseRow(value){
+  const box = $('chronicDiseasesRows');
+  const row = document.createElement('div');
+  row.style.cssText = 'display:flex; gap:8px; margin-bottom:8px;';
+  row.innerHTML = `
+    <input type="text" class="chronic-disease-input" value="${escapeHtml(value)}" placeholder="اسم المرض... (تقدر تضيف تفاصيل زي 'من 10 سنين')" style="flex:1; padding:9px 10px; border-radius:9px; border:1px solid var(--line); font-family:'Tajawal'; font-size:13.5px;">
+    <button type="button" class="btn btn-outline-red chronic-disease-remove" style="padding:6px 12px;">✕</button>
+  `;
+  row.querySelector('.chronic-disease-remove').addEventListener('click', ()=> row.remove());
+  box.appendChild(row);
+}
+function renderChronicDiseaseRows(diseases){
+  const box = $('chronicDiseasesRows');
+  box.innerHTML = '';
+  (diseases || []).forEach(d => addChronicDiseaseRow(d));
+}
+function getChronicDiseasesFromForm(){
+  return Array.from(document.querySelectorAll('.chronic-disease-input')).map(inp => inp.value.trim()).filter(Boolean);
+}
+
 buildMedicineRows();
 renderDropdownAdd('rxRecommendationsSelect', 'rxRecommendations', RECOMMENDATIONS_LIST);
 renderDropdownAppendToTextarea('rxRadiologyReqSelect', 'rxRadiologyReq', RADIOLOGY_LIST);
@@ -1396,6 +1439,7 @@ renderDiagnosisRecsList();
 renderPresetReportsList();
 renderReportPhraseSelect();
 renderServiceSelect();
+populateChronicDiseaseSelect();
 
 /* ====== إعدادات Firebase بتاعتك ====== */
 const firebaseConfig = {
@@ -1699,6 +1743,7 @@ function openPatient(id){
   $('fClinicNumber').value = p.ClinicNumber || '';
   $('fNote').value = p.Note || '';
   $('fRedFlag').checked = !!p.RedFlag;
+  renderChronicDiseaseRows(p.ChronicDiseases || []);
   $('fRadiologyLink').value = p.RadiologyLink || '';
   $('fHasOperation').checked = !!p.HasOperation;
   $('vDate').value = new Date().toISOString().slice(0,10);
@@ -1762,6 +1807,7 @@ $('newPatientBtn').onclick = ()=>{
   $('folderTitle').textContent = 'ملف جديد';
   $('fName').value = ''; $('fAge').value = ''; $('fPhone').value = '';
   $('fClinicNumber').value = ''; $('fNote').value = ''; $('fRedFlag').checked = false;
+  renderChronicDiseaseRows([]);
   $('fRadiologyLink').value = ''; $('fHasOperation').checked = false;
   $('vDate').value = new Date().toISOString().slice(0,10);
   $('vNotes').value = EXAM_TEMPLATE; $('vRadiology').value = ''; $('vLabTests').value = '';
@@ -1863,7 +1909,8 @@ $('savePatientBtn').onclick = async ()=>{
     Phone: $('fPhone').value.trim(),
     ClinicNumber: clinicNumber,
     Note: $('fNote').value,
-    RedFlag: $('fRedFlag').checked
+    RedFlag: $('fRedFlag').checked,
+    ChronicDiseases: getChronicDiseasesFromForm()
   };
 
   // لو أوفلاين فعليًا، منستناش رد جوجل خالص (ممكن ياخد وقت طويل جدًا وهو مستني النت يرجع) -
@@ -4130,6 +4177,7 @@ function openListsManagerTab(tab){
   else if(tab === 'physio') renderSimpleListManager('physio', 'العلاج الطبيعي', PT_LIST);
   else if(tab === 'labs') renderSimpleListManager('labs', 'التحاليل', LABS_LIST);
   else if(tab === 'radiology') renderSimpleListManager('radiology', 'الأشعة', RADIOLOGY_LIST);
+  else if(tab === 'chronicDiseases'){ renderSimpleListManager('chronicDiseases', 'الأمراض المزمنة', CHRONIC_DISEASES_LIST); populateChronicDiseaseSelect(); }
   else if(tab === 'medicines') renderMedicinesManager();
   else if(tab === 'presets') renderPresetsManager();
   else if(tab === 'services') renderServicesManager();
