@@ -93,6 +93,18 @@
   .collapsible-header.open .collapse-arrow{transform:rotate(180deg);}
   .collapsible-content{display:none; margin-top:12px;}
   .collapsible-content.open{display:block;}
+  .kashf-layout{display:flex; gap:20px; align-items:flex-start;}
+  .kashf-main{flex:3; min-width:0;}
+  .kashf-sidebar{flex:1; min-width:180px; max-width:260px; position:sticky; top:16px;}
+  .sidebar-visit-item{display:flex; align-items:center; gap:8px; padding:9px 10px; border:1px solid var(--line); border-radius:10px; margin-bottom:8px; cursor:pointer; background:#fff; font-size:12.5px;}
+  .sidebar-visit-item:hover{border-color:var(--teal); background:#F6F3EC;}
+  .sidebar-visit-item.active{background:var(--teal); border-color:var(--teal); color:#fff;}
+  .sidebar-visit-item .sv-icon{flex-shrink:0;}
+  .sidebar-visit-item .sv-text{flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  @media (max-width:820px){
+    .kashf-layout{flex-direction:column;}
+    .kashf-sidebar{max-width:100%; width:100%; position:static;}
+  }
   .exam-card textarea, .exam-card input[type="text"]{
     width:100%; padding:10px 12px; border-radius:9px; border:1px solid var(--line);
     font-family:'Tajawal'; font-size:14.5px; background:#FCFBF8; outline:none; color:#1450C4;
@@ -493,52 +505,58 @@
       </div>
 
       <div class="tab-panel" id="tab-kashf">
-        <div class="exam-card">
-          <h2 style="margin:0 0 4px;">تسجيل كشف / زيارة جديدة</h2>
-          <div class="hint" style="margin-bottom:14px;">أي حفظ هنا بيتسجل كزيارة جديدة تحت بتاريخها - الخانات هنا دايمًا فاضية لتسجيل حاجة جديدة</div>
+        <div class="kashf-layout">
+          <div class="kashf-main">
+            <div class="exam-card">
+              <h2 style="margin:0 0 4px;">تسجيل كشف / زيارة جديدة</h2>
+              <div class="hint" style="margin-bottom:14px;">أي حفظ هنا بيتسجل كزيارة جديدة - الخانات هنا دايمًا فاضية لتسجيل حاجة جديدة، أو دوس على أي زيارة قديمة من القايمة جنبها عشان تفتحها هنا</div>
 
-          <div class="field" style="max-width:200px;">
-            <label>تاريخ الزيارة</label>
-            <input type="date" id="vDate">
-          </div>
-          <div class="field">
-            <label>الشكوى والكشف</label>
-            <textarea id="vNotes" dir="ltr" style="min-height:180px; text-align:left;" placeholder="الشكوى، الفحص، التشخيص، العلاج..."></textarea>
-          </div>
+              <div class="field" style="max-width:200px;">
+                <label>تاريخ الزيارة</label>
+                <input type="date" id="vDate">
+              </div>
+              <div class="field">
+                <label>الشكوى والكشف</label>
+                <textarea id="vNotes" dir="ltr" style="min-height:180px; text-align:left;" placeholder="الشكوى، الفحص، التشخيص، العلاج..."></textarea>
+              </div>
 
-          <div class="collapsible-header" id="kashfRadLabsHeader" style="margin:14px 0 4px;">
-            <h2 style="margin:0; font-size:15px;">الأشعة والتحاليل</h2>
-            <span class="collapse-arrow">▾</span>
-          </div>
-          <div class="collapsible-content" id="kashfRadLabsContent">
-            <div class="field">
-              <label>الأشعة</label>
-              <textarea id="vRadiology" style="min-height:80px;" placeholder="الأشعة المطلوبة أو نتائجها..."></textarea>
+              <div class="collapsible-header" id="kashfRadLabsHeader" style="margin:14px 0 4px;">
+                <h2 style="margin:0; font-size:15px;">الأشعة والتحاليل</h2>
+                <span class="collapse-arrow">▾</span>
+              </div>
+              <div class="collapsible-content" id="kashfRadLabsContent">
+                <div class="field">
+                  <label>الأشعة</label>
+                  <textarea id="vRadiology" style="min-height:80px;" placeholder="الأشعة المطلوبة أو نتائجها..."></textarea>
+                </div>
+                <div class="field">
+                  <label>رابط أرشيف الأشعة</label>
+                  <input type="text" id="fRadiologyLink" placeholder="https://...">
+                </div>
+                <div class="field">
+                  <label>التحاليل</label>
+                  <textarea id="vLabTests" style="min-height:80px;" placeholder="التحاليل المطلوبة أو نتائجها..."></textarea>
+                </div>
+              </div>
+
+              <label style="display:flex; align-items:center; gap:8px; margin:16px 0 4px; cursor:pointer; font-size:14px; font-weight:700; color:var(--ink);">
+                <input type="checkbox" id="fHasOperation" style="width:18px;height:18px;">
+                المريض له عملية / عمل عملية
+              </label>
+
+              <div style="display:flex; gap:10px; margin-top:14px; flex-wrap:wrap;">
+                <button class="btn btn-primary" id="addVisitBtn">حفظ الزيارة</button>
+                <button class="btn btn-ghost" id="cancelVisitBtn" style="display:none;">إلغاء التعديل</button>
+                <button class="btn btn-outline-red" id="visitDeleteFromFormBtn" style="display:none;">حذف الزيارة دي</button>
+                <button class="btn btn-primary" id="visitPdfFromFormBtn" style="display:none;">تحميل PDF</button>
+              </div>
             </div>
-            <div class="field">
-              <label>رابط أرشيف الأشعة</label>
-              <input type="text" id="fRadiologyLink" placeholder="https://...">
-            </div>
-            <div class="field">
-              <label>التحاليل</label>
-              <textarea id="vLabTests" style="min-height:80px;" placeholder="التحاليل المطلوبة أو نتائجها..."></textarea>
-            </div>
           </div>
 
-          <label style="display:flex; align-items:center; gap:8px; margin:16px 0 4px; cursor:pointer; font-size:14px; font-weight:700; color:var(--ink);">
-            <input type="checkbox" id="fHasOperation" style="width:18px;height:18px;">
-            المريض له عملية / عمل عملية
-          </label>
-
-          <div style="display:flex; gap:10px; margin-top:14px;">
-            <button class="btn btn-primary" id="addVisitBtn">حفظ الزيارة</button>
-            <button class="btn btn-ghost" id="cancelVisitBtn" style="display:none;">إلغاء التعديل</button>
+          <div class="kashf-sidebar">
+            <h2 style="margin:0 0 10px; font-size:15px;">سجل الزيارات</h2>
+            <div id="visitsList"></div>
           </div>
-        </div>
-
-        <div class="exam-card">
-          <h2 style="margin:0 0 14px;">سجل الزيارات</h2>
-          <div id="visitsList"></div>
         </div>
       </div>
 
@@ -1800,6 +1818,8 @@ function openPatient(id){
   editingVisitId = null;
   $('addVisitBtn').textContent = 'حفظ الزيارة';
   $('cancelVisitBtn').style.display = 'none';
+  $('visitDeleteFromFormBtn').style.display = 'none';
+  $('visitPdfFromFormBtn').style.display = 'none';
   $('deletePatientBtn').style.display = 'inline-block';
   $('listView').style.display = 'none';
   $('workspace').style.display = 'block';
@@ -1861,6 +1881,8 @@ $('newPatientBtn').onclick = ()=>{
   editingVisitId = null;
   $('addVisitBtn').textContent = 'حفظ الزيارة';
   $('cancelVisitBtn').style.display = 'none';
+  $('visitDeleteFromFormBtn').style.display = 'none';
+  $('visitPdfFromFormBtn').style.display = 'none';
   currentVisits = [];
   $('visitsList').innerHTML = '<div class="no-visits">احفظ بيانات المريض الأول قبل تسجيل زيارات</div>';
   currentOperations = [];
@@ -2069,29 +2091,15 @@ function renderVisits(visits){
   const box = $('visitsList');
   if(!visits.length){ box.innerHTML = '<div class="no-visits">لسه مفيش زيارات مسجلة</div>'; return; }
   box.innerHTML = visits.map(v => `
-    <div class="visit-item" data-id="${v.id}">
-      <div class="visit-date">${escapeHtml(String(v.VisitDate || ''))} ${v._pending ? '⏳' : ''}</div>
-      <div class="visit-notes">${escapeHtml(v.VisitNotes || '—')}</div>
-      ${v.Radiology ? `<div class="visit-notes"><b class="visit-label">الأشعة:</b> ${escapeHtml(v.Radiology)}</div>` : ''}
-      ${v.LabTests ? `<div class="visit-notes"><b class="visit-label">التحاليل:</b> ${escapeHtml(v.LabTests)}</div>` : ''}
-      <div style="display:flex; gap:8px; margin-top:10px; flex-wrap:wrap;">
-        <button class="btn btn-ghost visit-view-btn" style="padding:6px 12px; font-size:12.5px;">عرض</button>
-        <button class="btn btn-ghost visit-edit-btn" style="padding:6px 12px; font-size:12.5px;">تعديل</button>
-        <button class="btn btn-outline-red visit-delete-btn" style="padding:6px 12px; font-size:12.5px;">حذف</button>
-        <button class="btn btn-primary visit-pdf-btn" style="padding:6px 12px; font-size:12.5px;">تحميل PDF</button>
-      </div>
+    <div class="sidebar-visit-item ${v.id === editingVisitId ? 'active' : ''}" data-id="${v.id}">
+      <span class="sv-icon">📄${v._pending ? '⏳' : ''}</span>
+      <span class="sv-text">${escapeHtml(String(v.VisitDate || '').slice(0,10))}</span>
     </div>`).join('');
-  box.querySelectorAll('.visit-item').forEach(item=>{
+  box.querySelectorAll('.sidebar-visit-item').forEach(item=>{
     const id = item.dataset.id;
     const visit = currentVisits.find(v => v.id === id);
     if(!visit) return;
-    item.querySelector('.visit-view-btn').addEventListener('click', ()=> openVisitDetail(visit));
-    item.querySelector('.visit-edit-btn').addEventListener('click', ()=> startEditVisit(visit));
-    item.querySelector('.visit-delete-btn').addEventListener('click', ()=> deleteVisitEntry(visit.id));
-    const pdfBtn = item.querySelector('.visit-pdf-btn');
-    pdfBtn.addEventListener('click', ()=>{
-      exportRxTemplateAsPdf(buildVisitBodyHtml(visit), 'كشف', pdfBtn, String(visit.VisitDate || '').slice(0,10));
-    });
+    item.addEventListener('click', ()=> startEditVisit(visit));
   });
 }
 
@@ -2103,17 +2111,37 @@ function startEditVisit(visit){
   $('vLabTests').value = visit.LabTests || '';
   $('addVisitBtn').textContent = 'حفظ التعديل';
   $('cancelVisitBtn').style.display = 'inline-block';
-  $('vDate').scrollIntoView({behavior:'smooth', block:'start'});
+  $('visitDeleteFromFormBtn').style.display = 'inline-block';
+  $('visitPdfFromFormBtn').style.display = 'inline-block';
+  renderVisits(currentVisits);
+  document.querySelector('.kashf-main').scrollIntoView({behavior:'smooth', block:'start'});
 }
 
-$('cancelVisitBtn').onclick = ()=>{
+$('visitDeleteFromFormBtn').onclick = ()=>{
+  if(!editingVisitId) return;
+  deleteVisitEntry(editingVisitId);
+};
+$('visitPdfFromFormBtn').onclick = ()=>{
+  if(!editingVisitId) return;
+  const visit = currentVisits.find(v => v.id === editingVisitId);
+  if(!visit) return;
+  exportRxTemplateAsPdf(buildVisitBodyHtml(visit), 'كشف', $('visitPdfFromFormBtn'), String(visit.VisitDate || '').slice(0,10));
+};
+
+function resetVisitForm(){
   editingVisitId = null;
   $('addVisitBtn').textContent = 'حفظ الزيارة';
   $('cancelVisitBtn').style.display = 'none';
+  $('visitDeleteFromFormBtn').style.display = 'none';
+  $('visitPdfFromFormBtn').style.display = 'none';
   $('vDate').value = new Date().toISOString().slice(0,10);
   $('vNotes').value = EXAM_TEMPLATE;
   $('vRadiology').value = '';
   $('vLabTests').value = '';
+}
+$('cancelVisitBtn').onclick = ()=>{
+  resetVisitForm();
+  renderVisits(currentVisits);
 };
 
 $('addVisitBtn').onclick = async ()=>{
@@ -2136,6 +2164,8 @@ $('addVisitBtn').onclick = async ()=>{
     editingVisitId = null;
     $('addVisitBtn').textContent = 'حفظ الزيارة';
     $('cancelVisitBtn').style.display = 'none';
+    $('visitDeleteFromFormBtn').style.display = 'none';
+    $('visitPdfFromFormBtn').style.display = 'none';
     $('vDate').value = new Date().toISOString().slice(0,10);
     $('vNotes').value = EXAM_TEMPLATE;
     $('vRadiology').value = '';
@@ -2192,11 +2222,13 @@ $('addVisitBtn').onclick = async ()=>{
 
 async function deleteVisitEntry(visitId){
   if(!confirm('حذف هذه الزيارة نهائيًا؟')) return;
+  const wasEditing = (editingVisitId === visitId);
   const isTemp = String(visitId).startsWith('tempv_');
 
   if(isTemp){
     currentVisits = currentVisits.filter(v => v.id !== visitId);
     setCachedVisits(currentPatientId, currentVisits);
+    if(wasEditing) resetVisitForm();
     renderVisits(currentVisits);
     const q = getWriteQueue().filter(item => item.tempId !== visitId);
     localStorage.setItem('writeQueue', JSON.stringify(q));
@@ -2206,6 +2238,7 @@ async function deleteVisitEntry(visitId){
   if(navigator.onLine === false){
     currentVisits = currentVisits.filter(v => v.id !== visitId);
     setCachedVisits(currentPatientId, currentVisits);
+    if(wasEditing) resetVisitForm();
     renderVisits(currentVisits);
     addToWriteQueue({ type:'deleteVisit', patientId: currentPatientId, visitId });
     showToast('النت مقطوع - الحذف هيتم تلقائي أول ما النت يرجع', true);
@@ -2214,10 +2247,12 @@ async function deleteVisitEntry(visitId){
   try{
     await deleteDoc(doc(db, "patients", currentPatientId, "visits", visitId));
     showToast('اتحذفت الزيارة ✓');
+    if(wasEditing) resetVisitForm();
     await loadVisits(currentPatientId);
   }catch(err){
     currentVisits = currentVisits.filter(v => v.id !== visitId);
     setCachedVisits(currentPatientId, currentVisits);
+    if(wasEditing) resetVisitForm();
     renderVisits(currentVisits);
     addToWriteQueue({ type:'deleteVisit', patientId: currentPatientId, visitId });
     showToast('حصل خطأ في الاتصال - الحذف هيتم تلقائي أول ما النت يرجع', true);
