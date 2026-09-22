@@ -968,6 +968,7 @@
       <button class="btn btn-primary" id="runBackupBtn" style="text-align:right;">💾 عمل نسخة احتياطية دلوقتي</button>
       <button class="btn btn-outline-red" id="restoreBackupBtn" style="text-align:right;">♻️ استعادة آخر نسخة احتياطية</button>
       <button class="btn btn-ghost" id="openListsManagerBtn" style="text-align:right;">🗂️ إدارة القوايم (أدوية، خدمات، مستخدمين...)</button>
+      <button class="btn btn-ghost" id="refreshListsBtn" style="text-align:right;">🔄 تحديث القوايم (لو الأدوية/الأمراض متأخرة)</button>
       <button class="btn btn-ghost" id="runClinicNumberMigrationBtn" style="text-align:right;">🔢 ترقيم المرضى تلقائيًا (رقم العيادة)</button>
     </div>
     <div class="hint" style="margin-top:16px;">الاستعادة بتكتب فوق أي بيانات اتضافت بعد وقت آخر نسخة احتياطية - استخدمها بحذر.</div>
@@ -1218,31 +1219,42 @@ populateReportTypeSelect();
 
 /* بتحاول تجيب القوايم الحقيقية من الشيت القديم لو فيه بيانات دخول محفوظة بالفعل -
    من غير ما تفتح أي مربع تسجيل دخول لوحدها (ده بيحصل بس أول مرة تستخدم فيها تاب الصور) */
-async function tryFetchListsRemote(){
+async function tryFetchListsRemote(silent){
   if(!getAppsScriptCreds()) return;
-  try{
-    const token = await ensureAppsScriptLogin();
-    const res = await fetch(`${APPS_SCRIPT_URL}?action=getLists&token=${encodeURIComponent(token)}`);
-    const data = await res.json();
-    if(data.error) return;
-    if(data.medicines && data.medicines.length) MEDICINES_LIST = data.medicines;
-    if(data.recommendations && data.recommendations.length) RECOMMENDATIONS_LIST = data.recommendations;
-    if(data.radiology && data.radiology.length) RADIOLOGY_LIST = data.radiology;
-    if(data.labs && data.labs.length) LABS_LIST = data.labs;
-    if(data.physio && data.physio.length) PT_LIST = data.physio;
-    if(data.chronicDiseases && data.chronicDiseases.length) CHRONIC_DISEASES_LIST = data.chronicDiseases;
-    if(data.administration && data.administration.length) ADMINISTRATION_LIST = data.administration;
-    if(data.reportPhrases && data.reportPhrases.length) REPORT_PHRASES_LIST = data.reportPhrases;
-    if(data.presets) PRESET_PRESCRIPTIONS = data.presets;
-    if(data.presetReports) PRESET_REPORTS = data.presetReports;
-    if(data.diagnosisRecommendations) DIAGNOSIS_RECS = data.diagnosisRecommendations;
-    if(data.operationLocations && data.operationLocations.length){ OPERATION_LOCATIONS.length = 0; OPERATION_LOCATIONS.push(...data.operationLocations); }
-    if(data.dressingTypes && data.dressingTypes.length){ DRESSING_TYPES.length = 0; DRESSING_TYPES.push(...data.dressingTypes); }
-    const svcRes = await fetch(`${APPS_SCRIPT_URL}?action=getServices&token=${encodeURIComponent(token)}`);
-    const svcData = await svcRes.json();
-    if(svcData.results) SERVICES_LIST = svcData.results;
-    refreshAllListUi();
-  }catch(err){ /* هنستخدم القوايم الافتراضية عادي */ }
+  const maxAttempts = 3;
+  for(let attempt = 1; attempt <= maxAttempts; attempt++){
+    try{
+      const token = await ensureAppsScriptLogin();
+      const res = await fetch(`${APPS_SCRIPT_URL}?action=getLists&token=${encodeURIComponent(token)}`);
+      const data = await res.json();
+      if(data.error) throw new Error(data.error);
+      if(data.medicines && data.medicines.length) MEDICINES_LIST = data.medicines;
+      if(data.recommendations && data.recommendations.length) RECOMMENDATIONS_LIST = data.recommendations;
+      if(data.radiology && data.radiology.length) RADIOLOGY_LIST = data.radiology;
+      if(data.labs && data.labs.length) LABS_LIST = data.labs;
+      if(data.physio && data.physio.length) PT_LIST = data.physio;
+      if(data.chronicDiseases && data.chronicDiseases.length) CHRONIC_DISEASES_LIST = data.chronicDiseases;
+      if(data.administration && data.administration.length) ADMINISTRATION_LIST = data.administration;
+      if(data.reportPhrases && data.reportPhrases.length) REPORT_PHRASES_LIST = data.reportPhrases;
+      if(data.presets) PRESET_PRESCRIPTIONS = data.presets;
+      if(data.presetReports) PRESET_REPORTS = data.presetReports;
+      if(data.diagnosisRecommendations) DIAGNOSIS_RECS = data.diagnosisRecommendations;
+      if(data.operationLocations && data.operationLocations.length){ OPERATION_LOCATIONS.length = 0; OPERATION_LOCATIONS.push(...data.operationLocations); }
+      if(data.dressingTypes && data.dressingTypes.length){ DRESSING_TYPES.length = 0; DRESSING_TYPES.push(...data.dressingTypes); }
+      const svcRes = await fetch(`${APPS_SCRIPT_URL}?action=getServices&token=${encodeURIComponent(token)}`);
+      const svcData = await svcRes.json();
+      if(svcData.results) SERVICES_LIST = svcData.results;
+      refreshAllListUi();
+      if(!silent && attempt > 1) showToast('اتحدّثت القوايم (الأدوية، الأمراض، الروشتات الجاهزة...) ✓');
+      return;
+    }catch(err){
+      if(attempt < maxAttempts){
+        await new Promise(r => setTimeout(r, attempt * 1200)); // نستنى شوية قبل ما نحاول تاني
+      } else if(!silent){
+        showToast('تعذر تحميل القوايم (الأدوية/الأمراض/الروشتات) - دوس على "🔄 تحديث القوايم" في الضبط', true);
+      }
+    }
+  }
 }
 
 function refreshAllListUi(){
@@ -4393,6 +4405,13 @@ async function runClinicNumberMigration(){
 let currentMgrTab = 'users';
 let USERS_LIST = [];
 
+$('refreshListsBtn').onclick = async ()=>{
+  if(navigator.onLine === false){ showToast('محتاج نت عشان يحدّث القوايم', true); return; }
+  const btn = $('refreshListsBtn');
+  btn.disabled = true; const orig = btn.textContent; btn.textContent = 'جاري التحديث...';
+  await tryFetchListsRemote(false);
+  btn.disabled = false; btn.textContent = orig;
+};
 $('runClinicNumberMigrationBtn').onclick = ()=>{
   $('settingsModal').style.display = 'none';
   runClinicNumberMigration();
