@@ -561,264 +561,293 @@
       </div>
 
       <div class="tab-panel" id="tab-operations">
-        <div class="exam-card">
-          <div class="visits-head">
-            <h2 style="margin:0;">سجل العمليات</h2>
-            <button class="btn btn-ghost" id="toggleOperationBtn">+ تسجيل عملية جديدة</button>
+        <div class="kashf-layout">
+          <div class="kashf-main">
+            <div class="exam-card">
+              <h2 style="margin:0 0 4px;">تسجيل عملية جديدة</h2>
+              <div class="hint" style="margin-bottom:14px;">أي حفظ هنا بيتسجل كعملية جديدة، أو دوس على أي عملية قديمة من القايمة جنبها عشان تفتحها هنا</div>
+              <div class="field" style="max-width:200px;">
+                <label>تاريخ العملية</label>
+                <input type="date" id="opDate">
+              </div>
+              <div class="field">
+                <label>اسم العملية</label>
+                <input type="text" id="opName" placeholder="اسم العملية...">
+              </div>
+              <div class="field">
+                <label>مكان العملية</label>
+                <select id="opLocation"></select>
+              </div>
+              <div class="field">
+                <label>التكلفة</label>
+                <input type="text" id="opCost" placeholder="التكلفة...">
+              </div>
+              <div class="field">
+                <label>الغيار الأول</label>
+                <select id="opDressing1"></select>
+              </div>
+              <div class="field">
+                <label>الغيار الثاني</label>
+                <select id="opDressing2"></select>
+              </div>
+              <div class="field">
+                <label>الغيار الثالث</label>
+                <select id="opDressing3"></select>
+              </div>
+              <div class="field">
+                <label>المتابعات</label>
+                <textarea id="opFollowUps" style="min-height:100px;" placeholder="المتابعات..."></textarea>
+              </div>
+              <div class="field">
+                <label>ملاحظات</label>
+                <textarea id="opNotes" style="min-height:100px;" placeholder="ملاحظات..."></textarea>
+              </div>
+              <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                <button class="btn btn-primary" id="addOperationBtn">حفظ العملية</button>
+                <button class="btn btn-ghost" id="cancelOperationBtn" style="display:none;">إلغاء التعديل</button>
+                <button class="btn btn-outline-red" id="opDeleteFromFormBtn" style="display:none;">حذف العملية دي</button>
+              </div>
+            </div>
           </div>
-
-          <div class="new-visit-form" id="newOperationForm">
-            <div class="field" style="max-width:200px;">
-              <label>تاريخ العملية</label>
-              <input type="date" id="opDate">
-            </div>
-            <div class="field">
-              <label>اسم العملية</label>
-              <input type="text" id="opName" placeholder="اسم العملية...">
-            </div>
-            <div class="field">
-              <label>مكان العملية</label>
-              <select id="opLocation"></select>
-            </div>
-            <div class="field">
-              <label>التكلفة</label>
-              <input type="text" id="opCost" placeholder="التكلفة...">
-            </div>
-            <div class="field">
-              <label>الغيار الأول</label>
-              <select id="opDressing1"></select>
-            </div>
-            <div class="field">
-              <label>الغيار الثاني</label>
-              <select id="opDressing2"></select>
-            </div>
-            <div class="field">
-              <label>الغيار الثالث</label>
-              <select id="opDressing3"></select>
-            </div>
-            <div class="field">
-              <label>المتابعات</label>
-              <textarea id="opFollowUps" style="min-height:100px;" placeholder="المتابعات..."></textarea>
-            </div>
-            <div class="field">
-              <label>ملاحظات</label>
-              <textarea id="opNotes" style="min-height:100px;" placeholder="ملاحظات..."></textarea>
-            </div>
-            <div style="display:flex; gap:10px;">
-              <button class="btn btn-primary" id="addOperationBtn">حفظ العملية</button>
-              <button class="btn btn-ghost" id="cancelOperationBtn">إلغاء</button>
-            </div>
+          <div class="kashf-sidebar">
+            <h2 style="margin:0 0 10px; font-size:15px;">سجل العمليات</h2>
+            <div id="operationsList"></div>
           </div>
-
-          <div id="operationsList"></div>
         </div>
       </div>
 
       <div class="tab-panel" id="tab-images">
-        <div class="exam-card">
-          <div class="visits-head">
-            <h2 style="margin:0;">صور المريض</h2>
-            <button type="button" class="btn btn-ghost" id="uploadImageLabel" style="margin:0;">+ رفع صور</button>
-            <input type="file" id="imageFileInput" accept="image/*" multiple style="display:none;">
+        <div class="kashf-layout">
+          <div class="kashf-main">
+            <div class="exam-card">
+              <div class="visits-head">
+                <h2 id="imagesMainTitle" style="margin:0;">اختار سكشن من القايمة</h2>
+                <button type="button" class="btn btn-ghost" id="uploadImageLabel" style="margin:0;">+ رفع صور</button>
+                <input type="file" id="imageFileInput" accept="image/*" multiple style="display:none;">
+              </div>
+              <div class="hint">الصور بتتخزن في نفس نظام جوجل درايف القديم (منفصل عن باقي البيانات)</div>
+              <div id="imagesMainGrid" class="images-grid"></div>
+            </div>
           </div>
-          <div class="hint">الصور بتتخزن في نفس نظام جوجل درايف القديم (منفصل عن باقي البيانات) - وبتتقسم كسجل زمني حسب وقت كل رفعة</div>
-          <div id="imagesTimeline"></div>
+          <div class="kashf-sidebar">
+            <h2 style="margin:0 0 10px; font-size:15px;">السكاشن</h2>
+            <div id="imagesSidebarList"></div>
+          </div>
         </div>
       </div>
 
       <div class="tab-panel" id="tab-rx">
-        <div class="exam-card">
-          <h2>روشتات جاهزة</h2>
-          <div class="hint">دوس على أي روشتة تحت وهتتحمّل PDF فورًا باسم المريض وتاريخ اليوم</div>
-          <div class="chips" id="presetRxList"></div>
-        </div>
-
-        <div class="exam-card">
-          <h2>الروشتة</h2>
-          <div class="hint">الاسم وتاريخ اليوم بيتحطوا في الروشتة تلقائي - اختار من القوائم تحت</div>
-
-          <div class="field">
-            <label>التشخيص</label>
-            <textarea id="rxDiagnosis" style="min-height:70px;" placeholder="التشخيص..."></textarea>
-          </div>
-
-          <div class="field">
-            <label>الأدوية</label>
-            <div id="rxMedicines"></div>
-            <button type="button" class="btn btn-ghost" id="addMedicineRowBtn" style="margin-top:4px;">+ إضافة دواء</button>
-          </div>
-
-          <div class="field">
-            <label>توصيات حسب التشخيص</label>
-            <div class="hint" style="margin-bottom:8px;">دوس على تشخيص وهتتكتب كل توصياته تلقائي تحت</div>
-            <div class="chips" id="diagnosisRecsList"></div>
-          </div>
-
-          <div class="collapsible-header" id="rxRecsHeader" style="margin-bottom:4px;">
-            <h2 style="margin:0; font-size:15px;">التوصيات</h2>
-            <span class="collapse-arrow">▾</span>
-          </div>
-          <div class="collapsible-content" id="rxRecsContent">
-            <div class="field">
-              <label>التوصيات العامة</label>
-              <select id="rxRecommendationsSelect" class="dropdown-add-select"></select>
-              <div class="chips" id="rxRecommendations" style="margin-top:8px;"></div>
-            </div>
-          </div>
-
-          <div class="collapsible-header" id="rxRadLabsHeader" style="margin:14px 0 4px;">
-            <h2 style="margin:0; font-size:15px;">الأشعة والتحاليل</h2>
-            <span class="collapse-arrow">▾</span>
-          </div>
-          <div class="collapsible-content" id="rxRadLabsContent">
-            <div class="field">
-              <label>الأشعة المطلوبة</label>
-              <div class="hint" style="margin-bottom:6px;">اكتب بحرية أو اختار من القايمة عشان تضاف كسطر جديد</div>
-              <select id="rxRadiologyReqSelect" class="dropdown-add-select"></select>
-              <textarea id="rxRadiologyReq" style="min-height:80px; margin-top:8px;" placeholder="الأشعة المطلوبة..."></textarea>
+        <div class="kashf-layout">
+          <div class="kashf-main">
+            <div class="exam-card">
+              <h2>روشتات جاهزة</h2>
+              <div class="hint">دوس على أي روشتة تحت وهتتحمّل PDF فورًا باسم المريض وتاريخ اليوم</div>
+              <div class="chips" id="presetRxList"></div>
             </div>
 
-            <div class="field">
-              <label>التحاليل المطلوبة</label>
-              <div class="hint" style="margin-bottom:6px;">اكتب بحرية أو اختار من القايمة عشان تضاف كسطر جديد</div>
-              <select id="rxLabsReqSelect" class="dropdown-add-select"></select>
-              <textarea id="rxLabsReq" style="min-height:80px; margin-top:8px;" placeholder="التحاليل المطلوبة..."></textarea>
+            <div class="exam-card">
+              <h2>الروشتة</h2>
+              <div class="hint">الاسم وتاريخ اليوم بيتحطوا في الروشتة تلقائي - اختار من القوائم تحت، أو دوس على روشتة قديمة من القايمة جنبها عشان تفتحها هنا</div>
+
+              <div class="field">
+                <label>التشخيص</label>
+                <textarea id="rxDiagnosis" style="min-height:70px;" placeholder="التشخيص..."></textarea>
+              </div>
+
+              <div class="field">
+                <label>الأدوية</label>
+                <div id="rxMedicines"></div>
+                <button type="button" class="btn btn-ghost" id="addMedicineRowBtn" style="margin-top:4px;">+ إضافة دواء</button>
+              </div>
+
+              <div class="field">
+                <label>توصيات حسب التشخيص</label>
+                <div class="hint" style="margin-bottom:8px;">دوس على تشخيص وهتتكتب كل توصياته تلقائي تحت</div>
+                <div class="chips" id="diagnosisRecsList"></div>
+              </div>
+
+              <div class="collapsible-header" id="rxRecsHeader" style="margin-bottom:4px;">
+                <h2 style="margin:0; font-size:15px;">التوصيات</h2>
+                <span class="collapse-arrow">▾</span>
+              </div>
+              <div class="collapsible-content" id="rxRecsContent">
+                <div class="field">
+                  <label>التوصيات العامة</label>
+                  <select id="rxRecommendationsSelect" class="dropdown-add-select"></select>
+                  <div class="chips" id="rxRecommendations" style="margin-top:8px;"></div>
+                </div>
+              </div>
+
+              <div class="collapsible-header" id="rxRadLabsHeader" style="margin:14px 0 4px;">
+                <h2 style="margin:0; font-size:15px;">الأشعة والتحاليل</h2>
+                <span class="collapse-arrow">▾</span>
+              </div>
+              <div class="collapsible-content" id="rxRadLabsContent">
+                <div class="field">
+                  <label>الأشعة المطلوبة</label>
+                  <div class="hint" style="margin-bottom:6px;">اكتب بحرية أو اختار من القايمة عشان تضاف كسطر جديد</div>
+                  <select id="rxRadiologyReqSelect" class="dropdown-add-select"></select>
+                  <textarea id="rxRadiologyReq" style="min-height:80px; margin-top:8px;" placeholder="الأشعة المطلوبة..."></textarea>
+                </div>
+
+                <div class="field">
+                  <label>التحاليل المطلوبة</label>
+                  <div class="hint" style="margin-bottom:6px;">اكتب بحرية أو اختار من القايمة عشان تضاف كسطر جديد</div>
+                  <select id="rxLabsReqSelect" class="dropdown-add-select"></select>
+                  <textarea id="rxLabsReq" style="min-height:80px; margin-top:8px;" placeholder="التحاليل المطلوبة..."></textarea>
+                </div>
+              </div>
+
+              <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                <button class="btn btn-primary" id="saveRxBtn">حفظ الروشتة</button>
+                <button class="btn btn-primary" id="downloadRxBtn">تحميل الروشتة PDF</button>
+                <button class="btn btn-ghost" id="cancelRxEditBtn" style="display:none;">إلغاء التعديل</button>
+                <button class="btn btn-outline-red" id="rxDeleteFromFormBtn" style="display:none;">حذف الروشتة دي</button>
+              </div>
             </div>
           </div>
-
-          <div style="display:flex; gap:10px;">
-            <button class="btn btn-primary" id="saveRxBtn">حفظ الروشتة</button>
-            <button class="btn btn-primary" id="downloadRxBtn">تحميل الروشتة PDF</button>
+          <div class="kashf-sidebar">
+            <h2 style="margin:0 0 10px; font-size:15px;">هستوري الروشتات</h2>
+            <div id="rxHistoryList"></div>
           </div>
-        </div>
-
-        <div class="exam-card">
-          <h2 style="margin:0 0 14px;">هستوري الروشتات</h2>
-          <div id="rxHistoryList"></div>
         </div>
       </div>
 
       <div class="tab-panel" id="tab-physio">
-        <div class="exam-card">
-          <h2>العلاج الطبيعي</h2>
-          <div class="hint">الاسم وتاريخ اليوم بيتحطوا تلقائي فوق الروشتة</div>
+        <div class="kashf-layout">
+          <div class="kashf-main">
+            <div class="exam-card">
+              <h2>العلاج الطبيعي</h2>
+              <div class="hint">الاسم وتاريخ اليوم بيتحطوا تلقائي، أو دوس على جلسة قديمة من القايمة جنبها عشان تفتحها هنا</div>
 
-          <div class="field">
-            <label>التشخيص</label>
-            <textarea id="ptDiagnosis" style="min-height:70px;" placeholder="التشخيص..."></textarea>
+              <div class="field">
+                <label>التشخيص</label>
+                <textarea id="ptDiagnosis" style="min-height:70px;" placeholder="التشخيص..."></textarea>
+              </div>
+
+              <div class="field">
+                <label>المطلوب من العلاج الطبيعي</label>
+                <div class="chips" id="ptInterventions"></div>
+              </div>
+
+              <div class="field" style="max-width:220px;">
+                <label>عدد الجلسات</label>
+                <input type="text" id="ptSessions" placeholder="مثال: 10 جلسات">
+              </div>
+
+              <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                <button class="btn btn-primary" id="savePhysioBtn">حفظ</button>
+                <button class="btn btn-primary" id="downloadPhysioBtn">تحميل روشتة العلاج الطبيعي PDF</button>
+                <button class="btn btn-ghost" id="cancelPhysioEditBtn" style="display:none;">إلغاء التعديل</button>
+                <button class="btn btn-outline-red" id="physioDeleteFromFormBtn" style="display:none;">حذف السجل ده</button>
+              </div>
+            </div>
           </div>
-
-          <div class="field">
-            <label>المطلوب من العلاج الطبيعي</label>
-            <div class="chips" id="ptInterventions"></div>
+          <div class="kashf-sidebar">
+            <h2 style="margin:0 0 10px; font-size:15px;">هستوري العلاج الطبيعي</h2>
+            <div id="physioHistoryList"></div>
           </div>
-
-          <div class="field" style="max-width:220px;">
-            <label>عدد الجلسات</label>
-            <input type="text" id="ptSessions" placeholder="مثال: 10 جلسات">
-          </div>
-
-          <div style="display:flex; gap:10px;">
-            <button class="btn btn-primary" id="savePhysioBtn">حفظ</button>
-            <button class="btn btn-primary" id="downloadPhysioBtn">تحميل روشتة العلاج الطبيعي PDF</button>
-          </div>
-        </div>
-
-        <div class="exam-card">
-          <h2 style="margin:0 0 14px;">هستوري العلاج الطبيعي</h2>
-          <div id="physioHistoryList"></div>
         </div>
       </div>
 
       <div class="tab-panel" id="tab-reports">
-        <div class="exam-card">
-          <h2>التقارير الطبية</h2>
-          <div class="hint">الاسم وتاريخ اليوم بيتحطوا تلقائي فوق التقرير</div>
+        <div class="kashf-layout">
+          <div class="kashf-main">
+            <div class="exam-card">
+              <h2>التقارير الطبية</h2>
+              <div class="hint">الاسم وتاريخ اليوم بيتحطوا تلقائي، أو دوس على تقرير قديم من القايمة جنبها عشان تفتحه هنا</div>
 
-          <div class="field">
-            <label>تقارير جاهزة</label>
-            <div class="hint" style="margin-bottom:8px;">دوس على عنوان وهيتضاف نصه في التقرير تحت</div>
-            <div class="chips" id="presetReportsList"></div>
-          </div>
+              <div class="field">
+                <label>تقارير جاهزة</label>
+                <div class="hint" style="margin-bottom:8px;">دوس على عنوان وهيتضاف نصه في التقرير تحت</div>
+                <div class="chips" id="presetReportsList"></div>
+              </div>
 
-          <div class="field">
-            <label>نوع التقرير</label>
-            <div style="display:flex; gap:8px;">
-              <select id="reportType" class="dropdown-add-select" style="flex:1;"></select>
-              <button type="button" class="btn btn-ghost" id="addReportTypeBtn" title="أضف نوع جديد" style="padding:9px 14px;">+</button>
-              <button type="button" class="btn btn-outline-red" id="removeReportTypeBtn" title="احذف النوع المختار" style="padding:9px 14px;">🗑</button>
+              <div class="field">
+                <label>نوع التقرير</label>
+                <div style="display:flex; gap:8px;">
+                  <select id="reportType" class="dropdown-add-select" style="flex:1;"></select>
+                  <button type="button" class="btn btn-ghost" id="addReportTypeBtn" title="أضف نوع جديد" style="padding:9px 14px;">+</button>
+                  <button type="button" class="btn btn-outline-red" id="removeReportTypeBtn" title="احذف النوع المختار" style="padding:9px 14px;">🗑</button>
+                </div>
+              </div>
+
+              <div class="field">
+                <label>جمل جاهزة للتقرير</label>
+                <select id="reportPhraseSelect" class="dropdown-add-select"></select>
+              </div>
+
+              <div class="field">
+                <label>نص التقرير</label>
+                <textarea id="reportBody" style="min-height:220px;" placeholder="اكتب نص التقرير هنا..."></textarea>
+              </div>
+
+              <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                <button class="btn btn-primary" id="saveReportBtn">حفظ</button>
+                <button class="btn btn-primary" id="downloadReportBtn">تحميل التقرير PDF</button>
+                <button class="btn btn-ghost" id="cancelReportEditBtn" style="display:none;">إلغاء التعديل</button>
+                <button class="btn btn-outline-red" id="reportDeleteFromFormBtn" style="display:none;">حذف التقرير ده</button>
+              </div>
             </div>
           </div>
-
-          <div class="field">
-            <label>جمل جاهزة للتقرير</label>
-            <select id="reportPhraseSelect" class="dropdown-add-select"></select>
+          <div class="kashf-sidebar">
+            <h2 style="margin:0 0 10px; font-size:15px;">هستوري التقارير</h2>
+            <div id="reportHistoryList"></div>
           </div>
-
-          <div class="field">
-            <label>نص التقرير</label>
-            <textarea id="reportBody" style="min-height:220px;" placeholder="اكتب نص التقرير هنا..."></textarea>
-          </div>
-
-          <div style="display:flex; gap:10px;">
-            <button class="btn btn-primary" id="saveReportBtn">حفظ</button>
-            <button class="btn btn-primary" id="downloadReportBtn">تحميل التقرير PDF</button>
-          </div>
-        </div>
-
-        <div class="exam-card">
-          <h2 style="margin:0 0 14px;">هستوري التقارير</h2>
-          <div id="reportHistoryList"></div>
         </div>
       </div>
 
       <div class="tab-panel" id="tab-invoices">
-        <div class="exam-card">
-          <div class="visits-head">
-            <h2 style="margin:0;">سجل الفواتير</h2>
-            <button class="btn btn-ghost" id="toggleInvoiceBtn">+ فاتورة جديدة</button>
-          </div>
+        <div class="kashf-layout">
+          <div class="kashf-main">
+            <div class="exam-card">
+              <h2 style="margin:0 0 4px;">تسجيل فاتورة جديدة</h2>
+              <div class="hint" style="margin-bottom:14px;">أي حفظ هنا بيتسجل كفاتورة جديدة، أو دوس على فاتورة قديمة من القايمة جنبها عشان تفتحها هنا</div>
 
-          <div class="new-visit-form" id="newInvoiceForm">
-            <div class="field" style="max-width:200px;">
-              <label>تاريخ الفاتورة</label>
-              <input type="date" id="invDate">
-            </div>
+              <div class="field" style="max-width:200px;">
+                <label>تاريخ الفاتورة</label>
+                <input type="date" id="invDate">
+              </div>
 
-            <div class="field">
-              <label>إضافة خدمة</label>
-              <select id="invServiceSelect" class="dropdown-add-select"></select>
-            </div>
+              <div class="field">
+                <label>إضافة خدمة</label>
+                <select id="invServiceSelect" class="dropdown-add-select"></select>
+              </div>
 
-            <div class="field">
-              <label>أو أضف بند مخصص (زي "عملية" أو أي حاجة مش في القايمة)</label>
-              <div style="display:flex; gap:8px;">
-                <input type="text" id="invCustomName" placeholder="اسم البند..." style="flex:2;">
-                <input type="text" id="invCustomPrice" placeholder="السعر" style="flex:1;">
-                <button type="button" class="btn btn-ghost" id="addCustomInvoiceItemBtn">إضافة</button>
+              <div class="field">
+                <label>أو أضف بند مخصص (زي "عملية" أو أي حاجة مش في القايمة)</label>
+                <div style="display:flex; gap:8px;">
+                  <input type="text" id="invCustomName" placeholder="اسم البند..." style="flex:2;">
+                  <input type="text" id="invCustomPrice" placeholder="السعر" style="flex:1;">
+                  <button type="button" class="btn btn-ghost" id="addCustomInvoiceItemBtn">إضافة</button>
+                </div>
+              </div>
+
+              <div class="field">
+                <div id="invItemsList" style="background:#FCFBF8; border:1px solid var(--line); border-radius:10px; padding:8px;"></div>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-top:12px; padding:0 6px;">
+                  <span style="font-weight:800; font-family:'Cairo';">الإجمالي</span>
+                  <span id="invTotal" style="font-weight:800; font-family:'Cairo'; font-size:20px; color:var(--teal-dark);">0</span>
+                </div>
+              </div>
+
+              <div class="field">
+                <label>ملاحظات</label>
+                <textarea id="invNotes" style="min-height:80px;" placeholder="ملاحظات إضافية على الفاتورة..."></textarea>
+              </div>
+
+              <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                <button class="btn btn-primary" id="saveInvoiceBtn">حفظ الفاتورة</button>
+                <button class="btn btn-ghost" id="cancelInvoiceBtn" style="display:none;">إلغاء التعديل</button>
+                <button class="btn btn-outline-red" id="invDeleteFromFormBtn" style="display:none;">حذف الفاتورة دي</button>
+                <button class="btn btn-primary" id="invPdfFromFormBtn" style="display:none;">تحميل PDF</button>
               </div>
             </div>
-
-            <div class="field">
-              <div id="invItemsList" style="background:#FCFBF8; border:1px solid var(--line); border-radius:10px; padding:8px;"></div>
-              <div style="display:flex; justify-content:space-between; align-items:center; margin-top:12px; padding:0 6px;">
-                <span style="font-weight:800; font-family:'Cairo';">الإجمالي</span>
-                <span id="invTotal" style="font-weight:800; font-family:'Cairo'; font-size:20px; color:var(--teal-dark);">0</span>
-              </div>
-            </div>
-
-            <div class="field">
-              <label>ملاحظات</label>
-              <textarea id="invNotes" style="min-height:80px;" placeholder="ملاحظات إضافية على الفاتورة..."></textarea>
-            </div>
-
-            <div style="display:flex; gap:10px;">
-              <button class="btn btn-primary" id="saveInvoiceBtn">حفظ الفاتورة</button>
-              <button class="btn btn-ghost" id="cancelInvoiceBtn">إلغاء</button>
-            </div>
           </div>
-
-          <div id="invoicesList"></div>
+          <div class="kashf-sidebar">
+            <h2 style="margin:0 0 10px; font-size:15px;">سجل الفواتير</h2>
+            <div id="invoicesList"></div>
+          </div>
         </div>
       </div>
     </div>
@@ -1830,25 +1859,27 @@ function openPatient(id){
     $('visitsList').innerHTML = '<div class="no-visits">لازم يتزامن ملف المريض مع الإنترنت الأول قبل تسجيل زيارات</div>';
     currentOperations = [];
     $('operationsList').innerHTML = '<div class="no-visits">لازم يتزامن ملف المريض مع الإنترنت الأول قبل تسجيل عمليات</div>';
-    $('toggleOperationBtn').style.display = 'none';
+    resetOperationForm();
     currentImages = [];
-    $('imagesTimeline').innerHTML = '<div class="no-visits">لازم يتزامن ملف المريض مع الإنترنت الأول قبل رفع صور</div>';
+    $('imagesSidebarList').innerHTML = '<div class="no-visits">لازم يتزامن ملف المريض مع الإنترنت الأول قبل رفع صور</div>';
+    $('imagesMainGrid').innerHTML = '';
+    $('imagesMainTitle').textContent = 'اختار سكشن من القايمة';
     $('uploadImageLabel').style.display = 'none';
     currentHistory = [];
     resetPrescriptionForm(); resetPhysioForm(); resetReportForm();
     renderAllHistory();
     currentInvoices = [];
     $('invoicesList').innerHTML = '<div class="no-visits">لازم يتزامن ملف المريض مع الإنترنت الأول قبل تسجيل فواتير</div>';
-    $('toggleInvoiceBtn').style.display = 'none';
+    resetInvoiceForm();
     $('bookApptCard').style.display = 'none';
   } else {
     migrateOldExamDataToVisit(id, p);
     loadVisits(id);
-    $('toggleOperationBtn').style.display = 'inline-block';
+    resetOperationForm();
     loadOperations(id);
     resetPrescriptionForm(); resetPhysioForm(); resetReportForm();
     loadHistory(id);
-    $('toggleInvoiceBtn').style.display = 'inline-block';
+    resetInvoiceForm();
     loadInvoices(id);
     $('uploadImageLabel').style.display = 'inline-flex';
     currentImagesTargetElId = 'imagesTimeline';
@@ -1863,8 +1894,6 @@ function resetToBasicTab(){
   document.querySelectorAll('.tab-panel').forEach(p=> p.classList.remove('active'));
   document.querySelector('.tab-btn[data-tab="tab-basic"]').classList.add('active');
   $('tab-basic').classList.add('active');
-  $('newOperationForm').classList.remove('open');
-  editingOperationId = null;
 }
 
 $('newPatientBtn').onclick = ()=>{
@@ -1887,16 +1916,18 @@ $('newPatientBtn').onclick = ()=>{
   $('visitsList').innerHTML = '<div class="no-visits">احفظ بيانات المريض الأول قبل تسجيل زيارات</div>';
   currentOperations = [];
   $('operationsList').innerHTML = '<div class="no-visits">احفظ بيانات المريض الأول قبل تسجيل عمليات</div>';
-  $('toggleOperationBtn').style.display = 'none';
+  resetOperationForm();
   currentImages = [];
-  $('imagesTimeline').innerHTML = '<div class="no-visits">احفظ بيانات المريض الأول قبل رفع صور</div>';
+  $('imagesSidebarList').innerHTML = '<div class="no-visits">احفظ بيانات المريض الأول قبل رفع صور</div>';
+  $('imagesMainGrid').innerHTML = '';
+  $('imagesMainTitle').textContent = 'اختار سكشن من القايمة';
   $('uploadImageLabel').style.display = 'none';
   currentHistory = [];
   resetPrescriptionForm(); resetPhysioForm(); resetReportForm();
   renderAllHistory();
   currentInvoices = [];
   $('invoicesList').innerHTML = '<div class="no-visits">احفظ بيانات المريض الأول قبل تسجيل فواتير</div>';
-  $('toggleInvoiceBtn').style.display = 'none';
+  resetInvoiceForm();
   $('bookApptCard').style.display = 'none';
   $('deletePatientBtn').style.display = 'none';
   $('listView').style.display = 'none';
@@ -2283,27 +2314,15 @@ function renderOperations(operations){
   const box = $('operationsList');
   if(!operations.length){ box.innerHTML = '<div class="no-visits">لسه مفيش عمليات مسجلة</div>'; return; }
   box.innerHTML = operations.map(o => `
-    <div class="visit-item" data-id="${o.id}">
-      <div class="visit-date">${escapeHtml(String(o.OperationDate || ''))} ${o._pending ? '⏳' : ''}</div>
-      <div class="visit-notes"><b>${escapeHtml(o.OperationName || '—')}</b></div>
-      ${o.Location ? `<div class="visit-notes"><b class="visit-label">مكان العملية:</b> ${escapeHtml(o.Location)}</div>` : ''}
-      ${o.Cost ? `<div class="visit-notes"><b class="visit-label">التكلفة:</b> ${escapeHtml(o.Cost)}</div>` : ''}
-      ${o.Dressing1 ? `<div class="visit-notes"><b class="visit-label">الغيار الأول:</b> ${escapeHtml(o.Dressing1)}</div>` : ''}
-      ${o.Dressing2 ? `<div class="visit-notes"><b class="visit-label">الغيار الثاني:</b> ${escapeHtml(o.Dressing2)}</div>` : ''}
-      ${o.Dressing3 ? `<div class="visit-notes"><b class="visit-label">الغيار الثالث:</b> ${escapeHtml(o.Dressing3)}</div>` : ''}
-      ${o.FollowUps ? `<div class="visit-notes"><b class="visit-label">المتابعات:</b> ${escapeHtml(o.FollowUps)}</div>` : ''}
-      ${o.Notes ? `<div class="visit-notes"><b class="visit-label">ملاحظات:</b> ${escapeHtml(o.Notes)}</div>` : ''}
-      <div style="display:flex; gap:8px; margin-top:10px;">
-        <button class="btn btn-ghost op-edit-btn" style="padding:6px 12px; font-size:12.5px;">تعديل</button>
-        <button class="btn btn-outline-red op-delete-btn" style="padding:6px 12px; font-size:12.5px;">حذف</button>
-      </div>
+    <div class="sidebar-visit-item ${o.id === editingOperationId ? 'active' : ''}" data-id="${o.id}">
+      <span class="sv-icon">🩺${o._pending ? '⏳' : ''}</span>
+      <span class="sv-text">${escapeHtml(String(o.OperationDate || '').slice(0,10))} - ${escapeHtml(o.OperationName || '')}</span>
     </div>`).join('');
-  box.querySelectorAll('.visit-item').forEach(item=>{
+  box.querySelectorAll('.sidebar-visit-item').forEach(item=>{
     const id = item.dataset.id;
     const op = currentOperations.find(o => o.id === id);
     if(!op) return;
-    item.querySelector('.op-edit-btn').addEventListener('click', ()=> startEditOperation(op));
-    item.querySelector('.op-delete-btn').addEventListener('click', ()=> deleteOperationEntry(op.id));
+    item.addEventListener('click', ()=> startEditOperation(op));
   });
 }
 
@@ -2319,29 +2338,35 @@ function startEditOperation(o){
   $('opFollowUps').value = o.FollowUps || '';
   $('opNotes').value = o.Notes || '';
   $('addOperationBtn').textContent = 'حفظ التعديل';
-  $('newOperationForm').classList.add('open');
-  $('newOperationForm').scrollIntoView({behavior:'smooth', block:'nearest'});
+  $('cancelOperationBtn').style.display = 'inline-block';
+  $('opDeleteFromFormBtn').style.display = 'inline-block';
+  renderOperations(currentOperations);
+  document.querySelector('#tab-operations .kashf-main').scrollIntoView({behavior:'smooth', block:'start'});
 }
 
-$('toggleOperationBtn').onclick = ()=>{
-  if(!currentPatientId || String(currentPatientId).startsWith('temp_')){
-    showToast('احفظ بيانات المريض الأول', true);
-    return;
-  }
+function resetOperationForm(){
   editingOperationId = null;
   $('addOperationBtn').textContent = 'حفظ العملية';
+  $('cancelOperationBtn').style.display = 'none';
+  $('opDeleteFromFormBtn').style.display = 'none';
   $('opDate').value = new Date().toISOString().slice(0,10);
   ['opName','opCost','opFollowUps','opNotes'].forEach(id => $(id).value = '');
   ['opLocation','opDressing1','opDressing2','opDressing3'].forEach(id => $(id).value = '');
-  $('newOperationForm').classList.add('open');
-};
+}
 $('cancelOperationBtn').onclick = ()=>{
-  editingOperationId = null;
-  $('addOperationBtn').textContent = 'حفظ العملية';
-  $('newOperationForm').classList.remove('open');
+  resetOperationForm();
+  renderOperations(currentOperations);
+};
+$('opDeleteFromFormBtn').onclick = ()=>{
+  if(!editingOperationId) return;
+  deleteOperationEntry(editingOperationId);
 };
 
 $('addOperationBtn').onclick = async ()=>{
+  if(!currentPatientId || String(currentPatientId).startsWith('temp_')){
+    showToast('احفظ بيانات المريض الأول من تاب البيانات الأساسية', true);
+    return;
+  }
   const date = $('opDate').value;
   if(!date){ showToast('اختار تاريخ العملية', true); return; }
   const data = {
@@ -2360,8 +2385,7 @@ $('addOperationBtn').onclick = async ()=>{
   btn.disabled = true; const orig = btn.textContent; btn.textContent = 'جاري الحفظ...';
 
   const finishUi = ()=>{
-    editingOperationId = null;
-    $('newOperationForm').classList.remove('open');
+    resetOperationForm();
     btn.disabled = false; btn.textContent = 'حفظ العملية';
   };
 
@@ -2409,11 +2433,13 @@ $('addOperationBtn').onclick = async ()=>{
 
 async function deleteOperationEntry(operationId){
   if(!confirm('حذف هذه العملية نهائيًا؟')) return;
+  const wasEditing = (editingOperationId === operationId);
   const isTemp = String(operationId).startsWith('tempo_');
 
   if(isTemp){
     currentOperations = currentOperations.filter(o => o.id !== operationId);
     setCachedOperations(currentPatientId, currentOperations);
+    if(wasEditing) resetOperationForm();
     renderOperations(currentOperations);
     const q = getWriteQueue().filter(item => item.tempId !== operationId);
     localStorage.setItem('writeQueue', JSON.stringify(q));
@@ -2423,6 +2449,7 @@ async function deleteOperationEntry(operationId){
   if(navigator.onLine === false){
     currentOperations = currentOperations.filter(o => o.id !== operationId);
     setCachedOperations(currentPatientId, currentOperations);
+    if(wasEditing) resetOperationForm();
     renderOperations(currentOperations);
     addToWriteQueue({ type:'deleteOperation', patientId: currentPatientId, operationId });
     showToast('النت مقطوع - الحذف هيتم تلقائي أول ما النت يرجع', true);
@@ -2431,10 +2458,12 @@ async function deleteOperationEntry(operationId){
   try{
     await deleteDoc(doc(db, "patients", currentPatientId, "operations", operationId));
     showToast('اتحذفت العملية ✓');
+    if(wasEditing) resetOperationForm();
     await loadOperations(currentPatientId);
   }catch(err){
     currentOperations = currentOperations.filter(o => o.id !== operationId);
     setCachedOperations(currentPatientId, currentOperations);
+    if(wasEditing) resetOperationForm();
     renderOperations(currentOperations);
     addToWriteQueue({ type:'deleteOperation', patientId: currentPatientId, operationId });
     showToast('حصل خطأ في الاتصال - الحذف هيتم تلقائي أول ما النت يرجع', true);
@@ -2444,18 +2473,21 @@ async function deleteOperationEntry(operationId){
 /* ---------- صور المريض (عن طريق نظام Apps Script القديم) ---------- */
 async function loadImages(ownerId, targetElId){
   targetElId = targetElId || 'imagesTimeline';
-  $(targetElId).innerHTML = '<div class="no-visits">جاري تحميل الصور...</div>';
+  const isPatientContext = (targetElId === 'imagesTimeline');
+  const statusElId = isPatientContext ? 'imagesSidebarList' : targetElId;
+  $(statusElId).innerHTML = '<div class="no-visits">جاري تحميل الصور...</div>';
+  if(isPatientContext){ $('imagesMainGrid').innerHTML = ''; $('imagesMainTitle').textContent = 'اختار سكشن من القايمة'; }
   if(navigator.onLine === false){
-    $(targetElId).innerHTML = '<div class="no-visits">محتاج نت عشان يعرض الصور</div>';
+    $(statusElId).innerHTML = '<div class="no-visits">محتاج نت عشان يعرض الصور</div>';
     return;
   }
   try{
     const data = await fetchPatientImagesRemote(ownerId);
-    if(data.error){ $(targetElId).innerHTML = `<div class="no-visits">${escapeHtml(data.error)}</div>`; return; }
+    if(data.error){ $(statusElId).innerHTML = `<div class="no-visits">${escapeHtml(data.error)}</div>`; return; }
     currentImages = data.images || [];
     renderImagesTimeline(currentImages, targetElId);
   }catch(err){
-    $(targetElId).innerHTML = '<div class="no-visits">تعذر تحميل الصور - جرب تاني</div>';
+    $(statusElId).innerHTML = '<div class="no-visits">تعذر تحميل الصور - جرب تاني</div>';
   }
 }
 
@@ -2473,60 +2505,98 @@ function groupImagesForTimeline(images){
   return order.map(k => groups[k]);
 }
 
-function renderImagesTimeline(images, targetElId){
-  const box = $(targetElId || 'imagesTimeline');
-  if(!images.length){ box.innerHTML = '<div class="no-visits">لسه مفيش صور مرفوعة</div>'; return; }
-  const groups = groupImagesForTimeline(images);
-  box.innerHTML = groups.map((g, gi) => `
-    <div class="timeline-entry" data-idx="${gi}">
-      <div class="timeline-header">
-        <div>
-          <span class="timeline-date">${escapeHtml(String(g.date || '').slice(0,10))}</span>
-          ${g.note ? `<span class="timeline-note">${escapeHtml(g.note)}</span>` : ''}
-        </div>
-        <span class="timeline-count">${g.items.length} صورة ▾</span>
-      </div>
-      <div class="images-grid timeline-images" style="display:none;"></div>
+function renderImageCards(gridBox, items){
+  gridBox.innerHTML = items.map(im => `
+    <div class="img-card" data-id="${escapeHtml(String(im.ImageID))}">
+      <div class="img-thumb">${im.dataUrl ? `<img src="${im.dataUrl}">` : '<span style="font-size:11px;color:var(--muted);">تعذر التحميل</span>'}</div>
+      <button class="btn btn-ghost img-download-btn" style="margin-top:4px;">⬇ تنزيل</button>
+      <button class="btn btn-outline-red img-delete-btn">حذف</button>
     </div>`).join('');
-  box.querySelectorAll('.timeline-entry').forEach(entry=>{
-    const gi = Number(entry.dataset.idx);
-    const group = groups[gi];
-    const header = entry.querySelector('.timeline-header');
-    const gridBox = entry.querySelector('.timeline-images');
-    header.addEventListener('click', ()=>{
-      const isOpen = gridBox.style.display !== 'none';
-      gridBox.style.display = isOpen ? 'none' : 'grid';
-      if(isOpen || gridBox.dataset.rendered) return;
-      gridBox.innerHTML = group.items.map(im => `
-        <div class="img-card" data-id="${escapeHtml(String(im.ImageID))}">
-          <div class="img-thumb">${im.dataUrl ? `<img src="${im.dataUrl}">` : '<span style="font-size:11px;color:var(--muted);">تعذر التحميل</span>'}</div>
-          <button class="btn btn-ghost img-download-btn" style="margin-top:4px;">⬇ تنزيل</button>
-          <button class="btn btn-outline-red img-delete-btn">حذف</button>
-        </div>`).join('');
-      gridBox.querySelectorAll('.img-card').forEach(card=>{
-        const id = card.dataset.id;
-        const im = group.items.find(x => String(x.ImageID) === id);
-        if(!im) return;
-        card.querySelector('.img-thumb').addEventListener('click', ()=>{
-          if(!im.dataUrl) return;
-          const w = window.open('');
-          w.document.write(`<img src="${im.dataUrl}" style="max-width:100%;">`);
-        });
-        card.querySelector('.img-download-btn').addEventListener('click', ()=>{
-          if(!im.dataUrl){ showToast('الصورة دي متعذر تحميلها', true); return; }
-          const a = document.createElement('a');
-          a.href = im.dataUrl;
-          const dateStr = String(im.ImageDate || '').slice(0,10) || 'صورة';
-          a.download = `${dateStr}-${im.ImageID}.jpg`;
-          document.body.appendChild(a);
-          a.click();
-          a.remove();
-        });
-        card.querySelector('.img-delete-btn').addEventListener('click', ()=> deleteImageEntry(im.ImageID));
-      });
-      gridBox.dataset.rendered = '1';
+  gridBox.querySelectorAll('.img-card').forEach(card=>{
+    const id = card.dataset.id;
+    const im = items.find(x => String(x.ImageID) === id);
+    if(!im) return;
+    card.querySelector('.img-thumb').addEventListener('click', ()=>{
+      if(!im.dataUrl) return;
+      const w = window.open('');
+      w.document.write(`<img src="${im.dataUrl}" style="max-width:100%;">`);
     });
+    card.querySelector('.img-download-btn').addEventListener('click', ()=>{
+      if(!im.dataUrl){ showToast('الصورة دي متعذر تحميلها', true); return; }
+      const a = document.createElement('a');
+      a.href = im.dataUrl;
+      const dateStr = String(im.ImageDate || '').slice(0,10) || 'صورة';
+      a.download = `${dateStr}-${im.ImageID}.jpg`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    });
+    card.querySelector('.img-delete-btn').addEventListener('click', ()=> deleteImageEntry(im.ImageID));
   });
+}
+
+let currentImageSidebarGroups = [];
+function showImageSection(idx){
+  const groups = currentImageSidebarGroups;
+  document.querySelectorAll('#imagesSidebarList .sidebar-visit-item').forEach((el,i)=> el.classList.toggle('active', i === idx));
+  const g = groups[idx];
+  if(!g){ $('imagesMainGrid').innerHTML = ''; $('imagesMainTitle').textContent = 'اختار سكشن من القايمة'; return; }
+  $('imagesMainTitle').textContent = (g.note ? g.note + ' - ' : '') + String(g.date || '').slice(0,10);
+  renderImageCards($('imagesMainGrid'), g.items);
+}
+
+function renderImagesTimeline(images, targetElId){
+  if(targetElId && targetElId !== 'imagesTimeline'){
+    /* السلوك القديم (زي مودال حالة العملية) - كل السكاشن في قايمة واحدة قابلة للفتح */
+    const box = $(targetElId);
+    if(!images.length){ box.innerHTML = '<div class="no-visits">لسه مفيش صور مرفوعة</div>'; return; }
+    const groups = groupImagesForTimeline(images);
+    box.innerHTML = groups.map((g, gi) => `
+      <div class="timeline-entry" data-idx="${gi}">
+        <div class="timeline-header">
+          <div>
+            <span class="timeline-date">${escapeHtml(String(g.date || '').slice(0,10))}</span>
+            ${g.note ? `<span class="timeline-note">${escapeHtml(g.note)}</span>` : ''}
+          </div>
+          <span class="timeline-count">${g.items.length} صورة ▾</span>
+        </div>
+        <div class="images-grid timeline-images" style="display:none;"></div>
+      </div>`).join('');
+    box.querySelectorAll('.timeline-entry').forEach(entry=>{
+      const gi = Number(entry.dataset.idx);
+      const group = groups[gi];
+      const header = entry.querySelector('.timeline-header');
+      const gridBox = entry.querySelector('.timeline-images');
+      header.addEventListener('click', ()=>{
+        const isOpen = gridBox.style.display !== 'none';
+        gridBox.style.display = isOpen ? 'none' : 'grid';
+        if(isOpen || gridBox.dataset.rendered) return;
+        renderImageCards(gridBox, group.items);
+        gridBox.dataset.rendered = '1';
+      });
+    });
+    return;
+  }
+
+  /* ملف المريض: قايمة سكاشن جانبية (25%) + عرض السكشن المختار في المساحة الكبيرة (75%) */
+  const sidebarBox = $('imagesSidebarList');
+  if(!images.length){
+    sidebarBox.innerHTML = '<div class="no-visits">لسه مفيش صور مرفوعة</div>';
+    $('imagesMainGrid').innerHTML = '';
+    $('imagesMainTitle').textContent = 'اختار سكشن من القايمة';
+    return;
+  }
+  const groups = groupImagesForTimeline(images);
+  currentImageSidebarGroups = groups;
+  sidebarBox.innerHTML = groups.map((g, gi) => `
+    <div class="sidebar-visit-item" data-idx="${gi}">
+      <span class="sv-icon">🖼️</span>
+      <span class="sv-text">${escapeHtml(String(g.date || '').slice(0,10))}${g.note ? ' - ' + escapeHtml(g.note) : ''}</span>
+    </div>`).join('');
+  sidebarBox.querySelectorAll('.sidebar-visit-item').forEach(item=>{
+    item.addEventListener('click', ()=> showImageSection(Number(item.dataset.idx)));
+  });
+  showImageSection(0);
 }
 
 let currentImagesTargetElId = 'imagesTimeline';
@@ -2664,6 +2734,8 @@ function resetPrescriptionForm(){
   document.querySelectorAll('.rx-med-select').forEach(sel => sel.value = '');
   document.querySelectorAll('.rx-med-instructions').forEach(inp => inp.value = '');
   setActiveChips('rxRecommendations', []);
+  if($('cancelRxEditBtn')) $('cancelRxEditBtn').style.display = 'none';
+  if($('rxDeleteFromFormBtn')) $('rxDeleteFromFormBtn').style.display = 'none';
   $('rxRadiologyReq').value = '';
   $('rxLabsReq').value = '';
 }
@@ -2682,6 +2754,8 @@ function resetPhysioForm(){
   $('ptDiagnosis').value = '';
   setActiveChips('ptInterventions', []);
   $('ptSessions').value = '';
+  if($('cancelPhysioEditBtn')) $('cancelPhysioEditBtn').style.display = 'none';
+  if($('physioDeleteFromFormBtn')) $('physioDeleteFromFormBtn').style.display = 'none';
 }
 
 function collectReport(){
@@ -2698,6 +2772,8 @@ function loadReport(raw){
 function resetReportForm(){
   populateReportTypeSelect('تقرير طبي عام');
   $('reportBody').value = '';
+  if($('cancelReportEditBtn')) $('cancelReportEditBtn').style.display = 'none';
+  if($('reportDeleteFromFormBtn')) $('reportDeleteFromFormBtn').style.display = 'none';
 }
 
 /* ---------- بناء نص PDF من بيانات الروشتة/العلاج الطبيعي/التقرير ---------- */
@@ -2892,15 +2968,93 @@ function renderAllHistory(){
 function renderHistoryIcons(containerId, entries, icon, labelPrefix, buildBodyHtmlFn, emptyText, type){
   const box = $(containerId);
   if(!entries.length){ box.innerHTML = `<div class="no-visits">${emptyText}</div>`; return; }
-  box.innerHTML = `<div class="history-icons">` + entries.map((h,i) => `
-    <div class="history-icon-card" data-idx="${i}">
-      <div class="icon-box">${icon} ${h._pending ? '⏳' : ''}</div>
-      <div class="icon-date">${escapeHtml(String(h.HistoryDate || '').slice(0,10))}</div>
-    </div>`).join('') + `</div>`;
-  box.querySelectorAll('.history-icon-card').forEach(card=>{
-    card.addEventListener('click', ()=> openHistoryDetail(type, entries[card.dataset.idx], labelPrefix, buildBodyHtmlFn));
+  box.innerHTML = entries.map((h,i) => `
+    <div class="sidebar-visit-item ${h.id === editingHistoryId && editingHistoryType === type ? 'active' : ''}" data-idx="${i}">
+      <span class="sv-icon">${icon}${h._pending ? '⏳' : ''}</span>
+      <span class="sv-text">${escapeHtml(String(h.HistoryDate || '').slice(0,10))}</span>
+    </div>`).join('');
+  box.querySelectorAll('.sidebar-visit-item').forEach(card=>{
+    card.addEventListener('click', ()=> loadHistoryEntryIntoForm(type, entries[card.dataset.idx]));
   });
 }
+
+const HISTORY_FORM_BUTTONS = {
+  rx: { cancel: 'cancelRxEditBtn', delete: 'rxDeleteFromFormBtn' },
+  physio: { cancel: 'cancelPhysioEditBtn', delete: 'physioDeleteFromFormBtn' },
+  report: { cancel: 'cancelReportEditBtn', delete: 'reportDeleteFromFormBtn' }
+};
+
+function loadHistoryEntryIntoForm(type, entry){
+  editingHistoryId = entry.id;
+  editingHistoryType = type;
+  if(type === 'rx') loadPrescription(entry.Content);
+  else if(type === 'physio') loadPhysio(entry.Content);
+  else if(type === 'report') loadReport(entry.Content);
+  const btns = HISTORY_FORM_BUTTONS[type];
+  $(btns.cancel).style.display = 'inline-block';
+  $(btns.delete).style.display = 'inline-block';
+  renderAllHistory();
+}
+
+function cancelHistoryEdit(type, resetFn){
+  editingHistoryId = null;
+  editingHistoryType = null;
+  const btns = HISTORY_FORM_BUTTONS[type];
+  $(btns.cancel).style.display = 'none';
+  $(btns.delete).style.display = 'none';
+  resetFn();
+  renderAllHistory();
+}
+$('cancelRxEditBtn').onclick = ()=> cancelHistoryEdit('rx', resetPrescriptionForm);
+$('cancelPhysioEditBtn').onclick = ()=> cancelHistoryEdit('physio', resetPhysioForm);
+$('cancelReportEditBtn').onclick = ()=> cancelHistoryEdit('report', resetReportForm);
+
+async function deleteHistoryEntryFromForm(type, resetFn){
+  if(!editingHistoryId || editingHistoryType !== type) return;
+  if(!confirm('حذف هذا السجل نهائيًا؟')) return;
+  const historyId = editingHistoryId;
+  const isTemp = String(historyId).startsWith('temph_');
+  const btns = HISTORY_FORM_BUTTONS[type];
+
+  const finish = ()=>{
+    editingHistoryId = null; editingHistoryType = null;
+    $(btns.cancel).style.display = 'none';
+    $(btns.delete).style.display = 'none';
+    resetFn();
+  };
+
+  if(isTemp){
+    currentHistory = currentHistory.filter(h => h.id !== historyId);
+    setCachedHistory(currentPatientId, currentHistory);
+    finish(); renderAllHistory();
+    const q = getWriteQueue().filter(item => item.tempId !== historyId);
+    localStorage.setItem('writeQueue', JSON.stringify(q));
+    return;
+  }
+  if(navigator.onLine === false){
+    currentHistory = currentHistory.filter(h => h.id !== historyId);
+    setCachedHistory(currentPatientId, currentHistory);
+    finish(); renderAllHistory();
+    addToWriteQueue({ type:'deleteHistory', patientId: currentPatientId, historyId });
+    showToast('النت مقطوع - الحذف هيتم تلقائي أول ما النت يرجع', true);
+    return;
+  }
+  try{
+    await deleteDoc(doc(db, "patients", currentPatientId, "history", historyId));
+    showToast('اتحذف السجل ✓');
+    finish();
+    await loadHistory(currentPatientId);
+  }catch(err){
+    currentHistory = currentHistory.filter(h => h.id !== historyId);
+    setCachedHistory(currentPatientId, currentHistory);
+    finish(); renderAllHistory();
+    addToWriteQueue({ type:'deleteHistory', patientId: currentPatientId, historyId });
+    showToast('حصل خطأ في الاتصال - الحذف هيتم تلقائي أول ما النت يرجع', true);
+  }
+}
+$('rxDeleteFromFormBtn').onclick = ()=> deleteHistoryEntryFromForm('rx', resetPrescriptionForm);
+$('physioDeleteFromFormBtn').onclick = ()=> deleteHistoryEntryFromForm('physio', resetPhysioForm);
+$('reportDeleteFromFormBtn').onclick = ()=> deleteHistoryEntryFromForm('report', resetReportForm);
 
 function openVisitDetail(visit){
   currentHistoryEntry = { type: 'visit', entry: visit };
@@ -3019,7 +3173,12 @@ async function saveHistoryEntry(btn, historyType, collectFn){
     : { Type: historyType, HistoryDate: todayStr, Content: JSON.stringify(content) };
 
   btn.disabled = true; const orig = btn.textContent; btn.textContent = 'جاري الحفظ...';
-  const finishUi = ()=>{ editingHistoryId = null; editingHistoryType = null; btn.disabled = false; btn.textContent = orig; };
+  const finishUi = ()=>{
+    editingHistoryId = null; editingHistoryType = null;
+    const btns = HISTORY_FORM_BUTTONS[historyType];
+    if(btns){ $(btns.cancel).style.display = 'none'; $(btns.delete).style.display = 'none'; }
+    btn.disabled = false; btn.textContent = orig;
+  };
 
   if(navigator.onLine === false){
     if(isEditing){
@@ -3145,28 +3304,13 @@ function renderInvoices(invoices){
   const box = $('invoicesList');
   if(!invoices.length){ box.innerHTML = '<div class="no-visits">لسه مفيش فواتير مسجلة</div>'; return; }
   box.innerHTML = invoices.map((inv,i) => `
-    <div class="visit-item" data-idx="${i}">
-      <div class="visit-date">${escapeHtml(String(inv.InvoiceDate || '').slice(0,10))} ${inv._pending ? '⏳' : ''}</div>
-      <div class="visit-notes">${(inv.Items || []).map(it => escapeHtml(it.name) + ' (' + escapeHtml(String(it.price)) + ')').join(' - ')}</div>
-      <div class="visit-notes"><b class="visit-label">الإجمالي:</b> ${escapeHtml(String(inv.Total))}</div>
-      ${inv.Notes ? `<div class="visit-notes"><b class="visit-label">ملاحظات:</b> ${escapeHtml(inv.Notes)}</div>` : ''}
-      <div style="display:flex; gap:8px; margin-top:10px; flex-wrap:wrap;">
-        <button class="btn btn-ghost inv-edit-btn" style="padding:6px 12px; font-size:12.5px;">تعديل</button>
-        <button class="btn btn-outline-red inv-delete-btn" style="padding:6px 12px; font-size:12.5px;">حذف</button>
-        <button class="btn btn-primary inv-pdf-btn" style="padding:6px 12px; font-size:12.5px;">تحميل PDF</button>
-      </div>
+    <div class="sidebar-visit-item ${inv.id === editingInvoiceId ? 'active' : ''}" data-idx="${i}">
+      <span class="sv-icon">🧾${inv._pending ? '⏳' : ''}</span>
+      <span class="sv-text">${escapeHtml(String(inv.InvoiceDate || '').slice(0,10))} - ${escapeHtml(String(inv.Total))}</span>
     </div>`).join('');
-  box.querySelectorAll('.visit-item').forEach(item=>{
+  box.querySelectorAll('.sidebar-visit-item').forEach(item=>{
     const inv = invoices[item.dataset.idx];
-    const editBtn = item.querySelector('.inv-edit-btn');
-    const delBtn = item.querySelector('.inv-delete-btn');
-    const pdfBtn = item.querySelector('.inv-pdf-btn');
-    editBtn.addEventListener('click', ()=> startEditInvoice(inv));
-    delBtn.addEventListener('click', ()=> deleteInvoiceEntry(inv.id));
-    pdfBtn.addEventListener('click', ()=>{
-      const bodyHtml = buildInvoiceBodyHtml(inv.Items || [], inv.Total, inv.Notes);
-      exportRxTemplateAsPdf(bodyHtml, 'فاتورة', pdfBtn, String(inv.InvoiceDate || '').slice(0,10));
-    });
+    item.addEventListener('click', ()=> startEditInvoice(inv));
   });
 }
 
@@ -3176,28 +3320,43 @@ function startEditInvoice(inv){
   $('invDate').value = String(inv.InvoiceDate || '').slice(0,10);
   $('invNotes').value = inv.Notes || '';
   $('saveInvoiceBtn').textContent = 'حفظ التعديل';
+  $('cancelInvoiceBtn').style.display = 'inline-block';
+  $('invDeleteFromFormBtn').style.display = 'inline-block';
+  $('invPdfFromFormBtn').style.display = 'inline-block';
   renderInvoiceItems();
-  $('newInvoiceForm').classList.add('open');
-  $('newInvoiceForm').scrollIntoView({behavior:'smooth', block:'nearest'});
+  renderInvoices(currentInvoices);
+  document.querySelector('#tab-invoices .kashf-main').scrollIntoView({behavior:'smooth', block:'start'});
 }
 
-$('toggleInvoiceBtn').onclick = ()=>{
-  if(!currentPatientId || String(currentPatientId).startsWith('temp_')){ showToast('احفظ بيانات المريض الأول', true); return; }
+function resetInvoiceForm(){
   editingInvoiceId = null;
   currentInvoiceItems = [];
   $('invDate').value = new Date().toISOString().slice(0,10);
   $('invNotes').value = '';
   $('saveInvoiceBtn').textContent = 'حفظ الفاتورة';
+  $('cancelInvoiceBtn').style.display = 'none';
+  $('invDeleteFromFormBtn').style.display = 'none';
+  $('invPdfFromFormBtn').style.display = 'none';
   renderInvoiceItems();
-  $('newInvoiceForm').classList.add('open');
-};
+}
 $('cancelInvoiceBtn').onclick = ()=>{
-  editingInvoiceId = null;
-  $('saveInvoiceBtn').textContent = 'حفظ الفاتورة';
-  $('newInvoiceForm').classList.remove('open');
+  resetInvoiceForm();
+  renderInvoices(currentInvoices);
+};
+$('invDeleteFromFormBtn').onclick = ()=>{
+  if(!editingInvoiceId) return;
+  deleteInvoiceEntry(editingInvoiceId);
+};
+$('invPdfFromFormBtn').onclick = ()=>{
+  if(!editingInvoiceId) return;
+  const inv = currentInvoices.find(x => x.id === editingInvoiceId);
+  if(!inv) return;
+  const bodyHtml = buildInvoiceBodyHtml(inv.Items || [], inv.Total, inv.Notes);
+  exportRxTemplateAsPdf(bodyHtml, 'فاتورة', $('invPdfFromFormBtn'), String(inv.InvoiceDate || '').slice(0,10));
 };
 
 $('saveInvoiceBtn').onclick = async ()=>{
+  if(!currentPatientId || String(currentPatientId).startsWith('temp_')){ showToast('احفظ بيانات المريض الأول', true); return; }
   const date = $('invDate').value;
   if(!date){ showToast('اختار تاريخ الفاتورة', true); return; }
   if(!currentInvoiceItems.length){ showToast('ضيف خدمة واحدة على الأقل', true); return; }
@@ -3208,8 +3367,7 @@ $('saveInvoiceBtn').onclick = async ()=>{
   btn.disabled = true; const orig = btn.textContent; btn.textContent = 'جاري الحفظ...';
 
   const finishUi = ()=>{
-    editingInvoiceId = null; currentInvoiceItems = [];
-    $('newInvoiceForm').classList.remove('open');
+    resetInvoiceForm();
     btn.disabled = false; btn.textContent = 'حفظ الفاتورة';
   };
 
@@ -3256,10 +3414,12 @@ $('saveInvoiceBtn').onclick = async ()=>{
 
 async function deleteInvoiceEntry(invoiceId){
   if(!confirm('حذف هذه الفاتورة نهائيًا؟')) return;
+  const wasEditing = (editingInvoiceId === invoiceId);
   const isTemp = String(invoiceId).startsWith('tempi_');
   if(isTemp){
     currentInvoices = currentInvoices.filter(inv => inv.id !== invoiceId);
     setCachedInvoices(currentPatientId, currentInvoices);
+    if(wasEditing) resetInvoiceForm();
     renderInvoices(currentInvoices);
     const q = getWriteQueue().filter(item => item.tempId !== invoiceId);
     localStorage.setItem('writeQueue', JSON.stringify(q));
@@ -3268,6 +3428,7 @@ async function deleteInvoiceEntry(invoiceId){
   if(navigator.onLine === false){
     currentInvoices = currentInvoices.filter(inv => inv.id !== invoiceId);
     setCachedInvoices(currentPatientId, currentInvoices);
+    if(wasEditing) resetInvoiceForm();
     renderInvoices(currentInvoices);
     addToWriteQueue({ type:'deleteInvoice', patientId: currentPatientId, invoiceId });
     showToast('النت مقطوع - الحذف هيتم تلقائي أول ما النت يرجع', true);
@@ -3276,10 +3437,12 @@ async function deleteInvoiceEntry(invoiceId){
   try{
     await deleteDoc(doc(db, "patients", currentPatientId, "invoices", invoiceId));
     showToast('اتحذفت الفاتورة ✓');
+    if(wasEditing) resetInvoiceForm();
     await loadInvoices(currentPatientId);
   }catch(err){
     currentInvoices = currentInvoices.filter(inv => inv.id !== invoiceId);
     setCachedInvoices(currentPatientId, currentInvoices);
+    if(wasEditing) resetInvoiceForm();
     renderInvoices(currentInvoices);
     addToWriteQueue({ type:'deleteInvoice', patientId: currentPatientId, invoiceId });
     showToast('حصل خطأ في الاتصال - الحذف هيتم تلقائي أول ما النت يرجع', true);
