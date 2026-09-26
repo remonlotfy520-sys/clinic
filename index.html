@@ -1012,6 +1012,26 @@
   </div>
 </div>
 
+<div id="appsScriptLoginModal" style="display:none; position:fixed; inset:0; background:rgba(31,74,64,.45); z-index:300; align-items:center; justify-content:center; padding:20px;">
+  <div class="card" style="max-width:380px; width:100%;">
+    <h2 style="margin:0 0 6px;">تسجيل دخول نظام الصور</h2>
+    <div class="hint" style="margin-bottom:16px;">بيانات دخول نظام الصور والقوايم القديم (مرة واحدة بس على الجهاز ده)</div>
+    <div class="field">
+      <label>اسم المستخدم</label>
+      <input type="text" id="appsScriptLoginUsername" autocomplete="username">
+    </div>
+    <div class="field">
+      <label>كلمة المرور</label>
+      <input type="password" id="appsScriptLoginPassword" autocomplete="current-password">
+    </div>
+    <div id="appsScriptLoginError" style="color:var(--red); font-size:13px; margin-bottom:8px; display:none;"></div>
+    <div style="display:flex; gap:10px;">
+      <button class="btn btn-primary" id="appsScriptLoginSubmitBtn" style="flex:1;">دخول</button>
+      <button class="btn btn-ghost" id="appsScriptLoginCancelBtn">إلغاء</button>
+    </div>
+  </div>
+</div>
+
 <div id="imageSectionModal" style="display:none; position:fixed; inset:0; background:rgba(31,74,64,.45); z-index:200; align-items:center; justify-content:center; padding:20px;">
   <div class="card" style="max-width:420px; width:100%; position:relative;">
     <button id="closeImageSectionModalBtn" class="btn btn-ghost" style="position:absolute; top:14px; left:14px; padding:6px 12px;">✕</button>
@@ -1178,28 +1198,77 @@ async function ensureAppsScriptLogin(){
 
   appsScriptLoginPromise = (async ()=>{
     try{
-      let creds = getAppsScriptCreds();
-      if(!creds){
-        const username = prompt('اسم المستخدم لنظام الصور القديم:');
-        const password = username ? prompt('كلمة المرور:') : null;
-        if(!username || !password) throw new Error('محتاجين بيانات دخول نظام الصور');
-        creds = { username, password };
-      }
-      const r = await fetch(`${APPS_SCRIPT_URL}?action=login&username=${encodeURIComponent(creds.username)}&password=${encodeURIComponent(creds.password)}`);
-      const d = await r.json();
-      if(!d || !d.success){
+      const creds = getAppsScriptCreds();
+      if(creds){
+        try{
+          const r = await fetch(`${APPS_SCRIPT_URL}?action=login&username=${encodeURIComponent(creds.username)}&password=${encodeURIComponent(creds.password)}`);
+          const d = await r.json();
+          if(d && d.success){ setAppsScriptToken(d.token); return d.token; }
+        }catch(e){ /* هنعرض المودال تحت */ }
         localStorage.removeItem('appsScriptCreds');
-        throw new Error('بيانات دخول نظام الصور غلط');
       }
-      setAppsScriptCreds(creds.username, creds.password);
-      setAppsScriptToken(d.token);
-      return d.token;
+      const token = await showAppsScriptLoginModal();
+      if(!token) throw new Error('محتاجين بيانات دخول نظام الصور');
+      return token;
     } finally {
       appsScriptLoginPromise = null;
     }
   })();
 
   return appsScriptLoginPromise;
+}
+
+/* مودال دخول نظام الصور القديم - بيفضل مفتوح لحد ما ينجح الدخول أو يلغي المستخدم */
+function showAppsScriptLoginModal(){
+  return new Promise((resolve)=>{
+    $('appsScriptLoginUsername').value = '';
+    $('appsScriptLoginPassword').value = '';
+    $('appsScriptLoginError').style.display = 'none';
+    $('appsScriptLoginModal').style.display = 'flex';
+
+    const submitBtn = $('appsScriptLoginSubmitBtn');
+    const cancelBtn = $('appsScriptLoginCancelBtn');
+
+    function cleanup(){
+      $('appsScriptLoginModal').style.display = 'none';
+      submitBtn.removeEventListener('click', onSubmit);
+      cancelBtn.removeEventListener('click', onCancel);
+    }
+    async function onSubmit(){
+      const username = $('appsScriptLoginUsername').value.trim();
+      const password = $('appsScriptLoginPassword').value;
+      if(!username || !password){
+        $('appsScriptLoginError').textContent = 'اكتب اليوزر والباسورد';
+        $('appsScriptLoginError').style.display = 'block';
+        return;
+      }
+      submitBtn.disabled = true; const orig = submitBtn.textContent; submitBtn.textContent = 'جاري الدخول...';
+      try{
+        const r = await fetch(`${APPS_SCRIPT_URL}?action=login&username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`);
+        const d = await r.json();
+        if(!d || !d.success){
+          $('appsScriptLoginError').textContent = 'بيانات الدخول غلط - جرب تاني';
+          $('appsScriptLoginError').style.display = 'block';
+          submitBtn.disabled = false; submitBtn.textContent = orig;
+          return;
+        }
+        setAppsScriptCreds(username, password);
+        setAppsScriptToken(d.token);
+        cleanup();
+        resolve(d.token);
+      }catch(err){
+        $('appsScriptLoginError').textContent = 'حصل خطأ في الاتصال - جرب تاني';
+        $('appsScriptLoginError').style.display = 'block';
+        submitBtn.disabled = false; submitBtn.textContent = orig;
+      }
+    }
+    function onCancel(){
+      cleanup();
+      resolve(null);
+    }
+    submitBtn.addEventListener('click', onSubmit);
+    cancelBtn.addEventListener('click', onCancel);
+  });
 }
 
 async function uploadPatientImageRemote(patientId, base64, mimeType, sessionNote, sessionDate){
