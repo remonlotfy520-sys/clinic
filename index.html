@@ -280,7 +280,18 @@
 <main>
   <div id="listView">
     <div id="dashboardCards" class="dashboard-grid"></div>
-    <div id="patientsList"><div class="empty-msg">جاري التحميل...</div></div>
+    <div class="kashf-layout" style="align-items:flex-start;">
+      <div class="kashf-main" style="flex:1;">
+        <div id="patientsList"><div class="empty-msg">جاري التحميل...</div></div>
+      </div>
+      <div class="kashf-sidebar" style="max-width:100%; flex:1;">
+        <h2 style="margin:0 0 10px; font-size:15px;">حالات العمليات</h2>
+        <select id="caseLocationFilter" class="dropdown-add-select" style="width:100%; margin-bottom:10px;">
+          <option value="">كل الأماكن</option>
+        </select>
+        <div id="homeCasesList"></div>
+      </div>
+    </div>
   </div>
 
   <div id="calendarView" style="display:none;">
@@ -5419,6 +5430,8 @@ $('saveOperationCaseBtn').onclick = async ()=>{
   try{
     const ref = await addDoc(collection(db, "operationCases"), { ...data, CreatedAt: serverTimestamp() });
     showToast('اتحفظت الحالة ✓ - دلوقتي تقدر ترفع صورها');
+    currentCases.unshift({ id: ref.id, ...data });
+    renderHomeCasesList();
     $('newOperationCaseModal').style.display = 'none';
     openOperationCaseDetail({ id: ref.id, ...data });
   }catch(err){
@@ -5532,6 +5545,8 @@ $('deleteOperationCaseBtn').onclick = async ()=>{
   try{
     await deleteDoc(doc(db, "operationCases", currentCaseId));
     showToast('اتحذفت الحالة ✓');
+    currentCases = currentCases.filter(c => c.id !== currentCaseId);
+    renderHomeCasesList();
     $('operationCaseDetailModal').style.display = 'none';
     currentCaseId = null;
     currentPatientId = null;
@@ -5566,7 +5581,36 @@ function renderOperationCasesList(){
       if(c) openOperationCaseDetail(c);
     });
   });
+  populateHomeCaseLocationFilter();
+  renderHomeCasesList();
 }
+
+/* ---------- قايمة حالات العمليات في الشاشة الرئيسية + فلتر المكان ---------- */
+function populateHomeCaseLocationFilter(){
+  const select = $('caseLocationFilter');
+  const current = select.value;
+  const locations = getOperationCaseLocations();
+  select.innerHTML = '<option value="">كل الأماكن</option>' + locations.map(l => `<option value="${escapeHtml(l)}">${escapeHtml(l)}</option>`).join('');
+  if(current && locations.includes(current)) select.value = current;
+}
+function renderHomeCasesList(){
+  const box = $('homeCasesList');
+  const filterLocation = $('caseLocationFilter').value;
+  const filtered = filterLocation ? currentCases.filter(c => c.Location === filterLocation) : currentCases;
+  if(!filtered.length){ box.innerHTML = '<div class="no-visits">لا يوجد حالات عمليات' + (filterLocation ? ' في المكان ده' : '') + '</div>'; return; }
+  box.innerHTML = filtered.map(c => `
+    <div class="sidebar-visit-item" data-id="${c.id}">
+      <span class="sv-icon">🩹</span>
+      <span class="sv-text">${escapeHtml(c.Name || '—')} - ${escapeHtml(String(c.CaseDate || '').slice(0,10))}</span>
+    </div>`).join('');
+  box.querySelectorAll('.sidebar-visit-item').forEach(item=>{
+    item.addEventListener('click', ()=>{
+      const c = currentCases.find(x => x.id === item.dataset.id);
+      if(c) openOperationCaseDetail(c);
+    });
+  });
+}
+$('caseLocationFilter').addEventListener('change', renderHomeCasesList);
 
 /* ---------- مراقبة الاتصال بالإنترنت ---------- */
 window.addEventListener('offline', ()=>{
@@ -5606,7 +5650,10 @@ function initApp(){
   populateOperationDropdowns();
   tryFetchListsRemote();
   loadAppointments();
-  loadOperationCases();
+  loadOperationCases().then(()=>{
+    populateHomeCaseLocationFilter();
+    renderHomeCasesList();
+  });
   checkUrlPatientParam();
 }
 
