@@ -1990,19 +1990,37 @@ function renderPatientsList(list, isSearch){
   const box = $('patientsList');
   if(!list.length){ box.innerHTML = '<div class="empty-msg">لسه مفيش مرضى مسجلين</div>'; return; }
   const visibleList = isSearch ? list : list.slice(0, patientsRenderLimit);
-  let html = visibleList.map(p => `
-    <div class="patient-row" data-id="${p.id}">
+  let html = visibleList.map(p => {
+    if(p._isCase){
+      return `
+      <div class="patient-row" data-id="${p.id}" data-type="case">
+        <div>
+          <div class="pname">🩹 ${escapeHtml(p.Name || '—')}</div>
+          <div class="pmeta">${escapeHtml(String(p.CaseDate || '').slice(0,10))} ${p.Location ? '· ' + escapeHtml(p.Location) : ''}</div>
+        </div>
+      </div>`;
+    }
+    return `
+    <div class="patient-row" data-id="${p.id}" data-type="patient">
       <div>
         <div class="pname">${escapeHtml(p.Name || '—')} ${p.RedFlag ? '🚩' : ''} ${p._pending ? '⏳' : ''}</div>
         <div class="pmeta">${escapeHtml(p.Phone || '')} ${p.ClinicNumber ? '· رقم ' + escapeHtml(p.ClinicNumber) : ''}</div>
       </div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
   if(!isSearch && list.length > visibleList.length){
     html += `<button class="btn btn-ghost" id="loadMorePatientsBtn" style="width:100%; margin-top:10px;">عرض المزيد (باقي ${list.length - visibleList.length})</button>`;
   }
   box.innerHTML = html;
   box.querySelectorAll('.patient-row').forEach(row=>{
-    row.addEventListener('click', ()=> openPatient(row.dataset.id));
+    if(row.dataset.type === 'case'){
+      row.addEventListener('click', ()=>{
+        const c = currentCases.find(x => x.id === row.dataset.id);
+        if(c) openOperationCaseDetail(c);
+      });
+    } else {
+      row.addEventListener('click', ()=> openPatient(row.dataset.id));
+    }
   });
   const loadMoreBtn = $('loadMorePatientsBtn');
   if(loadMoreBtn){
@@ -2016,8 +2034,11 @@ function renderPatientsList(list, isSearch){
 $('searchInput').addEventListener('input', ()=>{
   const q = normalizeArabic($('searchInput').value.trim());
   if(!q){ patientsRenderLimit = 50; renderPatientsList(allPatients); return; }
-  const filtered = allPatients.filter(p => normalizeArabic(p.Name || '').includes(q));
-  renderPatientsList(filtered, true);
+  const filteredPatients = allPatients.filter(p => normalizeArabic(p.Name || '').includes(q));
+  const filteredCases = currentCases
+    .filter(c => normalizeArabic(c.Name || '').includes(q))
+    .map(c => ({ ...c, _isCase: true }));
+  renderPatientsList([...filteredPatients, ...filteredCases], true);
 });
 
 function normalizeArabic(s){
@@ -5585,6 +5606,7 @@ function initApp(){
   populateOperationDropdowns();
   tryFetchListsRemote();
   loadAppointments();
+  loadOperationCases();
   checkUrlPatientParam();
 }
 
