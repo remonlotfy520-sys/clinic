@@ -1721,9 +1721,10 @@ initCollapsible('opFollowUpsHeader', 'opFollowUpsContent');
 initCollapsible('opNotesHeader', 'opNotesContent');
 initCollapsible('opEntryGoogleDocHeader', 'opEntryGoogleDocContent');
 initCollapsible('caseGoogleDocHeader', 'caseGoogleDocContent');
-$('opEntryGoogleDocLink').addEventListener('input', ()=>{
-  renderGoogleDocPreview($('opEntryGoogleDocLink').value, 'opEntryGoogleDocPreviewBox');
-});
+attachGoogleDocPreviewButton('imagesGoogleDocLink', 'imagesGoogleDocPreviewBox');
+attachGoogleDocPreviewButton('opsGoogleDocLink', 'opsGoogleDocPreviewBox');
+attachGoogleDocPreviewButton('opEntryGoogleDocLink', 'opEntryGoogleDocPreviewBox');
+attachGoogleDocPreviewButton('caseGoogleDocLink', 'caseGoogleDocPreviewBox');
 initCollapsible('fNoteHeader', 'fNoteContent');
 initCollapsible('opsGoogleDocHeader', 'opsGoogleDocContent');
 initCollapsible('imagesGoogleDocHeader', 'imagesGoogleDocContent');
@@ -2047,8 +2048,8 @@ function openPatient(id){
   $('fRadiologyLink').value = p.RadiologyLink || '';
   $('imagesGoogleDocLink').value = p.GoogleDocLink || '';
   $('opsGoogleDocLink').value = p.GoogleDocLink || '';
-  renderGoogleDocPreview(p.GoogleDocLink || '', 'imagesGoogleDocPreviewBox');
-  renderGoogleDocPreview(p.GoogleDocLink || '', 'opsGoogleDocPreviewBox');
+  $('imagesGoogleDocPreviewBox').innerHTML = '';
+  $('opsGoogleDocPreviewBox').innerHTML = '';
   setCollapsibleState('imagesGoogleDocHeader', 'imagesGoogleDocContent', !!p.GoogleDocLink);
   setCollapsibleState('opsGoogleDocHeader', 'opsGoogleDocContent', !!p.GoogleDocLink);
   $('fHasOperation').checked = !!p.HasOperation;
@@ -2558,7 +2559,7 @@ function startEditOperation(o){
   $('opFollowUps').value = o.FollowUps || '';
   $('opNotes').value = o.Notes || '';
   $('opEntryGoogleDocLink').value = o.GoogleDocLink || '';
-  renderGoogleDocPreview(o.GoogleDocLink || '', 'opEntryGoogleDocPreviewBox');
+  $('opEntryGoogleDocPreviewBox').innerHTML = '';
   setCollapsibleState('opEntryGoogleDocHeader', 'opEntryGoogleDocContent', !!o.GoogleDocLink);
   setCollapsibleState('opLocationHeader', 'opLocationContent', !!o.Location);
   setCollapsibleState('opCostHeader', 'opCostContent', !!o.Cost);
@@ -4568,23 +4569,41 @@ applyFontScale(getFontScale());
 
 /* ---------- رابط جوجل دوك للحالة (بريفيو + فتح) - مشترك بين تاب الصور وتاب العمليات ---------- */
 function extractGoogleDocId(url){
-  const m = String(url || '').match(/\/document\/d\/([a-zA-Z0-9_-]+)/);
-  return m ? m[1] : null;
+  const m = String(url || '').match(/\/(document|spreadsheets|presentation)\/d\/([a-zA-Z0-9_-]+)/);
+  return m ? { type: m[1], id: m[2] } : null;
 }
 function renderGoogleDocPreview(url, boxId){
   const box = $(boxId);
-  const docId = extractGoogleDocId(url);
-  if(!url || !docId){
-    box.innerHTML = url ? '<div class="hint">الرابط مش شكل رابط جوجل دوك معروف - اتأكد إنه رابط مستند (document) صحيح</div>' : '';
+  if(!box) return;
+  const info = extractGoogleDocId(url);
+  if(!url || !info){
+    box.innerHTML = url ? '<div class="hint">الرابط مش شكل رابط جوجل دوك/شيت معروف - اتأكد إنه رابط صحيح</div>' : '';
     return;
   }
   box.innerHTML = `
-    <iframe class="gdoc-preview-frame" src="https://docs.google.com/document/d/${docId}/preview"></iframe>
+    <iframe class="gdoc-preview-frame" src="https://docs.google.com/${info.type}/d/${info.id}/preview"></iframe>
     <div style="margin-top:8px;">
       <a href="${url}" target="_blank" rel="noopener" class="btn btn-ghost" style="display:inline-block; text-decoration:none;">فتح الملف كامل في تاب جديد ↗</a>
     </div>
-    <div class="hint" style="margin-top:6px;">لو البريفيو مش شغال، يبقى الملف مش متاح لـ"أي حد معاه الرابط" - غيّر إعدادات المشاركة في جوجل دوك</div>
+    <div class="hint" style="margin-top:6px;">لو البريفيو مش شغال، يبقى الملف مش متاح لـ"أي حد معاه الرابط" - غيّر إعدادات المشاركة في جوجل دوك/شيت</div>
   `;
+}
+/* بيضيف زرار "بريفيو" جنب أي خانة رابط جوجل دوك/شيت - البريفيو مبيتفتحش غير لما يدوس عليه، عشان مياخدش وقت/مساحة من غير داعي */
+function attachGoogleDocPreviewButton(inputId, boxId){
+  const input = $(inputId);
+  if(!input || input.dataset.previewAttached) return;
+  input.dataset.previewAttached = '1';
+  const wrapper = document.createElement('div');
+  wrapper.style.cssText = 'display:flex; gap:8px;';
+  input.parentNode.insertBefore(wrapper, input);
+  wrapper.appendChild(input);
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'btn btn-ghost';
+  btn.textContent = '🔍 بريفيو';
+  btn.style.flexShrink = '0';
+  wrapper.appendChild(btn);
+  btn.addEventListener('click', ()=> renderGoogleDocPreview(input.value, boxId));
 }
 async function saveGoogleDocLink(url){
   if(!currentPatientId || String(currentPatientId).startsWith('temp_')){
@@ -4604,15 +4623,11 @@ $('imagesSaveGoogleDocBtn').onclick = ()=>{
   const url = $('imagesGoogleDocLink').value;
   $('opsGoogleDocLink').value = url;
   saveGoogleDocLink(url);
-  renderGoogleDocPreview(url, 'imagesGoogleDocPreviewBox');
-  renderGoogleDocPreview(url, 'opsGoogleDocPreviewBox');
 };
 $('opsSaveGoogleDocBtn').onclick = ()=>{
   const url = $('opsGoogleDocLink').value;
   $('imagesGoogleDocLink').value = url;
   saveGoogleDocLink(url);
-  renderGoogleDocPreview(url, 'opsGoogleDocPreviewBox');
-  renderGoogleDocPreview(url, 'imagesGoogleDocPreviewBox');
 };
 
 $('menuBtn').onclick = (e)=>{
@@ -5364,9 +5379,6 @@ $('newOperationCaseBtn').onclick = ()=>{
   $('newOperationCaseModal').style.display = 'flex';
 };
 $('closeNewOperationCaseBtn').onclick = ()=>{ $('newOperationCaseModal').style.display = 'none'; };
-$('caseGoogleDocLink').addEventListener('input', ()=>{
-  renderGoogleDocPreview($('caseGoogleDocLink').value, 'caseGoogleDocPreviewBox');
-});
 
 $('saveOperationCaseBtn').onclick = async ()=>{
   if(navigator.onLine === false){ showToast('محتاج نت عشان تحفظ الحالة', true); return; }
@@ -5403,8 +5415,12 @@ function openOperationCaseDetail(caseObj){
     <div class="visit-notes"><b class="visit-label">التاريخ:</b> ${escapeHtml(String(caseObj.CaseDate || '').slice(0,10))}</div>
     ${caseObj.Location ? `<div class="visit-notes"><b class="visit-label">المكان:</b> ${escapeHtml(caseObj.Location)}</div>` : ''}
     ${caseObj.Note ? `<div class="visit-notes"><b class="visit-label">ملاحظة:</b> ${escapeHtml(caseObj.Note)}</div>` : ''}
+    ${caseObj.GoogleDocLink ? `<div class="visit-notes"><b class="visit-label">جوجل دوك:</b> <button type="button" class="btn btn-ghost" id="caseDetailPreviewBtn" style="padding:4px 10px; font-size:12.5px;">🔍 بريفيو</button></div>` : ''}
   `;
-  renderGoogleDocPreview(caseObj.GoogleDocLink || '', 'caseDetailGoogleDocPreviewBox');
+  $('caseDetailGoogleDocPreviewBox').innerHTML = '';
+  if(caseObj.GoogleDocLink){
+    $('caseDetailPreviewBtn').addEventListener('click', ()=> renderGoogleDocPreview(caseObj.GoogleDocLink, 'caseDetailGoogleDocPreviewBox'));
+  }
   $('caseEditFields').style.display = 'none';
   $('editOperationCaseBtn').textContent = 'تعديل بيانات الحالة';
   $('operationCaseDetailModal').style.display = 'flex';
