@@ -451,9 +451,14 @@
             <input type="text" id="fClinicNumber" placeholder="مثال: 120">
           </div>
         </div>
-        <div class="field">
-          <label>ملاحظات</label>
-          <textarea id="fNote" style="min-height:80px;" placeholder="أي ملاحظة عن المريض..."></textarea>
+        <div class="collapsible-header" id="fNoteHeader" style="margin:4px 0 4px;">
+          <h2 style="margin:0; font-size:14px;">ملاحظات</h2>
+          <span class="collapse-arrow">▾</span>
+        </div>
+        <div class="collapsible-content" id="fNoteContent">
+          <div class="field">
+            <textarea id="fNote" style="min-height:80px;" placeholder="أي ملاحظة عن المريض..."></textarea>
+          </div>
         </div>
         <label style="display:flex; align-items:center; gap:8px; margin:4px 0 18px; cursor:pointer; font-size:14px; font-weight:700; color:var(--red);">
           <input type="checkbox" id="fRedFlag" style="width:18px;height:18px;">
@@ -563,12 +568,17 @@
 
       <div class="tab-panel" id="tab-operations">
         <div class="exam-card">
-          <h2 style="margin:0 0 10px;">رابط جوجل دوك للحالة (أشعة/صور مخزنة برة)</h2>
-          <div style="display:flex; gap:8px;">
-            <input type="text" id="opsGoogleDocLink" placeholder="https://docs.google.com/document/d/..." style="flex:1;">
-            <button type="button" class="btn btn-primary" id="opsSaveGoogleDocBtn">حفظ الرابط</button>
+          <div class="collapsible-header" id="opsGoogleDocHeader">
+            <h2 style="margin:0 0 10px;">رابط جوجل دوك للحالة (أشعة/صور مخزنة برة)</h2>
+            <span class="collapse-arrow">▾</span>
           </div>
-          <div id="opsGoogleDocPreviewBox" style="margin-top:12px;"></div>
+          <div class="collapsible-content" id="opsGoogleDocContent">
+            <div style="display:flex; gap:8px;">
+              <input type="text" id="opsGoogleDocLink" placeholder="https://docs.google.com/document/d/..." style="flex:1;">
+              <button type="button" class="btn btn-primary" id="opsSaveGoogleDocBtn">حفظ الرابط</button>
+            </div>
+            <div id="opsGoogleDocPreviewBox" style="margin-top:12px;"></div>
+          </div>
         </div>
 
         <div class="kashf-layout">
@@ -670,12 +680,17 @@
 
       <div class="tab-panel" id="tab-images">
         <div class="exam-card">
-          <h2 style="margin:0 0 10px;">رابط جوجل دوك للحالة (أشعة/صور مخزنة برة)</h2>
-          <div style="display:flex; gap:8px;">
-            <input type="text" id="imagesGoogleDocLink" placeholder="https://docs.google.com/document/d/..." style="flex:1;">
-            <button type="button" class="btn btn-primary" id="imagesSaveGoogleDocBtn">حفظ الرابط</button>
+          <div class="collapsible-header" id="imagesGoogleDocHeader">
+            <h2 style="margin:0 0 10px;">رابط جوجل دوك للحالة (أشعة/صور مخزنة برة)</h2>
+            <span class="collapse-arrow">▾</span>
           </div>
-          <div id="imagesGoogleDocPreviewBox" style="margin-top:12px;"></div>
+          <div class="collapsible-content" id="imagesGoogleDocContent">
+            <div style="display:flex; gap:8px;">
+              <input type="text" id="imagesGoogleDocLink" placeholder="https://docs.google.com/document/d/..." style="flex:1;">
+              <button type="button" class="btn btn-primary" id="imagesSaveGoogleDocBtn">حفظ الرابط</button>
+            </div>
+            <div id="imagesGoogleDocPreviewBox" style="margin-top:12px;"></div>
+          </div>
         </div>
 
         <div class="kashf-layout">
@@ -1610,6 +1625,9 @@ initCollapsible('opDressing2Header', 'opDressing2Content');
 initCollapsible('opDressing3Header', 'opDressing3Content');
 initCollapsible('opFollowUpsHeader', 'opFollowUpsContent');
 initCollapsible('opNotesHeader', 'opNotesContent');
+initCollapsible('fNoteHeader', 'fNoteContent');
+initCollapsible('opsGoogleDocHeader', 'opsGoogleDocContent');
+initCollapsible('imagesGoogleDocHeader', 'imagesGoogleDocContent');
 
 buildMedicineRows();
 renderDropdownAdd('rxRecommendationsSelect', 'rxRecommendations', RECOMMENDATIONS_LIST);
@@ -1924,6 +1942,7 @@ function openPatient(id){
   $('fPhone').value = p.Phone || '';
   $('fClinicNumber').value = p.ClinicNumber || '';
   $('fNote').value = p.Note || '';
+  setCollapsibleState('fNoteHeader', 'fNoteContent', !!p.Note);
   $('fRedFlag').checked = !!p.RedFlag;
   renderChronicDiseaseRows(p.ChronicDiseases || []);
   $('fRadiologyLink').value = p.RadiologyLink || '';
@@ -1931,6 +1950,8 @@ function openPatient(id){
   $('opsGoogleDocLink').value = p.GoogleDocLink || '';
   renderGoogleDocPreview(p.GoogleDocLink || '', 'imagesGoogleDocPreviewBox');
   renderGoogleDocPreview(p.GoogleDocLink || '', 'opsGoogleDocPreviewBox');
+  setCollapsibleState('imagesGoogleDocHeader', 'imagesGoogleDocContent', !!p.GoogleDocLink);
+  setCollapsibleState('opsGoogleDocHeader', 'opsGoogleDocContent', !!p.GoogleDocLink);
   $('fHasOperation').checked = !!p.HasOperation;
   $('vDate').value = new Date().toISOString().slice(0,10);
   $('vNotes').value = EXAM_TEMPLATE;
@@ -1996,10 +2017,13 @@ $('newPatientBtn').onclick = ()=>{
   $('folderTitle').textContent = 'ملف جديد';
   $('fName').value = ''; $('fAge').value = ''; $('fPhone').value = '';
   $('fClinicNumber').value = ''; $('fNote').value = ''; $('fRedFlag').checked = false;
+  setCollapsibleState('fNoteHeader', 'fNoteContent', false);
   renderChronicDiseaseRows([]);
   $('fRadiologyLink').value = ''; $('fHasOperation').checked = false;
   $('imagesGoogleDocLink').value = ''; $('opsGoogleDocLink').value = '';
   $('imagesGoogleDocPreviewBox').innerHTML = ''; $('opsGoogleDocPreviewBox').innerHTML = '';
+  setCollapsibleState('imagesGoogleDocHeader', 'imagesGoogleDocContent', false);
+  setCollapsibleState('opsGoogleDocHeader', 'opsGoogleDocContent', false);
   $('vDate').value = new Date().toISOString().slice(0,10);
   $('vNotes').value = EXAM_TEMPLATE; $('vRadiology').value = ''; $('vLabTests').value = '';
   editingVisitId = null;
