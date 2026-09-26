@@ -664,6 +664,17 @@
                   <textarea id="opNotes" style="min-height:100px;" placeholder="ملاحظات..."></textarea>
                 </div>
               </div>
+
+              <div class="collapsible-header" id="opEntryGoogleDocHeader" style="margin:10px 0 4px;">
+                <h2 style="margin:0; font-size:14px;">رابط جوجل دوك</h2>
+                <span class="collapse-arrow">▾</span>
+              </div>
+              <div class="collapsible-content" id="opEntryGoogleDocContent">
+                <div class="field">
+                  <input type="text" id="opEntryGoogleDocLink" placeholder="https://docs.google.com/document/d/...">
+                </div>
+                <div id="opEntryGoogleDocPreviewBox"></div>
+              </div>
               <div style="display:flex; gap:10px; flex-wrap:wrap;">
                 <button class="btn btn-primary" id="addOperationBtn">حفظ العملية</button>
                 <button class="btn btn-ghost" id="cancelOperationBtn" style="display:none;">إلغاء التعديل</button>
@@ -1373,7 +1384,6 @@ populateReportTypeSelect();
 /* بتحاول تجيب القوايم الحقيقية من الشيت القديم لو فيه بيانات دخول محفوظة بالفعل -
    من غير ما تفتح أي مربع تسجيل دخول لوحدها (ده بيحصل بس أول مرة تستخدم فيها تاب الصور) */
 async function tryFetchListsRemote(silent){
-  if(!getAppsScriptCreds()) return;
   const maxAttempts = 3;
   for(let attempt = 1; attempt <= maxAttempts; attempt++){
     try{
@@ -1694,6 +1704,10 @@ initCollapsible('opDressing2Header', 'opDressing2Content');
 initCollapsible('opDressing3Header', 'opDressing3Content');
 initCollapsible('opFollowUpsHeader', 'opFollowUpsContent');
 initCollapsible('opNotesHeader', 'opNotesContent');
+initCollapsible('opEntryGoogleDocHeader', 'opEntryGoogleDocContent');
+$('opEntryGoogleDocLink').addEventListener('input', ()=>{
+  renderGoogleDocPreview($('opEntryGoogleDocLink').value, 'opEntryGoogleDocPreviewBox');
+});
 initCollapsible('fNoteHeader', 'fNoteContent');
 initCollapsible('opsGoogleDocHeader', 'opsGoogleDocContent');
 initCollapsible('imagesGoogleDocHeader', 'imagesGoogleDocContent');
@@ -2527,6 +2541,9 @@ function startEditOperation(o){
   $('opDressing3').value = o.Dressing3 || '';
   $('opFollowUps').value = o.FollowUps || '';
   $('opNotes').value = o.Notes || '';
+  $('opEntryGoogleDocLink').value = o.GoogleDocLink || '';
+  renderGoogleDocPreview(o.GoogleDocLink || '', 'opEntryGoogleDocPreviewBox');
+  setCollapsibleState('opEntryGoogleDocHeader', 'opEntryGoogleDocContent', !!o.GoogleDocLink);
   setCollapsibleState('opLocationHeader', 'opLocationContent', !!o.Location);
   setCollapsibleState('opCostHeader', 'opCostContent', !!o.Cost);
   setCollapsibleState('opDressing1Header', 'opDressing1Content', !!o.Dressing1);
@@ -2549,6 +2566,9 @@ function resetOperationForm(){
   $('opDate').value = new Date().toISOString().slice(0,10);
   ['opName','opCost','opFollowUps','opNotes'].forEach(id => $(id).value = '');
   ['opLocation','opDressing1','opDressing2','opDressing3'].forEach(id => $(id).value = '');
+  $('opEntryGoogleDocLink').value = '';
+  $('opEntryGoogleDocPreviewBox').innerHTML = '';
+  setCollapsibleState('opEntryGoogleDocHeader', 'opEntryGoogleDocContent', false);
   setCollapsibleState('opLocationHeader', 'opLocationContent', false);
   setCollapsibleState('opCostHeader', 'opCostContent', false);
   setCollapsibleState('opDressing1Header', 'opDressing1Content', false);
@@ -2582,7 +2602,8 @@ $('addOperationBtn').onclick = async ()=>{
     Dressing2: $('opDressing2').value,
     Dressing3: $('opDressing3').value,
     FollowUps: $('opFollowUps').value.trim(),
-    Notes: $('opNotes').value.trim()
+    Notes: $('opNotes').value.trim(),
+    GoogleDocLink: $('opEntryGoogleDocLink').value.trim()
   };
   const isEditing = !!editingOperationId;
   const btn = $('addOperationBtn');
