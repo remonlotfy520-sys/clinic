@@ -93,6 +93,7 @@
   .collapsible-header.open .collapse-arrow{transform:rotate(180deg);}
   .collapsible-content{display:none; margin-top:12px;}
   .collapsible-content.open{display:block;}
+  .gdoc-preview-frame{width:100%; height:420px; border:1px solid var(--line); border-radius:10px;}
   .kashf-layout{display:flex; gap:20px; align-items:flex-start;}
   .kashf-main{flex:3; min-width:0;}
   .kashf-sidebar{flex:1; min-width:180px; max-width:260px; position:sticky; top:16px;}
@@ -561,6 +562,15 @@
       </div>
 
       <div class="tab-panel" id="tab-operations">
+        <div class="exam-card">
+          <h2 style="margin:0 0 10px;">رابط جوجل دوك للحالة (أشعة/صور مخزنة برة)</h2>
+          <div style="display:flex; gap:8px;">
+            <input type="text" id="opsGoogleDocLink" placeholder="https://docs.google.com/document/d/..." style="flex:1;">
+            <button type="button" class="btn btn-primary" id="opsSaveGoogleDocBtn">حفظ الرابط</button>
+          </div>
+          <div id="opsGoogleDocPreviewBox" style="margin-top:12px;"></div>
+        </div>
+
         <div class="kashf-layout">
           <div class="kashf-main">
             <div class="exam-card">
@@ -617,6 +627,15 @@
       </div>
 
       <div class="tab-panel" id="tab-images">
+        <div class="exam-card">
+          <h2 style="margin:0 0 10px;">رابط جوجل دوك للحالة (أشعة/صور مخزنة برة)</h2>
+          <div style="display:flex; gap:8px;">
+            <input type="text" id="imagesGoogleDocLink" placeholder="https://docs.google.com/document/d/..." style="flex:1;">
+            <button type="button" class="btn btn-primary" id="imagesSaveGoogleDocBtn">حفظ الرابط</button>
+          </div>
+          <div id="imagesGoogleDocPreviewBox" style="margin-top:12px;"></div>
+        </div>
+
         <div class="kashf-layout">
           <div class="kashf-main">
             <div class="exam-card">
@@ -1859,6 +1878,10 @@ function openPatient(id){
   $('fRedFlag').checked = !!p.RedFlag;
   renderChronicDiseaseRows(p.ChronicDiseases || []);
   $('fRadiologyLink').value = p.RadiologyLink || '';
+  $('imagesGoogleDocLink').value = p.GoogleDocLink || '';
+  $('opsGoogleDocLink').value = p.GoogleDocLink || '';
+  renderGoogleDocPreview(p.GoogleDocLink || '', 'imagesGoogleDocPreviewBox');
+  renderGoogleDocPreview(p.GoogleDocLink || '', 'opsGoogleDocPreviewBox');
   $('fHasOperation').checked = !!p.HasOperation;
   $('vDate').value = new Date().toISOString().slice(0,10);
   $('vNotes').value = EXAM_TEMPLATE;
@@ -1925,6 +1948,8 @@ $('newPatientBtn').onclick = ()=>{
   $('fClinicNumber').value = ''; $('fNote').value = ''; $('fRedFlag').checked = false;
   renderChronicDiseaseRows([]);
   $('fRadiologyLink').value = ''; $('fHasOperation').checked = false;
+  $('imagesGoogleDocLink').value = ''; $('opsGoogleDocLink').value = '';
+  $('imagesGoogleDocPreviewBox').innerHTML = ''; $('opsGoogleDocPreviewBox').innerHTML = '';
   $('vDate').value = new Date().toISOString().slice(0,10);
   $('vNotes').value = EXAM_TEMPLATE; $('vRadiology').value = ''; $('vLabTests').value = '';
   editingVisitId = null;
@@ -4340,6 +4365,55 @@ $('fontSizeUpBtn').onclick = ()=>{
   applyFontScale(next);
 };
 applyFontScale(getFontScale());
+
+/* ---------- رابط جوجل دوك للحالة (بريفيو + فتح) - مشترك بين تاب الصور وتاب العمليات ---------- */
+function extractGoogleDocId(url){
+  const m = String(url || '').match(/\/document\/d\/([a-zA-Z0-9_-]+)/);
+  return m ? m[1] : null;
+}
+function renderGoogleDocPreview(url, boxId){
+  const box = $(boxId);
+  const docId = extractGoogleDocId(url);
+  if(!url || !docId){
+    box.innerHTML = url ? '<div class="hint">الرابط مش شكل رابط جوجل دوك معروف - اتأكد إنه رابط مستند (document) صحيح</div>' : '';
+    return;
+  }
+  box.innerHTML = `
+    <iframe class="gdoc-preview-frame" src="https://docs.google.com/document/d/${docId}/preview"></iframe>
+    <div style="margin-top:8px;">
+      <a href="${url}" target="_blank" rel="noopener" class="btn btn-ghost" style="display:inline-block; text-decoration:none;">فتح الملف كامل في تاب جديد ↗</a>
+    </div>
+    <div class="hint" style="margin-top:6px;">لو البريفيو مش شغال، يبقى الملف مش متاح لـ"أي حد معاه الرابط" - غيّر إعدادات المشاركة في جوجل دوك</div>
+  `;
+}
+async function saveGoogleDocLink(url){
+  if(!currentPatientId || String(currentPatientId).startsWith('temp_')){
+    showToast('احفظ بيانات المريض الأول', true);
+    return;
+  }
+  try{
+    await updateDoc(doc(db, "patients", currentPatientId), { GoogleDocLink: url.trim(), UpdatedAt: serverTimestamp() });
+    const idx = allPatients.findIndex(p => p.id === currentPatientId);
+    if(idx !== -1){ allPatients[idx] = { ...allPatients[idx], GoogleDocLink: url.trim() }; setCachedPatients(allPatients); }
+    showToast('اتحفظ الرابط ✓');
+  }catch(err){
+    showToast('حصل خطأ أثناء الحفظ - جرب تاني', true);
+  }
+}
+$('imagesSaveGoogleDocBtn').onclick = ()=>{
+  const url = $('imagesGoogleDocLink').value;
+  $('opsGoogleDocLink').value = url;
+  saveGoogleDocLink(url);
+  renderGoogleDocPreview(url, 'imagesGoogleDocPreviewBox');
+  renderGoogleDocPreview(url, 'opsGoogleDocPreviewBox');
+};
+$('opsSaveGoogleDocBtn').onclick = ()=>{
+  const url = $('opsGoogleDocLink').value;
+  $('imagesGoogleDocLink').value = url;
+  saveGoogleDocLink(url);
+  renderGoogleDocPreview(url, 'opsGoogleDocPreviewBox');
+  renderGoogleDocPreview(url, 'imagesGoogleDocPreviewBox');
+};
 
 $('menuBtn').onclick = (e)=>{
   e.stopPropagation();
