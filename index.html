@@ -584,33 +584,75 @@
                 <label>اسم العملية</label>
                 <input type="text" id="opName" placeholder="اسم العملية...">
               </div>
-              <div class="field">
-                <label>مكان العملية</label>
-                <select id="opLocation"></select>
+
+              <div class="collapsible-header" id="opLocationHeader" style="margin:10px 0 4px;">
+                <h2 style="margin:0; font-size:14px;">مكان العملية</h2>
+                <span class="collapse-arrow">▾</span>
               </div>
-              <div class="field">
-                <label>التكلفة</label>
-                <input type="text" id="opCost" placeholder="التكلفة...">
+              <div class="collapsible-content" id="opLocationContent">
+                <div class="field">
+                  <select id="opLocation"></select>
+                </div>
               </div>
-              <div class="field">
-                <label>الغيار الأول</label>
-                <select id="opDressing1"></select>
+
+              <div class="collapsible-header" id="opCostHeader" style="margin:10px 0 4px;">
+                <h2 style="margin:0; font-size:14px;">التكلفة</h2>
+                <span class="collapse-arrow">▾</span>
               </div>
-              <div class="field">
-                <label>الغيار الثاني</label>
-                <select id="opDressing2"></select>
+              <div class="collapsible-content" id="opCostContent">
+                <div class="field">
+                  <input type="text" id="opCost" placeholder="التكلفة...">
+                </div>
               </div>
-              <div class="field">
-                <label>الغيار الثالث</label>
-                <select id="opDressing3"></select>
+
+              <div class="collapsible-header" id="opDressing1Header" style="margin:10px 0 4px;">
+                <h2 style="margin:0; font-size:14px;">الغيار الأول</h2>
+                <span class="collapse-arrow">▾</span>
               </div>
-              <div class="field">
-                <label>المتابعات</label>
-                <textarea id="opFollowUps" style="min-height:100px;" placeholder="المتابعات..."></textarea>
+              <div class="collapsible-content" id="opDressing1Content">
+                <div class="field">
+                  <select id="opDressing1"></select>
+                </div>
               </div>
-              <div class="field">
-                <label>ملاحظات</label>
-                <textarea id="opNotes" style="min-height:100px;" placeholder="ملاحظات..."></textarea>
+
+              <div class="collapsible-header" id="opDressing2Header" style="margin:10px 0 4px;">
+                <h2 style="margin:0; font-size:14px;">الغيار الثاني</h2>
+                <span class="collapse-arrow">▾</span>
+              </div>
+              <div class="collapsible-content" id="opDressing2Content">
+                <div class="field">
+                  <select id="opDressing2"></select>
+                </div>
+              </div>
+
+              <div class="collapsible-header" id="opDressing3Header" style="margin:10px 0 4px;">
+                <h2 style="margin:0; font-size:14px;">الغيار الثالث</h2>
+                <span class="collapse-arrow">▾</span>
+              </div>
+              <div class="collapsible-content" id="opDressing3Content">
+                <div class="field">
+                  <select id="opDressing3"></select>
+                </div>
+              </div>
+
+              <div class="collapsible-header" id="opFollowUpsHeader" style="margin:10px 0 4px;">
+                <h2 style="margin:0; font-size:14px;">المتابعات</h2>
+                <span class="collapse-arrow">▾</span>
+              </div>
+              <div class="collapsible-content" id="opFollowUpsContent">
+                <div class="field">
+                  <textarea id="opFollowUps" style="min-height:100px;" placeholder="المتابعات..."></textarea>
+                </div>
+              </div>
+
+              <div class="collapsible-header" id="opNotesHeader" style="margin:10px 0 4px;">
+                <h2 style="margin:0; font-size:14px;">ملاحظات</h2>
+                <span class="collapse-arrow">▾</span>
+              </div>
+              <div class="collapsible-content" id="opNotesContent">
+                <div class="field">
+                  <textarea id="opNotes" style="min-height:100px;" placeholder="ملاحظات..."></textarea>
+                </div>
               </div>
               <div style="display:flex; gap:10px; flex-wrap:wrap;">
                 <button class="btn btn-primary" id="addOperationBtn">حفظ العملية</button>
@@ -1561,6 +1603,13 @@ initCollapsible('bookApptHeader', 'bookApptContent');
 initCollapsible('kashfRadLabsHeader', 'kashfRadLabsContent');
 initCollapsible('rxRecsHeader', 'rxRecsContent');
 initCollapsible('rxRadLabsHeader', 'rxRadLabsContent');
+initCollapsible('opLocationHeader', 'opLocationContent');
+initCollapsible('opCostHeader', 'opCostContent');
+initCollapsible('opDressing1Header', 'opDressing1Content');
+initCollapsible('opDressing2Header', 'opDressing2Content');
+initCollapsible('opDressing3Header', 'opDressing3Content');
+initCollapsible('opFollowUpsHeader', 'opFollowUpsContent');
+initCollapsible('opNotesHeader', 'opNotesContent');
 
 buildMedicineRows();
 renderDropdownAdd('rxRecommendationsSelect', 'rxRecommendations', RECOMMENDATIONS_LIST);
@@ -1887,6 +1936,7 @@ function openPatient(id){
   $('vNotes').value = EXAM_TEMPLATE;
   $('vRadiology').value = '';
   $('vLabTests').value = '';
+  setCollapsibleState('kashfRadLabsHeader', 'kashfRadLabsContent', false);
   editingVisitId = null;
   $('addVisitBtn').textContent = 'حفظ الزيارة';
   $('cancelVisitBtn').style.display = 'none';
@@ -2185,6 +2235,7 @@ function startEditVisit(visit){
   $('vNotes').value = visit.VisitNotes || '';
   $('vRadiology').value = visit.Radiology || '';
   $('vLabTests').value = visit.LabTests || '';
+  setCollapsibleState('kashfRadLabsHeader', 'kashfRadLabsContent', !!(visit.Radiology || visit.LabTests));
   $('addVisitBtn').textContent = 'حفظ التعديل';
   $('cancelVisitBtn').style.display = 'inline-block';
   $('visitDeleteFromFormBtn').style.display = 'inline-block';
@@ -2214,6 +2265,7 @@ function resetVisitForm(){
   $('vNotes').value = EXAM_TEMPLATE;
   $('vRadiology').value = '';
   $('vLabTests').value = '';
+  setCollapsibleState('kashfRadLabsHeader', 'kashfRadLabsContent', false);
 }
 $('cancelVisitBtn').onclick = ()=>{
   resetVisitForm();
@@ -2382,6 +2434,13 @@ function startEditOperation(o){
   $('opDressing3').value = o.Dressing3 || '';
   $('opFollowUps').value = o.FollowUps || '';
   $('opNotes').value = o.Notes || '';
+  setCollapsibleState('opLocationHeader', 'opLocationContent', !!o.Location);
+  setCollapsibleState('opCostHeader', 'opCostContent', !!o.Cost);
+  setCollapsibleState('opDressing1Header', 'opDressing1Content', !!o.Dressing1);
+  setCollapsibleState('opDressing2Header', 'opDressing2Content', !!o.Dressing2);
+  setCollapsibleState('opDressing3Header', 'opDressing3Content', !!o.Dressing3);
+  setCollapsibleState('opFollowUpsHeader', 'opFollowUpsContent', !!o.FollowUps);
+  setCollapsibleState('opNotesHeader', 'opNotesContent', !!o.Notes);
   $('addOperationBtn').textContent = 'حفظ التعديل';
   $('cancelOperationBtn').style.display = 'inline-block';
   $('opDeleteFromFormBtn').style.display = 'inline-block';
@@ -2397,6 +2456,13 @@ function resetOperationForm(){
   $('opDate').value = new Date().toISOString().slice(0,10);
   ['opName','opCost','opFollowUps','opNotes'].forEach(id => $(id).value = '');
   ['opLocation','opDressing1','opDressing2','opDressing3'].forEach(id => $(id).value = '');
+  setCollapsibleState('opLocationHeader', 'opLocationContent', false);
+  setCollapsibleState('opCostHeader', 'opCostContent', false);
+  setCollapsibleState('opDressing1Header', 'opDressing1Content', false);
+  setCollapsibleState('opDressing2Header', 'opDressing2Content', false);
+  setCollapsibleState('opDressing3Header', 'opDressing3Content', false);
+  setCollapsibleState('opFollowUpsHeader', 'opFollowUpsContent', false);
+  setCollapsibleState('opNotesHeader', 'opNotesContent', false);
 }
 $('cancelOperationBtn').onclick = ()=>{
   resetOperationForm();
@@ -2769,8 +2835,10 @@ function loadPrescription(raw){
     document.querySelector(`.rx-med-instructions[data-idx="${i}"]`).value = m ? (m.instructions || '') : '';
   });
   setActiveChips('rxRecommendations', rx.recommendations);
+  setCollapsibleState('rxRecsHeader', 'rxRecsContent', !!(rx.recommendations && rx.recommendations.length));
   $('rxRadiologyReq').value = (rx.radiologyRequested || []).join('\n');
   $('rxLabsReq').value = (rx.labsRequested || []).join('\n');
+  setCollapsibleState('rxRadLabsHeader', 'rxRadLabsContent', !!((rx.radiologyRequested && rx.radiologyRequested.length) || (rx.labsRequested && rx.labsRequested.length)));
 }
 function resetPrescriptionForm(){
   medicineRowsVisibleCount = 1;
@@ -2779,10 +2847,12 @@ function resetPrescriptionForm(){
   document.querySelectorAll('.rx-med-select').forEach(sel => sel.value = '');
   document.querySelectorAll('.rx-med-instructions').forEach(inp => inp.value = '');
   setActiveChips('rxRecommendations', []);
+  setCollapsibleState('rxRecsHeader', 'rxRecsContent', false);
   if($('cancelRxEditBtn')) $('cancelRxEditBtn').style.display = 'none';
   if($('rxDeleteFromFormBtn')) $('rxDeleteFromFormBtn').style.display = 'none';
   $('rxRadiologyReq').value = '';
   $('rxLabsReq').value = '';
+  setCollapsibleState('rxRadLabsHeader', 'rxRadLabsContent', false);
 }
 
 function collectPhysio(){
@@ -5340,6 +5410,13 @@ function initCollapsible(headerId, contentId, startOpen){
     header.classList.toggle('open');
     content.classList.toggle('open');
   });
+}
+function setCollapsibleState(headerId, contentId, hasData){
+  const header = $(headerId);
+  const content = $(contentId);
+  if(!header || !content) return;
+  header.classList.toggle('open', !!hasData);
+  content.classList.toggle('open', !!hasData);
 }
 
 function escapeHtml(str){
