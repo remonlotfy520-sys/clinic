@@ -94,6 +94,9 @@
   .collapsible-content{display:none; margin-top:12px;}
   .collapsible-content.open{display:block;}
   .gdoc-preview-frame{width:100%; height:420px; border:1px solid var(--line); border-radius:10px;}
+  .vnotes-editable{min-height:180px; max-height:420px; overflow-y:auto; direction:ltr; text-align:left; border:1px solid var(--line); border-radius:10px; padding:10px 12px; font-family:'Tajawal'; font-size:14px; background:#fff; white-space:pre-wrap; line-height:1.6;}
+  .vnotes-editable:empty::before{content:attr(data-placeholder); color:var(--muted);}
+  .vnotes-editable .template-text{color:#9a9488; font-style:italic;}
   .kashf-layout{display:flex; gap:20px; align-items:flex-start;}
   .kashf-main{flex:3; min-width:0;}
   .kashf-sidebar{flex:1; min-width:180px; max-width:260px; position:sticky; top:16px;}
@@ -523,7 +526,7 @@
               </div>
               <div class="field">
                 <label>الشكوى والكشف</label>
-                <textarea id="vNotes" dir="ltr" style="min-height:180px; text-align:left;" placeholder="الشكوى، الفحص، التشخيص، العلاج..."></textarea>
+                <div id="vNotes" class="vnotes-editable" contenteditable="true" dir="ltr" data-placeholder="الشكوى، الفحص، التشخيص، العلاج..."></div>
               </div>
 
               <div class="collapsible-header" id="kashfRadLabsHeader" style="margin:14px 0 4px;">
@@ -533,7 +536,8 @@
               <div class="collapsible-content" id="kashfRadLabsContent">
                 <div class="field">
                   <label>الأشعة</label>
-                  <textarea id="vRadiology" style="min-height:80px;" placeholder="الأشعة المطلوبة أو نتائجها..."></textarea>
+                  <select id="vRadiologySelect" class="dropdown-add-select" style="margin-bottom:8px;"></select>
+                  <textarea id="vRadiology" dir="ltr" style="min-height:80px; text-align:left;" placeholder="الأشعة المطلوبة أو نتائجها..."></textarea>
                 </div>
                 <div class="field">
                   <label>رابط أرشيف الأشعة</label>
@@ -541,7 +545,8 @@
                 </div>
                 <div class="field">
                   <label>التحاليل</label>
-                  <textarea id="vLabTests" style="min-height:80px;" placeholder="التحاليل المطلوبة أو نتائجها..."></textarea>
+                  <select id="vLabTestsSelect" class="dropdown-add-select" style="margin-bottom:8px;"></select>
+                  <textarea id="vLabTests" dir="ltr" style="min-height:80px; text-align:left;" placeholder="التحاليل المطلوبة أو نتائجها..."></textarea>
                 </div>
               </div>
 
@@ -555,6 +560,7 @@
                 <button class="btn btn-ghost" id="cancelVisitBtn" style="display:none;">إلغاء التعديل</button>
                 <button class="btn btn-outline-red" id="visitDeleteFromFormBtn" style="display:none;">حذف الزيارة دي</button>
                 <button class="btn btn-primary" id="visitPdfFromFormBtn" style="display:none;">تحميل PDF</button>
+                <button class="btn btn-ghost" id="visitPrintFromFormBtn" style="display:none;">🖨️ طباعة</button>
               </div>
             </div>
           </div>
@@ -761,7 +767,20 @@
                 <div class="field">
                   <label>التوصيات العامة</label>
                   <select id="rxRecommendationsSelect" class="dropdown-add-select"></select>
+                  <div style="display:flex; gap:8px; margin-top:8px;">
+                    <input type="text" id="rxCustomRecommendation" placeholder="اكتب توصية جديدة مش موجودة في القايمة...">
+                    <button type="button" class="btn btn-ghost" id="addCustomRecommendationBtn">إضافة</button>
+                  </div>
                   <div class="chips" id="rxRecommendations" style="margin-top:8px;"></div>
+                </div>
+                <div class="field" style="margin-top:14px;">
+                  <label>مستلزمات</label>
+                  <div style="display:flex; gap:8px;">
+                    <select id="rxSuppliesSelect" class="dropdown-add-select" style="flex:1;"></select>
+                    <button type="button" class="btn btn-ghost" id="addSupplyItemBtn" style="padding:9px 14px;">+</button>
+                    <button type="button" class="btn btn-outline-red" id="removeSupplyItemBtn" style="padding:9px 14px;">🗑</button>
+                  </div>
+                  <div class="chips" id="rxSupplies" style="margin-top:8px;"></div>
                 </div>
               </div>
 
@@ -788,7 +807,10 @@
               <div style="display:flex; gap:10px; flex-wrap:wrap;">
                 <button class="btn btn-primary" id="saveRxBtn">حفظ الروشتة</button>
                 <button class="btn btn-primary" id="downloadRxBtn">تحميل الروشتة PDF</button>
+                <button class="btn btn-ghost" id="printRxBtn">🖨️ طباعة</button>
                 <button class="btn btn-ghost" id="cancelRxEditBtn" style="display:none;">إلغاء التعديل</button>
+                <button type="button" class="btn btn-outline-red" id="clearRxFormBtn">🗑️ مسح الكل</button>
+                <button type="button" class="btn btn-ghost" id="saveRxAsPresetBtn">💾 حفظ كروشتة جاهزة</button>
                 <button class="btn btn-outline-red" id="rxDeleteFromFormBtn" style="display:none;">حذف الروشتة دي</button>
               </div>
             </div>
@@ -825,6 +847,7 @@
               <div style="display:flex; gap:10px; flex-wrap:wrap;">
                 <button class="btn btn-primary" id="savePhysioBtn">حفظ</button>
                 <button class="btn btn-primary" id="downloadPhysioBtn">تحميل روشتة العلاج الطبيعي PDF</button>
+                <button class="btn btn-ghost" id="printPhysioBtn">🖨️ طباعة</button>
                 <button class="btn btn-ghost" id="cancelPhysioEditBtn" style="display:none;">إلغاء التعديل</button>
                 <button class="btn btn-outline-red" id="physioDeleteFromFormBtn" style="display:none;">حذف السجل ده</button>
               </div>
@@ -872,7 +895,9 @@
               <div style="display:flex; gap:10px; flex-wrap:wrap;">
                 <button class="btn btn-primary" id="saveReportBtn">حفظ</button>
                 <button class="btn btn-primary" id="downloadReportBtn">تحميل التقرير PDF</button>
+                <button class="btn btn-ghost" id="printReportBtn">🖨️ طباعة</button>
                 <button class="btn btn-ghost" id="cancelReportEditBtn" style="display:none;">إلغاء التعديل</button>
+                <button type="button" class="btn btn-ghost" id="saveReportAsPresetBtn">💾 حفظ في التقارير الجاهزة</button>
                 <button class="btn btn-outline-red" id="reportDeleteFromFormBtn" style="display:none;">حذف التقرير ده</button>
               </div>
             </div>
@@ -928,6 +953,7 @@
                 <button class="btn btn-ghost" id="cancelInvoiceBtn" style="display:none;">إلغاء التعديل</button>
                 <button class="btn btn-outline-red" id="invDeleteFromFormBtn" style="display:none;">حذف الفاتورة دي</button>
                 <button class="btn btn-primary" id="invPdfFromFormBtn" style="display:none;">تحميل PDF</button>
+                <button class="btn btn-ghost" id="invPrintFromFormBtn" style="display:none;">🖨️ طباعة</button>
               </div>
             </div>
           </div>
@@ -1441,6 +1467,8 @@ function refreshAllListUi(){
   renderDropdownAdd('rxRecommendationsSelect', 'rxRecommendations', RECOMMENDATIONS_LIST);
   renderDropdownAppendToTextarea('rxRadiologyReqSelect', 'rxRadiologyReq', RADIOLOGY_LIST);
   renderDropdownAppendToTextarea('rxLabsReqSelect', 'rxLabsReq', LABS_LIST);
+  renderDropdownAppendToTextarea('vRadiologySelect', 'vRadiology', RADIOLOGY_LIST);
+  renderDropdownAppendToTextarea('vLabTestsSelect', 'vLabTests', LABS_LIST);
   renderChips('ptInterventions', PT_LIST);
   renderPresetRxList();
   renderDiagnosisRecsList();
@@ -1730,9 +1758,52 @@ initCollapsible('opsGoogleDocHeader', 'opsGoogleDocContent');
 initCollapsible('imagesGoogleDocHeader', 'imagesGoogleDocContent');
 
 buildMedicineRows();
+/* ---------- مستلزمات (قايمة محلية قابلة للتعديل + اختيار متعدد كـ chips) ---------- */
 renderDropdownAdd('rxRecommendationsSelect', 'rxRecommendations', RECOMMENDATIONS_LIST);
+$('addCustomRecommendationBtn').onclick = ()=>{
+  const val = $('rxCustomRecommendation').value.trim();
+  if(!val) return;
+  addChipTag('rxRecommendations', val);
+  $('rxCustomRecommendation').value = '';
+};
+const DEFAULT_SUPPLIES = ['جبس', 'رباط ضاغط', 'شاش معقم', 'دعامة ركبة', 'عكاز'];
+function getSuppliesList(){
+  try{
+    const saved = JSON.parse(localStorage.getItem('suppliesList') || 'null');
+    return (saved && saved.length) ? saved : DEFAULT_SUPPLIES.slice();
+  }catch(e){ return DEFAULT_SUPPLIES.slice(); }
+}
+function setSuppliesList(list){ localStorage.setItem('suppliesList', JSON.stringify(list)); }
+function populateSuppliesSelect(){
+  const list = getSuppliesList();
+  const select = $('rxSuppliesSelect');
+  select.innerHTML = `<option value="">— اختر مستلزم —</option>` + list.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('');
+  select.onchange = ()=>{ addChipTag('rxSupplies', select.value); select.value = ''; };
+}
+$('addSupplyItemBtn').onclick = ()=>{
+  const name = prompt('اكتب اسم مستلزم جديد يتضاف للقايمة:');
+  if(!name || !name.trim()) return;
+  const list = getSuppliesList();
+  if(list.includes(name.trim())){ showToast('المستلزم ده موجود بالفعل', true); return; }
+  list.push(name.trim());
+  setSuppliesList(list);
+  populateSuppliesSelect();
+  showToast('اتضاف ✓');
+};
+$('removeSupplyItemBtn').onclick = ()=>{
+  const current = $('rxSuppliesSelect').value;
+  if(!current){ showToast('اختار مستلزم من القايمة الأول عشان تمسحه', true); return; }
+  const list = getSuppliesList();
+  if(!confirm(`حذف "${current}" من قايمة المستلزمات؟`)) return;
+  setSuppliesList(list.filter(s => s !== current));
+  populateSuppliesSelect();
+  showToast('اتحذف ✓');
+};
+populateSuppliesSelect();
 renderDropdownAppendToTextarea('rxRadiologyReqSelect', 'rxRadiologyReq', RADIOLOGY_LIST);
 renderDropdownAppendToTextarea('rxLabsReqSelect', 'rxLabsReq', LABS_LIST);
+renderDropdownAppendToTextarea('vRadiologySelect', 'vRadiology', RADIOLOGY_LIST);
+renderDropdownAppendToTextarea('vLabTestsSelect', 'vLabTests', LABS_LIST);
 renderChips('ptInterventions', PT_LIST);
 renderPresetRxList();
 renderDiagnosisRecsList();
@@ -2075,7 +2146,7 @@ function openPatient(id){
   setCollapsibleState('opsGoogleDocHeader', 'opsGoogleDocContent', !!p.GoogleDocLink);
   $('fHasOperation').checked = !!p.HasOperation;
   $('vDate').value = new Date().toISOString().slice(0,10);
-  $('vNotes').value = EXAM_TEMPLATE;
+  setVNotesTemplate(EXAM_TEMPLATE);
   $('vRadiology').value = '';
   $('vLabTests').value = '';
   setCollapsibleState('kashfRadLabsHeader', 'kashfRadLabsContent', false);
@@ -2084,6 +2155,7 @@ function openPatient(id){
   $('cancelVisitBtn').style.display = 'none';
   $('visitDeleteFromFormBtn').style.display = 'none';
   $('visitPdfFromFormBtn').style.display = 'none';
+  $('visitPrintFromFormBtn').style.display = 'none';
   $('deletePatientBtn').style.display = 'inline-block';
   $('listView').style.display = 'none';
   $('workspace').style.display = 'block';
@@ -2146,12 +2218,13 @@ $('newPatientBtn').onclick = ()=>{
   setCollapsibleState('imagesGoogleDocHeader', 'imagesGoogleDocContent', false);
   setCollapsibleState('opsGoogleDocHeader', 'opsGoogleDocContent', false);
   $('vDate').value = new Date().toISOString().slice(0,10);
-  $('vNotes').value = EXAM_TEMPLATE; $('vRadiology').value = ''; $('vLabTests').value = '';
+  setVNotesTemplate(EXAM_TEMPLATE); $('vRadiology').value = ''; $('vLabTests').value = '';
   editingVisitId = null;
   $('addVisitBtn').textContent = 'حفظ الزيارة';
   $('cancelVisitBtn').style.display = 'none';
   $('visitDeleteFromFormBtn').style.display = 'none';
   $('visitPdfFromFormBtn').style.display = 'none';
+  $('visitPrintFromFormBtn').style.display = 'none';
   currentVisits = [];
   $('visitsList').innerHTML = '<div class="no-visits">احفظ بيانات المريض الأول قبل تسجيل زيارات</div>';
   currentOperations = [];
@@ -2377,7 +2450,7 @@ function renderVisits(visits){
 function startEditVisit(visit){
   editingVisitId = visit.id;
   $('vDate').value = String(visit.VisitDate || '').slice(0,10);
-  $('vNotes').value = visit.VisitNotes || '';
+  setVNotesPlain(visit.VisitNotes || '');
   $('vRadiology').value = visit.Radiology || '';
   $('vLabTests').value = visit.LabTests || '';
   setCollapsibleState('kashfRadLabsHeader', 'kashfRadLabsContent', !!(visit.Radiology || visit.LabTests));
@@ -2385,6 +2458,7 @@ function startEditVisit(visit){
   $('cancelVisitBtn').style.display = 'inline-block';
   $('visitDeleteFromFormBtn').style.display = 'inline-block';
   $('visitPdfFromFormBtn').style.display = 'inline-block';
+  $('visitPrintFromFormBtn').style.display = 'inline-block';
   renderVisits(currentVisits);
   document.querySelector('.kashf-main').scrollIntoView({behavior:'smooth', block:'start'});
 }
@@ -2399,6 +2473,12 @@ $('visitPdfFromFormBtn').onclick = ()=>{
   if(!visit) return;
   exportRxTemplateAsPdf(buildVisitBodyHtml(visit), 'كشف', $('visitPdfFromFormBtn'), String(visit.VisitDate || '').slice(0,10));
 };
+$('visitPrintFromFormBtn').onclick = ()=>{
+  if(!editingVisitId) return;
+  const visit = currentVisits.find(v => v.id === editingVisitId);
+  if(!visit) return;
+  exportRxTemplateAsPdf(buildVisitBodyHtml(visit), 'كشف', $('visitPrintFromFormBtn'), String(visit.VisitDate || '').slice(0,10), true);
+};
 
 function resetVisitForm(){
   editingVisitId = null;
@@ -2406,8 +2486,9 @@ function resetVisitForm(){
   $('cancelVisitBtn').style.display = 'none';
   $('visitDeleteFromFormBtn').style.display = 'none';
   $('visitPdfFromFormBtn').style.display = 'none';
+  $('visitPrintFromFormBtn').style.display = 'none';
   $('vDate').value = new Date().toISOString().slice(0,10);
-  $('vNotes').value = EXAM_TEMPLATE;
+  setVNotesTemplate(EXAM_TEMPLATE);
   $('vRadiology').value = '';
   $('vLabTests').value = '';
   setCollapsibleState('kashfRadLabsHeader', 'kashfRadLabsContent', false);
@@ -2423,7 +2504,7 @@ $('addVisitBtn').onclick = async ()=>{
     return;
   }
   const date = $('vDate').value;
-  const notes = $('vNotes').value.trim();
+  const notes = getVNotesValue().trim();
   const radiology = $('vRadiology').value.trim();
   const labTests = $('vLabTests').value.trim();
   if(!date){ showToast('اختار تاريخ الزيارة', true); return; }
@@ -2439,8 +2520,9 @@ $('addVisitBtn').onclick = async ()=>{
     $('cancelVisitBtn').style.display = 'none';
     $('visitDeleteFromFormBtn').style.display = 'none';
     $('visitPdfFromFormBtn').style.display = 'none';
+    $('visitPrintFromFormBtn').style.display = 'none';
     $('vDate').value = new Date().toISOString().slice(0,10);
-    $('vNotes').value = EXAM_TEMPLATE;
+    setVNotesTemplate(EXAM_TEMPLATE);
     $('vRadiology').value = '';
     $('vLabTests').value = '';
     btn.disabled = false; btn.textContent = 'حفظ الزيارة';
@@ -3109,7 +3191,7 @@ function buildInvoiceBodyHtml(items, total, notes){
 }
 
 /* ---------- توليد PDF (بشعار اختياري + QR) ---------- */
-async function exportRxTemplateAsPdf(bodyHtml, filenamePrefix, btn, dateOverride){
+async function exportRxTemplateAsPdf(bodyHtml, filenamePrefix, btn, dateOverride, printMode){
   const name = $('fName').value.trim() || '—';
   const todayStr = dateOverride || new Date().toLocaleDateString('ar-EG', {year:'numeric', month:'long', day:'numeric'});
   const tpl = $('rxTemplate');
@@ -3188,7 +3270,12 @@ async function exportRxTemplateAsPdf(bodyHtml, filenamePrefix, btn, dateOverride
     if(imgHeight > pageHeight){ imgHeight = pageHeight; imgWidth = imgHeight * ratio; }
     const x = (pageWidth - imgWidth) / 2;
     pdf.addImage(imgData, 'JPEG', x, 0, imgWidth, imgHeight);
-    pdf.save(`${filenamePrefix}-${name}${letterheadApplied ? '-بشعار' : ''}.pdf`);
+    if(printMode){
+      pdf.autoPrint();
+      window.open(pdf.output('bloburl'), '_blank');
+    } else {
+      pdf.save(`${filenamePrefix}-${name}${letterheadApplied ? '-بشعار' : ''}.pdf`);
+    }
   }catch(err){ showToast('تعذر إنشاء PDF', true); }
   finally{ btn.disabled = false; btn.textContent = orig; }
 }
@@ -3273,8 +3360,40 @@ function cancelHistoryEdit(type, resetFn){
   renderAllHistory();
 }
 $('cancelRxEditBtn').onclick = ()=> cancelHistoryEdit('rx', resetPrescriptionForm);
+$('clearRxFormBtn').onclick = ()=>{
+  if(!confirm('مسح كل محتويات الروشتة؟')) return;
+  cancelHistoryEdit('rx', resetPrescriptionForm);
+};
+$('saveRxAsPresetBtn').onclick = async ()=>{
+  const rx = collectPrescription();
+  if(!rx.medicines || !rx.medicines.length){ showToast('مفيش أدوية للحفظ', true); return; }
+  if(navigator.onLine === false){ showToast('محتاج نت عشان تحفظ في الروشتات الجاهزة', true); return; }
+  const medicineLines = rx.medicines.map(m => m.instructions ? `${m.name} - ${m.instructions}` : m.name);
+  const name = prompt('اسم الروشتة الجاهزة (سيبها فاضية لو عايزها من غير اسم):', '') || ('روشتة بدون اسم - ' + new Date().toLocaleDateString('ar-EG'));
+  const btn = $('saveRxAsPresetBtn');
+  btn.disabled = true; const orig = btn.textContent; btn.textContent = 'جاري الحفظ...';
+  const result = await mgrBridgeCall('addPresetRx', { data: { name, medicines: medicineLines } });
+  btn.disabled = false; btn.textContent = orig;
+  if(result.error){ showToast(result.error, true); return; }
+  showToast('اتحفظت في الروشتات الجاهزة ✓');
+  await tryFetchListsRemote(true);
+};
 $('cancelPhysioEditBtn').onclick = ()=> cancelHistoryEdit('physio', resetPhysioForm);
 $('cancelReportEditBtn').onclick = ()=> cancelHistoryEdit('report', resetReportForm);
+$('saveReportAsPresetBtn').onclick = async ()=>{
+  const text = $('reportBody').value.trim();
+  if(!text){ showToast('اكتب نص التقرير الأول', true); return; }
+  if(navigator.onLine === false){ showToast('محتاج نت عشان تحفظ في التقارير الجاهزة', true); return; }
+  const title = prompt('عنوان التقرير الجاهز:', $('reportType').value || 'تقرير');
+  if(!title) return;
+  const btn = $('saveReportAsPresetBtn');
+  btn.disabled = true; const orig = btn.textContent; btn.textContent = 'جاري الحفظ...';
+  const result = await mgrBridgeCall('addPresetReport', { data: { title, text } });
+  btn.disabled = false; btn.textContent = orig;
+  if(result.error){ showToast(result.error, true); return; }
+  showToast('اتحفظ في التقارير الجاهزة ✓');
+  await tryFetchListsRemote(true);
+};
 
 async function deleteHistoryEntryFromForm(type, resetFn){
   if(!editingHistoryId || editingHistoryType !== type) return;
@@ -3496,13 +3615,25 @@ $('downloadRxBtn').onclick = ()=>{
   if(!currentPatientId || String(currentPatientId).startsWith('temp_')){ showToast('احفظ بيانات المريض الأول', true); return; }
   exportRxTemplateAsPdf(buildRxBodyHtml(collectPrescription()), 'روشتة', $('downloadRxBtn'));
 };
+$('printRxBtn').onclick = ()=>{
+  if(!currentPatientId || String(currentPatientId).startsWith('temp_')){ showToast('احفظ بيانات المريض الأول', true); return; }
+  exportRxTemplateAsPdf(buildRxBodyHtml(collectPrescription()), 'روشتة', $('printRxBtn'), null, true);
+};
 $('downloadPhysioBtn').onclick = ()=>{
   if(!currentPatientId || String(currentPatientId).startsWith('temp_')){ showToast('احفظ بيانات المريض الأول', true); return; }
   exportRxTemplateAsPdf(buildPhysioBodyHtml(collectPhysio()), 'علاج-طبيعي', $('downloadPhysioBtn'));
 };
+$('printPhysioBtn').onclick = ()=>{
+  if(!currentPatientId || String(currentPatientId).startsWith('temp_')){ showToast('احفظ بيانات المريض الأول', true); return; }
+  exportRxTemplateAsPdf(buildPhysioBodyHtml(collectPhysio()), 'علاج-طبيعي', $('printPhysioBtn'), null, true);
+};
 $('downloadReportBtn').onclick = ()=>{
   if(!currentPatientId || String(currentPatientId).startsWith('temp_')){ showToast('احفظ بيانات المريض الأول', true); return; }
   exportRxTemplateAsPdf(buildReportBodyHtml(collectReport()), 'تقرير-طبي', $('downloadReportBtn'));
+};
+$('printReportBtn').onclick = ()=>{
+  if(!currentPatientId || String(currentPatientId).startsWith('temp_')){ showToast('احفظ بيانات المريض الأول', true); return; }
+  exportRxTemplateAsPdf(buildReportBodyHtml(collectReport()), 'تقرير-طبي', $('printReportBtn'), null, true);
 };
 
 /* ---------- الفواتير ---------- */
@@ -3590,6 +3721,7 @@ function startEditInvoice(inv){
   $('cancelInvoiceBtn').style.display = 'inline-block';
   $('invDeleteFromFormBtn').style.display = 'inline-block';
   $('invPdfFromFormBtn').style.display = 'inline-block';
+  $('invPrintFromFormBtn').style.display = 'inline-block';
   renderInvoiceItems();
   renderInvoices(currentInvoices);
   document.querySelector('#tab-invoices .kashf-main').scrollIntoView({behavior:'smooth', block:'start'});
@@ -3604,6 +3736,7 @@ function resetInvoiceForm(){
   $('cancelInvoiceBtn').style.display = 'none';
   $('invDeleteFromFormBtn').style.display = 'none';
   $('invPdfFromFormBtn').style.display = 'none';
+  $('invPrintFromFormBtn').style.display = 'none';
   renderInvoiceItems();
 }
 $('cancelInvoiceBtn').onclick = ()=>{
@@ -3620,6 +3753,13 @@ $('invPdfFromFormBtn').onclick = ()=>{
   if(!inv) return;
   const bodyHtml = buildInvoiceBodyHtml(inv.Items || [], inv.Total, inv.Notes);
   exportRxTemplateAsPdf(bodyHtml, 'فاتورة', $('invPdfFromFormBtn'), String(inv.InvoiceDate || '').slice(0,10));
+};
+$('invPrintFromFormBtn').onclick = ()=>{
+  if(!editingInvoiceId) return;
+  const inv = currentInvoices.find(x => x.id === editingInvoiceId);
+  if(!inv) return;
+  const bodyHtml = buildInvoiceBodyHtml(inv.Items || [], inv.Total, inv.Notes);
+  exportRxTemplateAsPdf(bodyHtml, 'فاتورة', $('invPrintFromFormBtn'), String(inv.InvoiceDate || '').slice(0,10), true);
 };
 
 $('saveInvoiceBtn').onclick = async ()=>{
@@ -5578,6 +5718,28 @@ window.addEventListener('offline', ()=>{
 window.addEventListener('online', ()=>{
   showToast('رجع الاتصال ✓ - بنحفظ أي تعديلات كانت متأخرة');
   flushWriteQueue();
+});
+
+/* خانة الشكوى بقت contenteditable عشان نقدر نلوّن القالب الجاهز بلون مختلف عن الكلام اللي بيكتبه الطبيب */
+function setVNotesTemplate(templateText){
+  const el = $('vNotes');
+  el.innerHTML = templateText ? `<span class="template-text">${escapeHtml(templateText)}</span>` : '';
+}
+function setVNotesPlain(text){
+  $('vNotes').textContent = text || '';
+}
+function getVNotesValue(){
+  return $('vNotes').innerText || '';
+}
+$('vNotes').addEventListener('focus', ()=>{
+  const span = $('vNotes').querySelector('.template-text');
+  if(!span) return;
+  const range = document.createRange();
+  range.selectNodeContents($('vNotes'));
+  range.collapse(false);
+  const sel = window.getSelection();
+  sel.removeAllRanges();
+  sel.addRange(range);
 });
 
 function initCollapsible(headerId, contentId, startOpen){
