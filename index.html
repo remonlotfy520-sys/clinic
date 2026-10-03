@@ -650,42 +650,18 @@
                 </div>
               </div>
 
-              <div class="collapsible-header" id="opDressing1Header" style="margin:10px 0 4px;">
-                <h2 style="margin:0; font-size:14px;">الغيار الأول</h2>
+              <div class="collapsible-header" id="opDressingHeader" style="margin:10px 0 4px;">
+                <h2 style="margin:0; font-size:14px;">الغيار والمتابعة</h2>
                 <span class="collapse-arrow">▾</span>
               </div>
-              <div class="collapsible-content" id="opDressing1Content">
+              <div class="collapsible-content" id="opDressingContent">
                 <div class="field">
-                  <select id="opDressing1"></select>
+                  <label>الغيارات</label>
+                  <div id="opDressingsRows"></div>
+                  <button type="button" class="btn btn-ghost" id="addDressingRowBtn" style="margin-top:4px;">+ إضافة غيار</button>
                 </div>
-              </div>
-
-              <div class="collapsible-header" id="opDressing2Header" style="margin:10px 0 4px;">
-                <h2 style="margin:0; font-size:14px;">الغيار الثاني</h2>
-                <span class="collapse-arrow">▾</span>
-              </div>
-              <div class="collapsible-content" id="opDressing2Content">
-                <div class="field">
-                  <select id="opDressing2"></select>
-                </div>
-              </div>
-
-              <div class="collapsible-header" id="opDressing3Header" style="margin:10px 0 4px;">
-                <h2 style="margin:0; font-size:14px;">الغيار الثالث</h2>
-                <span class="collapse-arrow">▾</span>
-              </div>
-              <div class="collapsible-content" id="opDressing3Content">
-                <div class="field">
-                  <select id="opDressing3"></select>
-                </div>
-              </div>
-
-              <div class="collapsible-header" id="opFollowUpsHeader" style="margin:10px 0 4px;">
-                <h2 style="margin:0; font-size:14px;">المتابعات</h2>
-                <span class="collapse-arrow">▾</span>
-              </div>
-              <div class="collapsible-content" id="opFollowUpsContent">
-                <div class="field">
+                <div class="field" style="margin-top:14px;">
+                  <label>المتابعات</label>
                   <textarea id="opFollowUps" style="min-height:100px;" placeholder="المتابعات..."></textarea>
                 </div>
               </div>
@@ -1552,10 +1528,41 @@ function fillSelectOptions(selectId, options){
 }
 function populateOperationDropdowns(){
   fillSelectOptions('opLocation', OPERATION_LOCATIONS);
-  fillSelectOptions('opDressing1', DRESSING_TYPES);
-  fillSelectOptions('opDressing2', DRESSING_TYPES);
-  fillSelectOptions('opDressing3', DRESSING_TYPES);
+  document.querySelectorAll('.op-dressing-select').forEach(sel=>{
+    const current = sel.value;
+    sel.innerHTML = DRESSING_TYPES.map(d => `<option value="${escapeHtml(d)}">${escapeHtml(d)}</option>`).join('');
+    if(current && DRESSING_TYPES.includes(current)) sel.value = current;
+  });
 }
+
+/* ---------- غيارات العملية (قائمة ديناميكية بعدد مفتوح) ---------- */
+function addDressingRow(value){
+  const box = $('opDressingsRows');
+  const row = document.createElement('div');
+  row.style.cssText = 'display:flex; gap:8px; margin-bottom:8px;';
+  const select = document.createElement('select');
+  select.className = 'op-dressing-select dropdown-add-select';
+  select.style.flex = '1';
+  select.innerHTML = DRESSING_TYPES.map(d => `<option value="${escapeHtml(d)}">${escapeHtml(d)}</option>`).join('');
+  if(value && DRESSING_TYPES.includes(value)) select.value = value;
+  const removeBtn = document.createElement('button');
+  removeBtn.type = 'button';
+  removeBtn.className = 'btn btn-outline-red';
+  removeBtn.style.padding = '6px 12px';
+  removeBtn.textContent = '✕';
+  removeBtn.addEventListener('click', ()=> row.remove());
+  row.appendChild(select);
+  row.appendChild(removeBtn);
+  box.appendChild(row);
+}
+function renderDressingsRows(dressings){
+  $('opDressingsRows').innerHTML = '';
+  (dressings || []).forEach(d => { if(d) addDressingRow(d); });
+}
+function getDressingsFromForm(){
+  return Array.from(document.querySelectorAll('.op-dressing-select')).map(s => s.value).filter(Boolean);
+}
+$('addDressingRowBtn').onclick = ()=> addDressingRow();
 
 /* ---------- Chips / Autocomplete / قوايم منسدلة تضيف بنود ---------- */
 function getActiveChips(containerId){
@@ -1785,10 +1792,7 @@ initCollapsible('rxRecsHeader', 'rxRecsContent');
 initCollapsible('rxRadLabsHeader', 'rxRadLabsContent');
 initCollapsible('opLocationHeader', 'opLocationContent');
 initCollapsible('opCostHeader', 'opCostContent');
-initCollapsible('opDressing1Header', 'opDressing1Content');
-initCollapsible('opDressing2Header', 'opDressing2Content');
-initCollapsible('opDressing3Header', 'opDressing3Content');
-initCollapsible('opFollowUpsHeader', 'opFollowUpsContent');
+initCollapsible('opDressingHeader', 'opDressingContent');
 initCollapsible('opNotesHeader', 'opNotesContent');
 initCollapsible('opEntryGoogleDocHeader', 'opEntryGoogleDocContent');
 initCollapsible('caseGoogleDocHeader', 'caseGoogleDocContent');
@@ -2704,9 +2708,8 @@ function startEditOperation(o){
   $('opName').value = o.OperationName || '';
   $('opLocation').value = o.Location || '';
   $('opCost').value = o.Cost || '';
-  $('opDressing1').value = o.Dressing1 || '';
-  $('opDressing2').value = o.Dressing2 || '';
-  $('opDressing3').value = o.Dressing3 || '';
+  const dressings = (o.Dressings && o.Dressings.length) ? o.Dressings : [o.Dressing1, o.Dressing2, o.Dressing3].filter(Boolean);
+  renderDressingsRows(dressings);
   $('opFollowUps').value = o.FollowUps || '';
   $('opNotes').value = o.Notes || '';
   $('opEntryGoogleDocLink').value = o.GoogleDocLink || '';
@@ -2714,10 +2717,7 @@ function startEditOperation(o){
   setCollapsibleState('opEntryGoogleDocHeader', 'opEntryGoogleDocContent', !!o.GoogleDocLink);
   setCollapsibleState('opLocationHeader', 'opLocationContent', !!o.Location);
   setCollapsibleState('opCostHeader', 'opCostContent', !!o.Cost);
-  setCollapsibleState('opDressing1Header', 'opDressing1Content', !!o.Dressing1);
-  setCollapsibleState('opDressing2Header', 'opDressing2Content', !!o.Dressing2);
-  setCollapsibleState('opDressing3Header', 'opDressing3Content', !!o.Dressing3);
-  setCollapsibleState('opFollowUpsHeader', 'opFollowUpsContent', !!o.FollowUps);
+  setCollapsibleState('opDressingHeader', 'opDressingContent', !!(dressings.length || o.FollowUps));
   setCollapsibleState('opNotesHeader', 'opNotesContent', !!o.Notes);
   $('addOperationBtn').textContent = 'حفظ التعديل';
   $('cancelOperationBtn').style.display = 'inline-block';
@@ -2733,16 +2733,14 @@ function resetOperationForm(){
   $('opDeleteFromFormBtn').style.display = 'none';
   $('opDate').value = new Date().toISOString().slice(0,10);
   ['opName','opCost','opFollowUps','opNotes'].forEach(id => $(id).value = '');
-  ['opLocation','opDressing1','opDressing2','opDressing3'].forEach(id => $(id).value = '');
+  $('opLocation').value = '';
+  renderDressingsRows([]);
   $('opEntryGoogleDocLink').value = '';
   $('opEntryGoogleDocPreviewBox').innerHTML = '';
   setCollapsibleState('opEntryGoogleDocHeader', 'opEntryGoogleDocContent', false);
   setCollapsibleState('opLocationHeader', 'opLocationContent', false);
   setCollapsibleState('opCostHeader', 'opCostContent', false);
-  setCollapsibleState('opDressing1Header', 'opDressing1Content', false);
-  setCollapsibleState('opDressing2Header', 'opDressing2Content', false);
-  setCollapsibleState('opDressing3Header', 'opDressing3Content', false);
-  setCollapsibleState('opFollowUpsHeader', 'opFollowUpsContent', false);
+  setCollapsibleState('opDressingHeader', 'opDressingContent', false);
   setCollapsibleState('opNotesHeader', 'opNotesContent', false);
 }
 $('cancelOperationBtn').onclick = ()=>{
@@ -2766,9 +2764,7 @@ $('addOperationBtn').onclick = async ()=>{
     OperationName: $('opName').value.trim(),
     Location: $('opLocation').value,
     Cost: $('opCost').value.trim(),
-    Dressing1: $('opDressing1').value,
-    Dressing2: $('opDressing2').value,
-    Dressing3: $('opDressing3').value,
+    Dressings: getDressingsFromForm(),
     FollowUps: $('opFollowUps').value.trim(),
     Notes: $('opNotes').value.trim(),
     GoogleDocLink: $('opEntryGoogleDocLink').value.trim()
