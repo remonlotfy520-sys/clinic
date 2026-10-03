@@ -531,13 +531,13 @@
               </div>
               <div class="field">
                 <label>الشكوى والكشف</label>
-                <div class="highlight-toolbar">
+                <div class="highlight-toolbar" data-target="vNotes">
                   <span class="hint" style="align-self:center; margin-left:4px;">حدّد كلمة وعلّم عليها:</span>
                   <button type="button" class="highlight-swatch" data-color="#d32f2f" style="background:#d32f2f;" title="أحمر"></button>
                   <button type="button" class="highlight-swatch" data-color="#1976d2" style="background:#1976d2;" title="أزرق"></button>
                   <button type="button" class="highlight-swatch" data-color="#388e3c" style="background:#388e3c;" title="أخضر"></button>
                   <button type="button" class="highlight-swatch" data-color="#f57c00" style="background:#f57c00;" title="برتقالي"></button>
-                  <button type="button" class="btn btn-ghost" id="removeHighlightBtn" style="padding:3px 10px; font-size:11px;">إلغاء التلوين</button>
+                  <button type="button" class="btn btn-ghost remove-highlight-btn" style="padding:3px 10px; font-size:11px;">إلغاء التلوين</button>
                 </div>
                 <div id="vNotes" class="vnotes-editable" contenteditable="true" dir="ltr" data-placeholder="الشكوى، الفحص، التشخيص، العلاج..."></div>
               </div>
@@ -550,7 +550,15 @@
                 <div class="field">
                   <label>الأشعة</label>
                   <select id="vRadiologySelect" class="dropdown-add-select" style="margin-bottom:8px;"></select>
-                  <textarea id="vRadiology" dir="ltr" style="min-height:80px; text-align:left;" placeholder="الأشعة المطلوبة أو نتائجها..."></textarea>
+                  <div class="highlight-toolbar" data-target="vRadiology">
+                    <span class="hint" style="align-self:center; margin-left:4px;">حدّد كلمة وعلّم عليها:</span>
+                    <button type="button" class="highlight-swatch" data-color="#d32f2f" style="background:#d32f2f;" title="أحمر"></button>
+                    <button type="button" class="highlight-swatch" data-color="#1976d2" style="background:#1976d2;" title="أزرق"></button>
+                    <button type="button" class="highlight-swatch" data-color="#388e3c" style="background:#388e3c;" title="أخضر"></button>
+                    <button type="button" class="highlight-swatch" data-color="#f57c00" style="background:#f57c00;" title="برتقالي"></button>
+                    <button type="button" class="btn btn-ghost remove-highlight-btn" style="padding:3px 10px; font-size:11px;">إلغاء التلوين</button>
+                  </div>
+                  <div id="vRadiology" class="vnotes-editable" contenteditable="true" dir="ltr" style="min-height:80px;" data-placeholder="الأشعة المطلوبة أو نتائجها..."></div>
                 </div>
                 <div class="field">
                   <label>رابط أرشيف الأشعة</label>
@@ -559,7 +567,15 @@
                 <div class="field">
                   <label>التحاليل</label>
                   <select id="vLabTestsSelect" class="dropdown-add-select" style="margin-bottom:8px;"></select>
-                  <textarea id="vLabTests" dir="ltr" style="min-height:80px; text-align:left;" placeholder="التحاليل المطلوبة أو نتائجها..."></textarea>
+                  <div class="highlight-toolbar" data-target="vLabTests">
+                    <span class="hint" style="align-self:center; margin-left:4px;">حدّد كلمة وعلّم عليها:</span>
+                    <button type="button" class="highlight-swatch" data-color="#d32f2f" style="background:#d32f2f;" title="أحمر"></button>
+                    <button type="button" class="highlight-swatch" data-color="#1976d2" style="background:#1976d2;" title="أزرق"></button>
+                    <button type="button" class="highlight-swatch" data-color="#388e3c" style="background:#388e3c;" title="أخضر"></button>
+                    <button type="button" class="highlight-swatch" data-color="#f57c00" style="background:#f57c00;" title="برتقالي"></button>
+                    <button type="button" class="btn btn-ghost remove-highlight-btn" style="padding:3px 10px; font-size:11px;">إلغاء التلوين</button>
+                  </div>
+                  <div id="vLabTests" class="vnotes-editable" contenteditable="true" dir="ltr" style="min-height:80px;" data-placeholder="التحاليل المطلوبة أو نتائجها..."></div>
                 </div>
               </div>
 
@@ -1588,7 +1604,12 @@ function renderDropdownAppendToTextarea(selectId, textareaId, list){
   select.onchange = ()=>{
     if(!select.value) return;
     const ta = $(textareaId);
-    ta.value = ta.value.trim() ? (ta.value.replace(/\n+$/,'') + '\n' + select.value) : select.value;
+    if(ta.isContentEditable){
+      const currentText = ta.innerText || '';
+      setEditableValue(textareaId, currentText.trim() ? (currentText.replace(/\n+$/,'') + '\n' + select.value) : select.value);
+    } else {
+      ta.value = ta.value.trim() ? (ta.value.replace(/\n+$/,'') + '\n' + select.value) : select.value;
+    }
     select.value = '';
   };
 }
@@ -2169,8 +2190,8 @@ function openPatient(id){
   $('fHasOperation').checked = !!p.HasOperation;
   $('vDate').value = new Date().toISOString().slice(0,10);
   setVNotesTemplate(EXAM_TEMPLATE);
-  $('vRadiology').value = '';
-  $('vLabTests').value = '';
+  setEditableValue('vRadiology', '');
+  setEditableValue('vLabTests', '');
   setCollapsibleState('kashfRadLabsHeader', 'kashfRadLabsContent', false);
   editingVisitId = null;
   $('addVisitBtn').textContent = 'حفظ الزيارة';
@@ -2240,7 +2261,7 @@ $('newPatientBtn').onclick = ()=>{
   setCollapsibleState('imagesGoogleDocHeader', 'imagesGoogleDocContent', false);
   setCollapsibleState('opsGoogleDocHeader', 'opsGoogleDocContent', false);
   $('vDate').value = new Date().toISOString().slice(0,10);
-  setVNotesTemplate(EXAM_TEMPLATE); $('vRadiology').value = ''; $('vLabTests').value = '';
+  setVNotesTemplate(EXAM_TEMPLATE); setEditableValue('vRadiology', ''); setEditableValue('vLabTests', '');
   editingVisitId = null;
   $('addVisitBtn').textContent = 'حفظ الزيارة';
   $('cancelVisitBtn').style.display = 'none';
@@ -2453,8 +2474,8 @@ function buildVisitBodyHtml(visit){
   const section = (title, innerHtml) => `<div style="margin-bottom:18px;"><div style="font-weight:700; font-size:10pt; color:#1F4A40; margin-bottom:6px;">${title}</div>${innerHtml}</div>`;
   let html = '';
   html += section('الشكوى والكشف', renderVisitNotesForPdf(visit.VisitNotes));
-  if(visit.Radiology) html += section('الأشعة', renderArabicTextBlock(visit.Radiology));
-  if(visit.LabTests) html += section('التحاليل', renderArabicTextBlock(visit.LabTests));
+  if(visit.Radiology) html += section('الأشعة', renderVisitNotesForPdf(visit.Radiology));
+  if(visit.LabTests) html += section('التحاليل', renderVisitNotesForPdf(visit.LabTests));
   return html;
 }
 
@@ -2478,8 +2499,8 @@ function startEditVisit(visit){
   editingVisitId = visit.id;
   $('vDate').value = String(visit.VisitDate || '').slice(0,10);
   setVNotesPlain(visit.VisitNotes || '');
-  $('vRadiology').value = visit.Radiology || '';
-  $('vLabTests').value = visit.LabTests || '';
+  setEditableValue('vRadiology', visit.Radiology || '');
+  setEditableValue('vLabTests', visit.LabTests || '');
   setCollapsibleState('kashfRadLabsHeader', 'kashfRadLabsContent', !!(visit.Radiology || visit.LabTests));
   $('addVisitBtn').textContent = 'حفظ التعديل';
   $('cancelVisitBtn').style.display = 'inline-block';
@@ -2516,8 +2537,8 @@ function resetVisitForm(){
   $('visitPrintFromFormBtn').style.display = 'none';
   $('vDate').value = new Date().toISOString().slice(0,10);
   setVNotesTemplate(EXAM_TEMPLATE);
-  $('vRadiology').value = '';
-  $('vLabTests').value = '';
+  setEditableValue('vRadiology', '');
+  setEditableValue('vLabTests', '');
   setCollapsibleState('kashfRadLabsHeader', 'kashfRadLabsContent', false);
 }
 $('cancelVisitBtn').onclick = ()=>{
@@ -2532,8 +2553,8 @@ $('addVisitBtn').onclick = async ()=>{
   }
   const date = $('vDate').value;
   const notes = getVNotesValue().trim();
-  const radiology = $('vRadiology').value.trim();
-  const labTests = $('vLabTests').value.trim();
+  const radiology = getEditableValue('vRadiology').trim();
+  const labTests = getEditableValue('vLabTests').trim();
   if(!date){ showToast('اختار تاريخ الزيارة', true); return; }
   const data = { VisitDate: date, VisitNotes: notes, Radiology: radiology, LabTests: labTests };
   const patientFlags = { RadiologyLink: $('fRadiologyLink').value.trim(), HasOperation: $('fHasOperation').checked };
@@ -2550,8 +2571,8 @@ $('addVisitBtn').onclick = async ()=>{
     $('visitPrintFromFormBtn').style.display = 'none';
     $('vDate').value = new Date().toISOString().slice(0,10);
     setVNotesTemplate(EXAM_TEMPLATE);
-    $('vRadiology').value = '';
-    $('vLabTests').value = '';
+    setEditableValue('vRadiology', '');
+    setEditableValue('vLabTests', '');
     btn.disabled = false; btn.textContent = 'حفظ الزيارة';
   };
 
@@ -5766,25 +5787,38 @@ function setVNotesTemplate(templateText){
   el.innerHTML = templateText ? `<span class="template-text">${escapeHtml(templateText)}</span>` : '';
 }
 function setVNotesPlain(value){
-  const el = $('vNotes');
-  const looksLikeOwnHtml = /<span[^>]*>|<div[^>]*>|<br\s*\/?>/.test(String(value || ''));
-  el.innerHTML = looksLikeOwnHtml ? value : escapeHtml(value || '');
+  setEditableValue('vNotes', value);
 }
 function getVNotesValue(){
   return $('vNotes').innerHTML || '';
 }
-/* تلوين كلمة محددة في خانة الشكوى - زي الهايلايت، مش بيغيّر لون باقي الكلام */
-document.querySelectorAll('.highlight-swatch').forEach(btn=>{
-  btn.addEventListener('mousedown', (e)=>{
-    e.preventDefault(); // عشان متاخدش الفوكس من الاختيار المحدد قبل ما نلوّنه
-    document.execCommand('styleWithCSS', false, true);
-    document.execCommand('foreColor', false, btn.dataset.color);
+/* دوال عامة لأي خانة قابلة للتعديل وتدعم التلوين (الشكوى، الأشعة، التحاليل بالكشف) */
+function setEditableValue(elId, value){
+  const el = $(elId);
+  const looksLikeOwnHtml = /<span[^>]*>|<div[^>]*>|<br\s*\/?>/.test(String(value || ''));
+  el.innerHTML = looksLikeOwnHtml ? value : escapeHtml(value || '');
+}
+function getEditableValue(elId){
+  return $(elId).innerHTML || '';
+}
+/* تلوين كلمة محددة - زي الهايلايت، مش بيغيّر لون باقي الكلام - شغالة على أي خانة فيها شريط ألوان */
+document.querySelectorAll('.highlight-toolbar').forEach(toolbar=>{
+  const targetId = toolbar.dataset.target;
+  toolbar.querySelectorAll('.highlight-swatch').forEach(btn=>{
+    btn.addEventListener('mousedown', (e)=>{
+      e.preventDefault(); // عشان متاخدش الفوكس من الاختيار المحدد قبل ما نلوّنه
+      $(targetId).focus();
+      document.execCommand('styleWithCSS', false, true);
+      document.execCommand('foreColor', false, btn.dataset.color);
+    });
   });
-});
-$('removeHighlightBtn').addEventListener('mousedown', (e)=>{
-  e.preventDefault();
-  document.execCommand('styleWithCSS', false, true);
-  document.execCommand('foreColor', false, '#000000');
+  const removeBtn = toolbar.querySelector('.remove-highlight-btn');
+  removeBtn.addEventListener('mousedown', (e)=>{
+    e.preventDefault();
+    $(targetId).focus();
+    document.execCommand('styleWithCSS', false, true);
+    document.execCommand('foreColor', false, '#000000');
+  });
 });
 $('vNotes').addEventListener('focus', ()=>{
   const span = $('vNotes').querySelector('.template-text');
