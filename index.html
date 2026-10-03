@@ -1070,11 +1070,22 @@
   </div>
 </div>
 
+<div id="shortcutDatePickerModal" style="display:none; position:fixed; inset:0; background:rgba(31,74,64,.45); z-index:400; align-items:center; justify-content:center; padding:20px;">
+  <div class="card" style="max-width:300px; width:100%;">
+    <h2 style="margin:0 0 12px;">اختار التاريخ</h2>
+    <input type="date" id="shortcutDatePickerInput" style="width:100%; margin-bottom:14px;">
+    <div style="display:flex; gap:10px;">
+      <button class="btn btn-primary" id="shortcutDatePickerConfirmBtn" style="flex:1;">إدراج</button>
+      <button class="btn btn-ghost" id="shortcutDatePickerCancelBtn">إلغاء</button>
+    </div>
+  </div>
+</div>
+
 <div id="shortcutsManagerModal" style="display:none; position:fixed; inset:0; background:rgba(31,74,64,.45); z-index:300; align-items:center; justify-content:center; padding:20px;">
   <div class="card" style="max-width:440px; width:100%; max-height:85vh; overflow-y:auto; position:relative;">
     <button id="closeShortcutsManagerBtn" class="btn btn-ghost" style="position:absolute; top:14px; left:14px; padding:6px 12px;">✕</button>
     <h2 style="margin:0 0 8px;">⌨️ اختصارات الكتابة</h2>
-    <div class="hint" style="margin-bottom:16px;">اكتب الاختصار في أي خانة كتابة في التطبيق وامسح مسافة بعده، وهيتحول تلقائي للنص الكامل. اكتب "DATE" في خانة "النص الكامل" عشان يتحول لتاريخ النهاردة تلقائي.</div>
+    <div class="hint" style="margin-bottom:16px;">اكتب الاختصار في أي خانة كتابة في التطبيق وامسح مسافة بعده، وهيتحول تلقائي للنص الكامل.<br>اكتب "DATE" في خانة "النص الكامل" عشان يتحول لتاريخ النهاردة تلقائي.<br>اكتب "PICKDATE" عشان يفتحلك تقويم تختار منه أي تاريخ تاني.</div>
     <div class="field-row">
       <div class="field"><label>الاختصار</label><input type="text" id="shortcutKeyInput" placeholder="زي: imp"></div>
       <div class="field"><label>النص الكامل</label><input type="text" id="shortcutValueInput" placeholder="زي: improving أو DATE"></div>
@@ -4846,6 +4857,34 @@ $('addShortcutBtn').onclick = ()=>{
 };
 
 /* بيوسّع الاختصار لما تدوس مسافة بعده، في أي خانة كتابة عادية أو خانة من النوع القابل للتلوين */
+let pendingDateShortcut = null;
+function openShortcutDatePicker(){
+  $('shortcutDatePickerInput').value = new Date().toISOString().slice(0,10);
+  $('shortcutDatePickerModal').style.display = 'flex';
+}
+$('shortcutDatePickerConfirmBtn').onclick = ()=>{
+  const dateVal = $('shortcutDatePickerInput').value;
+  if(!dateVal || !pendingDateShortcut) return;
+  const formatted = new Date(dateVal + 'T00:00:00').toLocaleDateString('ar-EG', {year:'numeric', month:'long', day:'numeric'});
+  if(pendingDateShortcut.type === 'field'){
+    const { el, start, end } = pendingDateShortcut;
+    el.value = el.value.slice(0, start) + formatted + ' ' + el.value.slice(end);
+    el.focus();
+    el.selectionStart = el.selectionEnd = start + formatted.length + 1;
+  } else if(pendingDateShortcut.type === 'editable'){
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(pendingDateShortcut.range);
+    document.execCommand('insertText', false, formatted + ' ');
+  }
+  pendingDateShortcut = null;
+  $('shortcutDatePickerModal').style.display = 'none';
+};
+$('shortcutDatePickerCancelBtn').onclick = ()=>{
+  pendingDateShortcut = null;
+  $('shortcutDatePickerModal').style.display = 'none';
+};
+
 function expandShortcutInField(el){
   const shortcuts = getShortcuts();
   const value = el.value;
@@ -4855,8 +4894,13 @@ function expandShortcutInField(el){
   if(!match) return;
   const word = match[1];
   if(shortcuts[word] === undefined) return;
-  const expansion = resolveShortcutExpansion(shortcuts[word]);
   const start = cursorPos - match[0].length;
+  if(String(shortcuts[word]).trim().toUpperCase() === 'PICKDATE'){
+    pendingDateShortcut = { type:'field', el, start, end: cursorPos };
+    openShortcutDatePicker();
+    return;
+  }
+  const expansion = resolveShortcutExpansion(shortcuts[word]);
   el.value = value.slice(0, start) + expansion + ' ' + value.slice(cursorPos);
   const newPos = start + expansion.length + 1;
   el.selectionStart = el.selectionEnd = newPos;
@@ -4873,13 +4917,18 @@ function expandShortcutInEditable(){
   if(!match) return;
   const word = match[1];
   if(shortcuts[word] === undefined) return;
-  const expansion = resolveShortcutExpansion(shortcuts[word]);
   const start = range.startOffset - match[0].length;
-  const newRange = document.createRange();
-  newRange.setStart(node, start);
-  newRange.setEnd(node, range.startOffset);
+  const wordRange = document.createRange();
+  wordRange.setStart(node, start);
+  wordRange.setEnd(node, range.startOffset);
+  if(String(shortcuts[word]).trim().toUpperCase() === 'PICKDATE'){
+    pendingDateShortcut = { type:'editable', range: wordRange.cloneRange() };
+    openShortcutDatePicker();
+    return;
+  }
+  const expansion = resolveShortcutExpansion(shortcuts[word]);
   sel.removeAllRanges();
-  sel.addRange(newRange);
+  sel.addRange(wordRange);
   document.execCommand('insertText', false, expansion + ' ');
 }
 document.addEventListener('keyup', (e)=>{
