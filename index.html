@@ -1071,6 +1071,24 @@
   </div>
 </div>
 
+<div id="exportSectionsModal" style="display:none; position:fixed; inset:0; background:rgba(31,74,64,.45); z-index:400; align-items:center; justify-content:center; padding:20px;">
+  <div class="card" style="max-width:360px; width:100%;">
+    <h2 style="margin:0 0 6px;">اختار الأقسام اللي تتصدّر</h2>
+    <div class="hint" style="margin-bottom:14px;">بيانات المريض الأساسية بتتصدّر دايمًا</div>
+    <label style="display:flex; align-items:center; gap:8px; margin-bottom:10px; cursor:pointer;"><input type="checkbox" id="exportSecVisits" checked> الكشف والزيارات</label>
+    <label style="display:flex; align-items:center; gap:8px; margin-bottom:10px; cursor:pointer;"><input type="checkbox" id="exportSecOps" checked> العمليات</label>
+    <label style="display:flex; align-items:center; gap:8px; margin-bottom:10px; cursor:pointer;"><input type="checkbox" id="exportSecRx" checked> الروشتات</label>
+    <label style="display:flex; align-items:center; gap:8px; margin-bottom:10px; cursor:pointer;"><input type="checkbox" id="exportSecPhysio" checked> العلاج الطبيعي</label>
+    <label style="display:flex; align-items:center; gap:8px; margin-bottom:10px; cursor:pointer;"><input type="checkbox" id="exportSecReports" checked> التقارير الطبية</label>
+    <label style="display:flex; align-items:center; gap:8px; margin-bottom:10px; cursor:pointer;"><input type="checkbox" id="exportSecInvoices" checked> الفواتير</label>
+    <label style="display:flex; align-items:center; gap:8px; margin-bottom:16px; cursor:pointer;"><input type="checkbox" id="exportSecImages" checked> الصور</label>
+    <div style="display:flex; gap:10px;">
+      <button class="btn btn-primary" id="exportSectionsConfirmBtn" style="flex:1;">تصدير</button>
+      <button class="btn btn-ghost" id="exportSectionsCancelBtn">إلغاء</button>
+    </div>
+  </div>
+</div>
+
 <div id="shortcutDatePickerModal" style="display:none; position:fixed; inset:0; background:rgba(31,74,64,.45); z-index:400; align-items:center; justify-content:center; padding:20px;">
   <div class="card" style="max-width:300px; width:100%;">
     <h2 style="margin:0 0 12px;">اختار التاريخ</h2>
@@ -3294,7 +3312,26 @@ async function exportFullHtmlAsMultiPagePdf(bodyHtml, filename){
   pdf.save(`${filename}.pdf`);
 }
 
-async function exportFullPatientRecord(){
+$('exportFullRecordBtn').onclick = ()=>{
+  if(!currentPatientId || String(currentPatientId).startsWith('temp_')){ showToast('احفظ بيانات المريض الأول', true); return; }
+  $('exportSectionsModal').style.display = 'flex';
+};
+$('exportSectionsCancelBtn').onclick = ()=>{ $('exportSectionsModal').style.display = 'none'; };
+$('exportSectionsConfirmBtn').onclick = ()=>{
+  const sections = {
+    visits: $('exportSecVisits').checked,
+    ops: $('exportSecOps').checked,
+    rx: $('exportSecRx').checked,
+    physio: $('exportSecPhysio').checked,
+    reports: $('exportSecReports').checked,
+    invoices: $('exportSecInvoices').checked,
+    images: $('exportSecImages').checked
+  };
+  $('exportSectionsModal').style.display = 'none';
+  exportFullPatientRecord(sections);
+};
+
+async function exportFullPatientRecord(sections){
   if(!currentPatientId || String(currentPatientId).startsWith('temp_')){ showToast('احفظ بيانات المريض الأول', true); return; }
   if(navigator.onLine === false){ showToast('التصدير محتاج نت', true); return; }
   const btn = $('exportFullRecordBtn');
@@ -3305,21 +3342,31 @@ async function exportFullPatientRecord(){
     const phone = $('fPhone').value.trim();
     const clinicNumber = $('fClinicNumber').value.trim();
 
-    const visitsSnap = await getDocs(query(collection(db, "patients", currentPatientId, "visits"), orderBy('VisitDate', 'desc')));
-    const visits = []; visitsSnap.forEach(d => visits.push({ id: d.id, ...d.data() }));
-    const opsSnap = await getDocs(collection(db, "patients", currentPatientId, "operations"));
-    const ops = []; opsSnap.forEach(d => ops.push({ id: d.id, ...d.data() }));
-    const histSnap = await getDocs(collection(db, "patients", currentPatientId, "history"));
-    const hist = []; histSnap.forEach(d => hist.push({ id: d.id, ...d.data() }));
-    const invSnap = await getDocs(collection(db, "patients", currentPatientId, "invoices"));
-    const invs = []; invSnap.forEach(d => invs.push({ id: d.id, ...d.data() }));
+    let visits = [], ops = [], hist = [], invs = [], images = [];
 
-    btn.textContent = 'جاري تحميل الصور...';
-    let images = [];
-    try{
-      const imgData = await fetchPatientImagesRemote(currentPatientId);
-      images = imgData.images || [];
-    }catch(e){ /* نكمّل من غير صور لو حصل خطأ في تحميلها */ }
+    if(sections.visits){
+      const visitsSnap = await getDocs(query(collection(db, "patients", currentPatientId, "visits"), orderBy('VisitDate', 'desc')));
+      visitsSnap.forEach(d => visits.push({ id: d.id, ...d.data() }));
+    }
+    if(sections.ops){
+      const opsSnap = await getDocs(collection(db, "patients", currentPatientId, "operations"));
+      opsSnap.forEach(d => ops.push({ id: d.id, ...d.data() }));
+    }
+    if(sections.rx || sections.physio || sections.reports){
+      const histSnap = await getDocs(collection(db, "patients", currentPatientId, "history"));
+      histSnap.forEach(d => hist.push({ id: d.id, ...d.data() }));
+    }
+    if(sections.invoices){
+      const invSnap = await getDocs(collection(db, "patients", currentPatientId, "invoices"));
+      invSnap.forEach(d => invs.push({ id: d.id, ...d.data() }));
+    }
+    if(sections.images){
+      btn.textContent = 'جاري تحميل الصور...';
+      try{
+        const imgData = await fetchPatientImagesRemote(currentPatientId);
+        images = imgData.images || [];
+      }catch(e){ /* نكمّل من غير صور لو حصل خطأ في تحميلها */ }
+    }
 
     let html = `
       <div style="font-size:15pt; font-weight:800; margin-bottom:4px;">${escapeHtml(name)}</div>
@@ -3331,10 +3378,10 @@ async function exportFullPatientRecord(){
     const section = (title, inner) => `<div style="margin:22px 0;"><div style="font-weight:800; font-size:12.5pt; color:#1F4A40; border-bottom:2px solid #1F4A40; padding-bottom:4px; margin-bottom:12px;">${title}</div>${inner}</div>`;
     const entryWrap = (date, inner) => `<div style="margin-bottom:14px; padding-bottom:12px; border-bottom:1px solid #e2ddce;"><div style="font-weight:700; color:#555; margin-bottom:6px;">${escapeHtml(date)}</div>${inner}</div>`;
 
-    if(visits.length){
+    if(sections.visits && visits.length){
       html += section('الكشف والزيارات', visits.map(v => entryWrap(String(v.VisitDate || '').slice(0,10), buildVisitBodyHtml(v))).join(''));
     }
-    if(ops.length){
+    if(sections.ops && ops.length){
       html += section('العمليات', ops.map(o => entryWrap(String(o.OperationDate || '').slice(0,10), `
         <div style="font-weight:700;">${escapeHtml(o.OperationName || '')}</div>
         ${o.Location ? `<div>مكان العملية: ${escapeHtml(o.Location)}</div>` : ''}
@@ -3344,37 +3391,43 @@ async function exportFullPatientRecord(){
         ${o.Notes ? `<div>ملاحظات: ${escapeHtml(o.Notes)}</div>` : ''}
       `)).join(''));
     }
-    const rxEntries = hist.filter(h => h.Type === 'rx');
-    if(rxEntries.length){
-      html += section('الروشتات', rxEntries.map(h=>{
-        let c = {}; try{ c = JSON.parse(h.Content || '{}'); }catch(e){}
-        return entryWrap(String(h.HistoryDate || '').slice(0,10), buildRxBodyHtml(c));
-      }).join(''));
+    if(sections.rx){
+      const rxEntries = hist.filter(h => h.Type === 'rx');
+      if(rxEntries.length){
+        html += section('الروشتات', rxEntries.map(h=>{
+          let c = {}; try{ c = JSON.parse(h.Content || '{}'); }catch(e){}
+          return entryWrap(String(h.HistoryDate || '').slice(0,10), buildRxBodyHtml(c));
+        }).join(''));
+      }
     }
-    const physioEntries = hist.filter(h => h.Type === 'physio');
-    if(physioEntries.length){
-      html += section('العلاج الطبيعي', physioEntries.map(h=>{
-        let c = {}; try{ c = JSON.parse(h.Content || '{}'); }catch(e){}
-        return entryWrap(String(h.HistoryDate || '').slice(0,10), buildPhysioBodyHtml(c));
-      }).join(''));
+    if(sections.physio){
+      const physioEntries = hist.filter(h => h.Type === 'physio');
+      if(physioEntries.length){
+        html += section('العلاج الطبيعي', physioEntries.map(h=>{
+          let c = {}; try{ c = JSON.parse(h.Content || '{}'); }catch(e){}
+          return entryWrap(String(h.HistoryDate || '').slice(0,10), buildPhysioBodyHtml(c));
+        }).join(''));
+      }
     }
-    const reportEntries = hist.filter(h => h.Type === 'report');
-    if(reportEntries.length){
-      html += section('التقارير الطبية', reportEntries.map(h=>{
-        let c = {}; try{ c = JSON.parse(h.Content || '{}'); }catch(e){}
-        return entryWrap(String(h.HistoryDate || '').slice(0,10), buildReportBodyHtml(c));
-      }).join(''));
+    if(sections.reports){
+      const reportEntries = hist.filter(h => h.Type === 'report');
+      if(reportEntries.length){
+        html += section('التقارير الطبية', reportEntries.map(h=>{
+          let c = {}; try{ c = JSON.parse(h.Content || '{}'); }catch(e){}
+          return entryWrap(String(h.HistoryDate || '').slice(0,10), buildReportBodyHtml(c));
+        }).join(''));
+      }
     }
-    if(invs.length){
+    if(sections.invoices && invs.length){
       html += section('الفواتير', invs.map(inv => entryWrap(String(inv.InvoiceDate || '').slice(0,10), buildInvoiceBodyHtml(inv.Items || [], inv.Total, inv.Notes))).join(''));
     }
-    if(images.length){
+    if(sections.images && images.length){
       const groups = groupImagesForTimeline(images);
       html += section('الصور', groups.map(g => `
         <div style="margin-bottom:16px;">
           <div style="font-weight:700; margin-bottom:8px;">${escapeHtml(String(g.date || '').slice(0,10))}${g.note ? ' - ' + escapeHtml(g.note) : ''}</div>
           <div style="display:flex; flex-wrap:wrap; gap:8px;">
-            ${g.items.map(im => im.dataUrl ? `<img src="${im.dataUrl}" style="width:140px; height:140px; object-fit:cover; border-radius:8px; border:1px solid #e2ddce;">` : '').join('')}
+            ${g.items.map(im => im.dataUrl ? `<img src="${im.dataUrl}" style="max-width:160px; max-height:160px; width:auto; height:auto; border-radius:8px; border:1px solid #e2ddce;">` : '').join('')}
           </div>
         </div>`).join(''));
     }
@@ -3387,7 +3440,6 @@ async function exportFullPatientRecord(){
   }
   btn.disabled = false; btn.textContent = orig;
 }
-$('exportFullRecordBtn').onclick = exportFullPatientRecord;
 
 async function exportRxTemplateAsPdf(bodyHtml, filenamePrefix, btn, dateOverride, printMode){
   const name = $('fName').value.trim() || '—';
