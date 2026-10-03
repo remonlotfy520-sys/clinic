@@ -657,8 +657,9 @@
               <div class="collapsible-content" id="opDressingContent">
                 <div class="field">
                   <label>الغيارات</label>
-                  <div id="opDressingsRows"></div>
-                  <button type="button" class="btn btn-ghost" id="addDressingRowBtn" style="margin-top:4px;">+ إضافة غيار</button>
+                  <select id="opDressingAddSelect" class="dropdown-add-select"></select>
+                  <div id="opDressingsRows" style="margin-top:10px;"></div>
+                  <button type="button" class="btn btn-ghost" id="addDressingRowBtn" style="margin-top:4px;">+ إضافة غيار فاضي</button>
                 </div>
                 <div class="field" style="margin-top:14px;">
                   <label>المتابعات</label>
@@ -1528,31 +1529,29 @@ function fillSelectOptions(selectId, options){
 }
 function populateOperationDropdowns(){
   fillSelectOptions('opLocation', OPERATION_LOCATIONS);
-  document.querySelectorAll('.op-dressing-select').forEach(sel=>{
-    const current = sel.value;
-    sel.innerHTML = DRESSING_TYPES.map(d => `<option value="${escapeHtml(d)}">${escapeHtml(d)}</option>`).join('');
-    if(current && DRESSING_TYPES.includes(current)) sel.value = current;
-  });
+  populateDressingAddSelect();
 }
 
-/* ---------- غيارات العملية (قائمة ديناميكية بعدد مفتوح) ---------- */
+/* ---------- غيارات العملية (قائمة ديناميكية بعدد مفتوح، كل صف نص قابل للتعديل الحر) ---------- */
+function populateDressingAddSelect(){
+  const select = $('opDressingAddSelect');
+  select.innerHTML = `<option value="">— اختر غيار من القايمة —</option>` + DRESSING_TYPES.map(d => `<option value="${escapeHtml(d)}">${escapeHtml(d)}</option>`).join('');
+}
+$('opDressingAddSelect').addEventListener('change', ()=>{
+  const select = $('opDressingAddSelect');
+  if(!select.value) return;
+  addDressingRow(select.value);
+  select.value = '';
+});
 function addDressingRow(value){
   const box = $('opDressingsRows');
   const row = document.createElement('div');
   row.style.cssText = 'display:flex; gap:8px; margin-bottom:8px;';
-  const select = document.createElement('select');
-  select.className = 'op-dressing-select dropdown-add-select';
-  select.style.flex = '1';
-  select.innerHTML = DRESSING_TYPES.map(d => `<option value="${escapeHtml(d)}">${escapeHtml(d)}</option>`).join('');
-  if(value && DRESSING_TYPES.includes(value)) select.value = value;
-  const removeBtn = document.createElement('button');
-  removeBtn.type = 'button';
-  removeBtn.className = 'btn btn-outline-red';
-  removeBtn.style.padding = '6px 12px';
-  removeBtn.textContent = '✕';
-  removeBtn.addEventListener('click', ()=> row.remove());
-  row.appendChild(select);
-  row.appendChild(removeBtn);
+  row.innerHTML = `
+    <input type="text" class="op-dressing-input" value="${escapeHtml(value || '')}" placeholder="اسم الغيار... (تقدر تعدّل أو تضيف تفاصيل)" style="flex:1; padding:9px 10px; border-radius:9px; border:1px solid var(--line); font-family:'Tajawal'; font-size:13.5px;">
+    <button type="button" class="btn btn-outline-red op-dressing-remove" style="padding:6px 12px;">✕</button>
+  `;
+  row.querySelector('.op-dressing-remove').addEventListener('click', ()=> row.remove());
   box.appendChild(row);
 }
 function renderDressingsRows(dressings){
@@ -1560,9 +1559,9 @@ function renderDressingsRows(dressings){
   (dressings || []).forEach(d => { if(d) addDressingRow(d); });
 }
 function getDressingsFromForm(){
-  return Array.from(document.querySelectorAll('.op-dressing-select')).map(s => s.value).filter(Boolean);
+  return Array.from(document.querySelectorAll('.op-dressing-input')).map(inp => inp.value.trim()).filter(Boolean);
 }
-$('addDressingRowBtn').onclick = ()=> addDressingRow();
+$('addDressingRowBtn').onclick = ()=> addDressingRow('');
 
 /* ---------- Chips / Autocomplete / قوايم منسدلة تضيف بنود ---------- */
 function getActiveChips(containerId){
