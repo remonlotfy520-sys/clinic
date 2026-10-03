@@ -4872,6 +4872,7 @@ $('shortcutDatePickerConfirmBtn').onclick = ()=>{
     el.focus();
     el.selectionStart = el.selectionEnd = start + formatted.length + 1;
   } else if(pendingDateShortcut.type === 'editable'){
+    pendingDateShortcut.el.focus();
     const sel = window.getSelection();
     sel.removeAllRanges();
     sel.addRange(pendingDateShortcut.range);
@@ -4905,7 +4906,7 @@ function expandShortcutInField(el){
   const newPos = start + expansion.length + 1;
   el.selectionStart = el.selectionEnd = newPos;
 }
-function expandShortcutInEditable(){
+function expandShortcutInEditable(editableEl){
   const shortcuts = getShortcuts();
   const sel = window.getSelection();
   if(!sel.rangeCount) return;
@@ -4922,7 +4923,7 @@ function expandShortcutInEditable(){
   wordRange.setStart(node, start);
   wordRange.setEnd(node, range.startOffset);
   if(String(shortcuts[word]).trim().toUpperCase() === 'PICKDATE'){
-    pendingDateShortcut = { type:'editable', range: wordRange.cloneRange() };
+    pendingDateShortcut = { type:'editable', el: editableEl, range: wordRange.cloneRange() };
     openShortcutDatePicker();
     return;
   }
@@ -4937,7 +4938,7 @@ document.addEventListener('keyup', (e)=>{
   if(el.tagName === 'TEXTAREA' || (el.tagName === 'INPUT' && (el.type === 'text' || !el.type))){
     expandShortcutInField(el);
   } else if(el.isContentEditable){
-    expandShortcutInEditable();
+    expandShortcutInEditable(el);
   }
 });
 
