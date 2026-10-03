@@ -98,7 +98,8 @@
   .vnotes-editable:empty::before{content:attr(data-placeholder); color:var(--muted);}
   .vnotes-editable .template-text{color:#9a9488; font-style:italic;}
   :root{ --user-font-family: 'Tajawal', sans-serif; --user-font-color: #1c2420; }
-  input, textarea, select, .vnotes-editable{ font-family: var(--user-font-family); color: var(--user-font-color); }
+  input, textarea, select, option, [contenteditable]{ font-family: var(--user-font-family) !important; color: var(--user-font-color) !important; }
+  .vnotes-editable .template-text{ color: #9a9488 !important; }
   .kashf-layout{display:flex; gap:20px; align-items:flex-start;}
   .kashf-main{flex:3; min-width:0;}
   .kashf-sidebar{flex:1; min-width:180px; max-width:260px; position:sticky; top:16px;}
@@ -4729,7 +4730,10 @@ function getFontScale(){
   return isNaN(saved) ? 100 : Math.min(FONT_SIZE_MAX, Math.max(FONT_SIZE_MIN, saved));
 }
 function applyFontScale(scale){
-  document.body.style.zoom = scale + '%';
+  const factor = scale / 100;
+  document.body.style.transformOrigin = 'top center';
+  document.body.style.transform = `scale(${factor})`;
+  document.body.style.width = (100 / factor) + '%';
   $('fontSizeValue').textContent = scale + '%';
   localStorage.setItem('fontScale', String(scale));
 }
