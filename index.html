@@ -97,6 +97,8 @@
   .vnotes-editable{min-height:180px; max-height:420px; overflow-y:auto; direction:ltr; text-align:left; border:1px solid var(--line); border-radius:10px; padding:10px 12px; font-family:'Tajawal'; font-size:14px; background:#fff; white-space:pre-wrap; line-height:1.6;}
   .vnotes-editable:empty::before{content:attr(data-placeholder); color:var(--muted);}
   .vnotes-editable .template-text{color:#9a9488; font-style:italic;}
+  :root{ --user-font-family: 'Tajawal', sans-serif; --user-font-color: #1c2420; }
+  input, textarea, select, .vnotes-editable{ font-family: var(--user-font-family); color: var(--user-font-color); }
   .kashf-layout{display:flex; gap:20px; align-items:flex-start;}
   .kashf-main{flex:3; min-width:0;}
   .kashf-sidebar{flex:1; min-width:180px; max-width:260px; position:sticky; top:16px;}
@@ -1124,6 +1126,19 @@
           <span id="fontSizeValue" style="min-width:44px; text-align:center; font-weight:800; font-family:'Cairo';">100%</span>
           <button type="button" class="btn btn-ghost" id="fontSizeUpBtn" style="padding:5px 12px; font-size:16px;">+</button>
         </div>
+      </div>
+      <div style="display:flex; align-items:center; justify-content:space-between; padding:9px 14px; border:1px solid var(--line); border-radius:9px;">
+        <span style="font-weight:700; font-size:13.5px;">نوع الخط اللي بتكتب بيه</span>
+        <select id="userFontFamilySelect" class="dropdown-add-select" style="width:160px;">
+          <option value="'Tajawal', sans-serif">Tajawal (الافتراضي)</option>
+          <option value="'Cairo', sans-serif">Cairo</option>
+          <option value="Arial, sans-serif">Arial</option>
+          <option value="'Traditional Arabic', serif">Traditional Arabic</option>
+        </select>
+      </div>
+      <div style="display:flex; align-items:center; justify-content:space-between; padding:9px 14px; border:1px solid var(--line); border-radius:9px;">
+        <span style="font-weight:700; font-size:13.5px;">لون الخط اللي بتكتب بيه</span>
+        <input type="color" id="userFontColorInput" value="#1c2420" style="width:50px; height:34px; padding:2px; border-radius:8px; border:1px solid var(--line); cursor:pointer;">
       </div>
       <button class="btn btn-ghost" id="runClinicNumberMigrationBtn" style="text-align:right;">🔢 ترقيم المرضى تلقائيًا (رقم العيادة)</button>
     </div>
@@ -4727,6 +4742,24 @@ $('fontSizeUpBtn').onclick = ()=>{
   applyFontScale(next);
 };
 applyFontScale(getFontScale());
+
+/* ---------- نوع ولون الخط اللي بيكتب بيه الطبيب (محفوظ على الجهاز) ---------- */
+function getUserFontFamily(){ return localStorage.getItem('userFontFamily') || "'Tajawal', sans-serif"; }
+function getUserFontColor(){ return localStorage.getItem('userFontColor') || '#1c2420'; }
+function applyUserFontFamily(value){
+  document.documentElement.style.setProperty('--user-font-family', value);
+  localStorage.setItem('userFontFamily', value);
+  $('userFontFamilySelect').value = value;
+}
+function applyUserFontColor(value){
+  document.documentElement.style.setProperty('--user-font-color', value);
+  localStorage.setItem('userFontColor', value);
+  $('userFontColorInput').value = value;
+}
+$('userFontFamilySelect').addEventListener('change', ()=> applyUserFontFamily($('userFontFamilySelect').value));
+$('userFontColorInput').addEventListener('input', ()=> applyUserFontColor($('userFontColorInput').value));
+applyUserFontFamily(getUserFontFamily());
+applyUserFontColor(getUserFontColor());
 
 /* ---------- رابط جوجل دوك للحالة (بريفيو + فتح) - مشترك بين تاب الصور وتاب العمليات ---------- */
 function extractGoogleDocId(url){
