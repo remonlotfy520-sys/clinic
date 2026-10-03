@@ -1070,6 +1070,20 @@
   </div>
 </div>
 
+<div id="shortcutsManagerModal" style="display:none; position:fixed; inset:0; background:rgba(31,74,64,.45); z-index:300; align-items:center; justify-content:center; padding:20px;">
+  <div class="card" style="max-width:440px; width:100%; max-height:85vh; overflow-y:auto; position:relative;">
+    <button id="closeShortcutsManagerBtn" class="btn btn-ghost" style="position:absolute; top:14px; left:14px; padding:6px 12px;">✕</button>
+    <h2 style="margin:0 0 8px;">⌨️ اختصارات الكتابة</h2>
+    <div class="hint" style="margin-bottom:16px;">اكتب الاختصار في أي خانة كتابة في التطبيق وامسح مسافة بعده، وهيتحول تلقائي للنص الكامل. اكتب "DATE" في خانة "النص الكامل" عشان يتحول لتاريخ النهاردة تلقائي.</div>
+    <div class="field-row">
+      <div class="field"><label>الاختصار</label><input type="text" id="shortcutKeyInput" placeholder="زي: imp"></div>
+      <div class="field"><label>النص الكامل</label><input type="text" id="shortcutValueInput" placeholder="زي: improving أو DATE"></div>
+    </div>
+    <button class="btn btn-primary" id="addShortcutBtn" style="width:100%; margin-bottom:16px;">إضافة</button>
+    <div id="shortcutsList"></div>
+  </div>
+</div>
+
 <div id="appsScriptLoginModal" style="display:none; position:fixed; inset:0; background:rgba(31,74,64,.45); z-index:300; align-items:center; justify-content:center; padding:20px;">
   <div class="card" style="max-width:380px; width:100%;">
     <h2 style="margin:0 0 6px;">تسجيل دخول نظام الصور</h2>
@@ -1123,6 +1137,7 @@
       <button class="btn btn-outline-red" id="restoreBackupBtn" style="text-align:right;">♻️ استعادة آخر نسخة احتياطية</button>
       <button class="btn btn-ghost" id="openListsManagerBtn" style="text-align:right;">🗂️ إدارة القوايم (أدوية، خدمات، مستخدمين...)</button>
       <button class="btn btn-ghost" id="refreshListsBtn" style="text-align:right;">🔄 تحديث القوايم (لو الأدوية/الأمراض متأخرة)</button>
+      <button class="btn btn-ghost" id="openShortcutsManagerBtn" style="text-align:right;">⌨️ اختصارات الكتابة</button>
       <div style="display:flex; align-items:center; justify-content:space-between; padding:9px 14px; border:1px solid var(--line); border-radius:9px;">
         <span style="font-weight:700; font-size:13.5px;">حجم الخط</span>
         <div style="display:flex; align-items:center; gap:10px;">
@@ -4773,6 +4788,109 @@ $('fontSizeUpBtn').onclick = ()=>{
   applyFontScale(next);
 };
 applyFontScale(getFontScale());
+
+/* ---------- اختصارات الكتابة (محفوظة على الجهاز، وأهمها DATE لكتابة التاريخ تلقائي) ---------- */
+const DEFAULT_SHORTCUTS = { '555': 'DATE' };
+function getShortcuts(){
+  try{
+    const saved = JSON.parse(localStorage.getItem('textShortcuts') || 'null');
+    return (saved && Object.keys(saved).length) ? saved : { ...DEFAULT_SHORTCUTS };
+  }catch(e){ return { ...DEFAULT_SHORTCUTS }; }
+}
+function setShortcuts(obj){ localStorage.setItem('textShortcuts', JSON.stringify(obj)); }
+function resolveShortcutExpansion(value){
+  if(String(value).trim().toUpperCase() === 'DATE'){
+    return new Date().toLocaleDateString('ar-EG', {year:'numeric', month:'long', day:'numeric'});
+  }
+  return value;
+}
+
+function renderShortcutsList(){
+  const shortcuts = getShortcuts();
+  const box = $('shortcutsList');
+  const keys = Object.keys(shortcuts);
+  if(!keys.length){ box.innerHTML = '<div class="no-visits">لسه مفيش اختصارات</div>'; return; }
+  box.innerHTML = keys.map(k => `
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:9px 6px; border-bottom:1px solid var(--line); gap:8px;">
+      <span style="flex:1;"><b>${escapeHtml(k)}</b> ← ${escapeHtml(shortcuts[k])}</span>
+      <button class="btn btn-outline-red shortcut-del-btn" data-key="${escapeHtml(k)}" style="padding:4px 10px; font-size:12px;">حذف</button>
+    </div>`).join('');
+  box.querySelectorAll('.shortcut-del-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const s = getShortcuts();
+      delete s[btn.dataset.key];
+      setShortcuts(s);
+      renderShortcutsList();
+    });
+  });
+}
+$('openShortcutsManagerBtn').onclick = ()=>{
+  $('settingsModal').style.display = 'none';
+  $('shortcutKeyInput').value = '';
+  $('shortcutValueInput').value = '';
+  renderShortcutsList();
+  $('shortcutsManagerModal').style.display = 'flex';
+};
+$('closeShortcutsManagerBtn').onclick = ()=>{ $('shortcutsManagerModal').style.display = 'none'; };
+$('addShortcutBtn').onclick = ()=>{
+  const key = $('shortcutKeyInput').value.trim();
+  const value = $('shortcutValueInput').value.trim();
+  if(!key || !value){ showToast('اكتب الاختصار والنص الكامل', true); return; }
+  const s = getShortcuts();
+  s[key] = value;
+  setShortcuts(s);
+  $('shortcutKeyInput').value = '';
+  $('shortcutValueInput').value = '';
+  renderShortcutsList();
+  showToast('اتضاف ✓');
+};
+
+/* بيوسّع الاختصار لما تدوس مسافة بعده، في أي خانة كتابة عادية أو خانة من النوع القابل للتلوين */
+function expandShortcutInField(el){
+  const shortcuts = getShortcuts();
+  const value = el.value;
+  const cursorPos = el.selectionStart;
+  const before = value.slice(0, cursorPos);
+  const match = before.match(/(\S+)\s$/);
+  if(!match) return;
+  const word = match[1];
+  if(shortcuts[word] === undefined) return;
+  const expansion = resolveShortcutExpansion(shortcuts[word]);
+  const start = cursorPos - match[0].length;
+  el.value = value.slice(0, start) + expansion + ' ' + value.slice(cursorPos);
+  const newPos = start + expansion.length + 1;
+  el.selectionStart = el.selectionEnd = newPos;
+}
+function expandShortcutInEditable(){
+  const shortcuts = getShortcuts();
+  const sel = window.getSelection();
+  if(!sel.rangeCount) return;
+  const range = sel.getRangeAt(0);
+  const node = range.startContainer;
+  if(node.nodeType !== Node.TEXT_NODE) return;
+  const text = node.textContent.slice(0, range.startOffset);
+  const match = text.match(/(\S+)\s$/);
+  if(!match) return;
+  const word = match[1];
+  if(shortcuts[word] === undefined) return;
+  const expansion = resolveShortcutExpansion(shortcuts[word]);
+  const start = range.startOffset - match[0].length;
+  const newRange = document.createRange();
+  newRange.setStart(node, start);
+  newRange.setEnd(node, range.startOffset);
+  sel.removeAllRanges();
+  sel.addRange(newRange);
+  document.execCommand('insertText', false, expansion + ' ');
+}
+document.addEventListener('keyup', (e)=>{
+  if(e.key !== ' ') return;
+  const el = e.target;
+  if(el.tagName === 'TEXTAREA' || (el.tagName === 'INPUT' && (el.type === 'text' || !el.type))){
+    expandShortcutInField(el);
+  } else if(el.isContentEditable){
+    expandShortcutInEditable();
+  }
+});
 
 /* ---------- نوع الخط اللي بيكتب بيه الطبيب (محفوظ على الجهاز) ---------- */
 function getUserFontFamily(){ return localStorage.getItem('userFontFamily') || "'Tajawal', sans-serif"; }
