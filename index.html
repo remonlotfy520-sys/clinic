@@ -147,9 +147,14 @@
   .mv-bar button{font-family:inherit; font-size:13px; padding:7px 11px; border-radius:8px; border:1px solid #3a463f; background:#26312b; color:#f2efe6; cursor:pointer;}
   .mv-bar button.active{background:#2f8f6b; border-color:#2f8f6b; color:#fff;}
   .mv-bar .mv-sep{width:1px; height:22px; background:#3a463f; margin:0 2px;}
+  .mv-bar2{border-top:1px solid #2f3a34; align-items:center;}
+  .mv-lbl{color:#d9d4c2; font-size:12px;}
+  .mv-bar input[type=color]{width:34px; height:30px; padding:0; border:1px solid #3a463f; border-radius:6px; background:none; cursor:pointer;}
+  .mv-bar input[type=range]{width:110px;}
+  .mv-bar button.mv-sw{width:24px; height:24px; padding:0; border-radius:50%; border:2px solid #3a463f;}
   .mv-stage{flex:1; overflow:auto; padding:10px; text-align:center; direction:ltr;}
   .mv-stage canvas{cursor:crosshair; background:#000; display:inline-block; max-width:none;}
-  .mv-hint{padding:7px 12px; background:#1c2420; color:#d9d4c2; font-size:13px; text-align:center;}
+  .mv-hint{min-height:2.8em; display:flex; align-items:center; justify-content:center; padding:7px 12px; background:#1c2420; color:#d9d4c2; font-size:13px; text-align:center;}
   .img-thumb{width:100%; height:110px; border-radius:10px; border:1px solid var(--line); background:#F2F0E9; overflow:hidden; cursor:pointer; display:flex; align-items:center; justify-content:center;}
   .img-thumb img{width:100%; height:100%; object-fit:cover;}
   .img-date{font-size:11px; color:var(--muted); text-align:center; margin-top:5px;}
@@ -1228,8 +1233,30 @@
   <div class="mv-bar">
     <button id="mvToolLine" class="active">📏 طول</button>
     <button id="mvToolAngle">📐 زاوية (3 نقاط)</button>
-    <button id="mvToolAngle2">∠ زاوية بين خطين</button>
+    <button id="mvToolAngle2">∠ زاوية (4 نقاط)</button>
+    <button id="mvToolLink">🔗 زاوية بين خطين موجودين</button>
     <button id="mvToolCalib">🎯 معايرة (مم)</button>
+    <span class="mv-sep"></span>
+    <button id="mvToolPen">✏️ رسم حر</button>
+    <button id="mvToolText">🔤 كتابة</button>
+    <button id="mvToolMove">✋ تحريك/تحديد</button>
+    <button id="mvToolPan">🖐 تنقّل</button>
+    <button id="mvClose" style="margin-inline-start:auto;">✖ إغلاق</button>
+  </div>
+  <div class="mv-bar mv-bar2">
+    <span class="mv-lbl">اللون</span>
+    <input type="color" id="mvColor" value="#39ff88">
+    <button class="mv-sw" data-c="#39ff88" style="background:#39ff88" title="أخضر"></button>
+    <button class="mv-sw" data-c="#ff4d4d" style="background:#ff4d4d" title="أحمر"></button>
+    <button class="mv-sw" data-c="#ffe66d" style="background:#ffe66d" title="أصفر"></button>
+    <button class="mv-sw" data-c="#4dd0e1" style="background:#4dd0e1" title="سماوي"></button>
+    <button class="mv-sw" data-c="#ff9f43" style="background:#ff9f43" title="برتقالي"></button>
+    <button class="mv-sw" data-c="#ffffff" style="background:#ffffff" title="أبيض"></button>
+    <button class="mv-sw" data-c="#111111" style="background:#111111" title="أسود"></button>
+    <span class="mv-lbl">السُمك / حجم الخط</span>
+    <input type="range" id="mvWidth" min="1" max="12" step="1" value="3">
+    <span class="mv-lbl" id="mvWidthVal">3</span>
+    <button id="mvDelSel" style="visibility:hidden;">🗑 حذف المحدد</button>
     <span class="mv-sep"></span>
     <button id="mvUndo">↩ تراجع</button>
     <button id="mvClear">🗑 مسح الكل</button>
@@ -1239,7 +1266,6 @@
     <button id="mvZoomIn">➕</button>
     <span class="mv-sep"></span>
     <button id="mvSave">⬇ حفظ بالقياسات</button>
-    <button id="mvClose" style="margin-inline-start:auto;">✖ إغلاق</button>
   </div>
   <div class="mv-stage" id="mvStage"><canvas id="mvCanvas"></canvas></div>
   <div class="mv-hint" id="mvHint"></div>
@@ -2975,20 +3001,28 @@ function groupImagesForTimeline(images){
 }
 
 
-// ===== أداة قياس الأطوال والزوايا على الصور =====
-const mv = { img:null, shapes:[], pending:[], tool:'line', zoom:1, fit:1, mmPerPx:null, mouse:null, bound:false };
+// ===== أداة قياس الأطوال والزوايا والرسم على الصور =====
+const mv = { img:null, shapes:[], pending:[], pendRefs:[], tool:'line', zoom:1, fit:1, mmPerPx:null, mouse:null,
+             sel:null, drag:null, down:null, color:'#39ff88', w:3, bound:false };
 const MV_NEED = { line:2, calib:2, angle:3, angle2:4 };
 const MV_HINTS = {
-  line:   ['اضغط على بداية الخط', 'اضغط على نهاية الخط'],
-  calib:  ['اضغط على بداية جسم معروف الطول (مسطرة/مسمار/كرة معايرة)', 'اضغط على نهايته ثم اكتب طوله الحقيقي بالمم'],
-  angle:  ['اضغط على النقطة الأولى', 'اضغط على رأس الزاوية', 'اضغط على النقطة الثالثة'],
-  angle2: ['الخط الأول: نقطة البداية', 'الخط الأول: نقطة النهاية', 'الخط الثاني: نقطة البداية', 'الخط الثاني: نقطة النهاية']
+  line:     ['اضغط على بداية الخط', 'اضغط على نهاية الخط'],
+  calib:    ['اضغط على بداية جسم معروف الطول (مسطرة/مسمار/كرة معايرة)', 'اضغط على نهايته ثم اكتب طوله الحقيقي بالمم'],
+  angle:    ['اضغط على النقطة الأولى', 'اضغط على رأس الزاوية', 'اضغط على النقطة الثالثة'],
+  angle2:   ['الخط الأول: نقطة البداية', 'الخط الأول: نقطة النهاية', 'الخط الثاني: نقطة البداية', 'الخط الثاني: نقطة النهاية'],
+  linkangle:['اضغط على خط موجود (الأول)', 'اضغط على الخط التاني ليظهر الرقم بينهم'],
+  pen:      ['اسحب بالماوس/الصباع للرسم الحر'],
+  text:     ['اضغط في المكان اللي عايز تكتب فيه'],
+  move:     ['اسحب أي نقطة لتحريكها، أو اسحب الخط كله، واضغط على عنصر لتحديده وتعديل لونه/سُمكه'],
+  pan:      ['اسحب لتحريك الصورة (مفيد وانت مكبّر)']
 };
 function mvUpdateHint(){
   const h = MV_HINTS[mv.tool];
-  let t = h[Math.min(mv.pending.length, h.length-1)];
-  if(!mv.mmPerPx) t += ' — القياسات بالبكسل لحد ما تعمل معايرة';
-  else t += ` — معايرة: 1 بكسل = ${mv.mmPerPx.toFixed(3)} مم`;
+  const n = mv.tool === 'linkangle' ? mv.pendRefs.length : mv.pending.length;
+  let t = h[Math.min(n, h.length-1)];
+  if(['line','calib'].includes(mv.tool) || mv.sel){
+    t += mv.mmPerPx ? ` — معايرة: 1 بكسل = ${mv.mmPerPx.toFixed(3)} مم` : ' — القياسات بالبكسل لحد ما تعمل معايرة';
+  }
   $('mvHint').textContent = t;
 }
 function mvSetZoom(z){
@@ -3003,136 +3037,379 @@ function mvToImg(e){
   return { x:(e.clientX - r.left) * cv.width / r.width, y:(e.clientY - r.top) * cv.height / r.height };
 }
 function mvDist(a,b){ return Math.hypot(b.x-a.x, b.y-a.y); }
-function mvAngleBetween(v1, v2, acute){
+function mvVecAngle(v1, v2){
   const d = (v1.x*v2.x + v1.y*v2.y) / ((Math.hypot(v1.x,v1.y) * Math.hypot(v2.x,v2.y)) || 1);
-  let a = Math.acos(Math.max(-1, Math.min(1, acute ? Math.abs(d) : d))) * 180 / Math.PI;
-  return a;
+  return Math.acos(Math.max(-1, Math.min(1, d))) * 180 / Math.PI;
 }
 function mvLen(px){ return mv.mmPerPx ? (px * mv.mmPerPx).toFixed(1) + ' mm' : Math.round(px) + ' px'; }
-function mvLabel(ctx, text, x, y, u){
-  ctx.font = `bold ${Math.round(17*u)}px sans-serif`;
-  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.lineWidth = 4*u; ctx.strokeStyle = 'rgba(0,0,0,.85)'; ctx.strokeText(text, x, y);
-  ctx.fillStyle = '#ffe66d'; ctx.fillText(text, x, y);
+function mvLum(hex){
+  const h = hex.replace('#',''); const r = parseInt(h.substr(0,2),16), g = parseInt(h.substr(2,2),16), b = parseInt(h.substr(4,2),16);
+  return (0.299*r + 0.587*g + 0.114*b) / 255;
 }
-function mvDot(ctx, p, u, color){
-  ctx.beginPath(); ctx.arc(p.x, p.y, 4.5*u, 0, Math.PI*2);
-  ctx.fillStyle = color; ctx.fill();
+function mvLabel(ctx, text, x, y, u, col, size){
+  ctx.font = `bold ${Math.round((size||17)*u)}px sans-serif`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.lineWidth = 4*u; ctx.lineJoin = 'round';
+  ctx.strokeStyle = mvLum(col) > 0.55 ? 'rgba(0,0,0,.85)' : 'rgba(255,255,255,.9)';
+  ctx.strokeText(text, x, y);
+  ctx.fillStyle = col; ctx.fillText(text, x, y);
+}
+function mvDot(ctx, p, u, col, r){
+  ctx.beginPath(); ctx.arc(p.x, p.y, (r||4.5)*u, 0, Math.PI*2);
+  ctx.fillStyle = col; ctx.fill();
   ctx.lineWidth = 1.5*u; ctx.strokeStyle = '#000'; ctx.stroke();
 }
-function mvLine(ctx, a, b, u, color){
+function mvSeg(ctx, a, b, lw, col){
   ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y);
-  ctx.lineWidth = 2.5*u; ctx.strokeStyle = color; ctx.stroke();
+  ctx.lineWidth = lw; ctx.lineCap = 'round'; ctx.strokeStyle = col; ctx.stroke();
 }
+// نقاط الشكل القابلة للتحريك
+function mvPoints(sh){
+  switch(sh.type){
+    case 'line': case 'calib': return [sh.a, sh.b];
+    case 'angle': return [sh.a, sh.v, sh.b];
+    case 'angle2': return [sh.a, sh.b, sh.c, sh.d];
+    case 'pen': return sh.pts;
+    case 'text': return [sh.p];
+    default: return [];
+  }
+}
+// القطع المستقيمة اللي ينفع نختار منها خط لقياس الزاوية بين خطين
+function mvSegOf(ref){
+  const s = ref.s;
+  if(s.type === 'line' || s.type === 'calib') return [s.a, s.b];
+  if(s.type === 'angle2') return ref.i === 0 ? [s.a, s.b] : [s.c, s.d];
+  if(s.type === 'angle') return ref.i === 0 ? [s.v, s.a] : [s.v, s.b];
+  return null;
+}
+function mvAllSegRefs(){
+  const out = [];
+  mv.shapes.forEach(s=>{
+    if(s.type === 'line' || s.type === 'calib') out.push({s, i:0});
+    else if(s.type === 'angle2' || s.type === 'angle'){ out.push({s, i:0}); out.push({s, i:1}); }
+  });
+  return out;
+}
+function mvPtSegDist(p, a, b){
+  const dx = b.x-a.x, dy = b.y-a.y, l2 = dx*dx + dy*dy;
+  let t = l2 ? ((p.x-a.x)*dx + (p.y-a.y)*dy) / l2 : 0;
+  t = Math.max(0, Math.min(1, t));
+  return Math.hypot(p.x - (a.x + t*dx), p.y - (a.y + t*dy));
+}
+function mvHitRadius(){ return 14 / mv.zoom; }
+function mvHitHandle(p){
+  const r = mvHitRadius();
+  for(let i = mv.shapes.length-1; i >= 0; i--){
+    const sh = mv.shapes[i];
+    if(sh.type === 'pen') continue;
+    const pts = mvPoints(sh);
+    for(const pt of pts) if(mvDist(p, pt) <= r) return { shape:sh, pt };
+  }
+  return null;
+}
+function mvTextBox(sh){
+  const u = 1 / mv.zoom, size = (10 + sh.w*3) * u;
+  return { w: Math.max(1, sh.text.length) * size * 0.6, h: size * 1.3 };
+}
+function mvHitBody(p){
+  const r = mvHitRadius();
+  for(let i = mv.shapes.length-1; i >= 0; i--){
+    const sh = mv.shapes[i];
+    if(sh.type === 'pen'){
+      for(let k = 1; k < sh.pts.length; k++) if(mvPtSegDist(p, sh.pts[k-1], sh.pts[k]) <= r) return sh;
+    } else if(sh.type === 'text'){
+      const b = mvTextBox(sh);
+      if(Math.abs(p.x - sh.p.x) <= b.w/2 + r/2 && Math.abs(p.y - sh.p.y) <= b.h/2 + r/2) return sh;
+    } else if(sh.type === 'lineangle'){
+      const c = mvLinkLabelPos(sh);
+      if(c && mvDist(p, c) <= r * 2.5) return sh;
+    } else {
+      const segs = (sh.type === 'angle') ? [[sh.v,sh.a],[sh.v,sh.b]] :
+                   (sh.type === 'angle2') ? [[sh.a,sh.b],[sh.c,sh.d]] : [[sh.a,sh.b]];
+      for(const [a,b] of segs) if(mvPtSegDist(p, a, b) <= r) return sh;
+    }
+  }
+  return null;
+}
+function mvHitSegRef(p){
+  const r = mvHitRadius(); let best = null, bd = r;
+  mvAllSegRefs().forEach(ref=>{
+    const sg = mvSegOf(ref); const d = mvPtSegDist(p, sg[0], sg[1]);
+    if(d <= bd){ bd = d; best = ref; }
+  });
+  return best;
+}
+// حساب نقطة تقاطع امتداد الخطين
+function mvIntersect(a,b,c,d){
+  const den = (a.x-b.x)*(c.y-d.y) - (a.y-b.y)*(c.x-d.x);
+  if(Math.abs(den) < 1e-9) return null;
+  const t = ((a.x-c.x)*(c.y-d.y) - (a.y-c.y)*(c.x-d.x)) / den;
+  return { x: a.x + t*(b.x-a.x), y: a.y + t*(b.y-a.y) };
+}
+function mvLinkInfo(sh){
+  const s1 = mvSegOf(sh.r1), s2 = mvSegOf(sh.r2);
+  if(!s1 || !s2) return null;
+  const v1 = {x:s1[1].x-s1[0].x, y:s1[1].y-s1[0].y}, v2 = {x:s2[1].x-s2[0].x, y:s2[1].y-s2[0].y};
+  let ang = mvVecAngle(v1, v2); if(ang > 90) ang = 180 - ang;
+  const P = mvIntersect(s1[0], s1[1], s2[0], s2[1]);
+  const W = mv.img ? mv.img.naturalWidth : 1000, H = mv.img ? mv.img.naturalHeight : 1000;
+  const ok = P && P.x > -0.2*W && P.x < 1.2*W && P.y > -0.2*H && P.y < 1.2*H;
+  const m1 = {x:(s1[0].x+s1[1].x)/2, y:(s1[0].y+s1[1].y)/2}, m2 = {x:(s2[0].x+s2[1].x)/2, y:(s2[0].y+s2[1].y)/2};
+  const pos = ok ? P : {x:(m1.x+m2.x)/2, y:(m1.y+m2.y)/2};
+  return { s1, s2, ang, P: ok ? P : null, pos };
+}
+function mvLinkLabelPos(sh){
+  const info = mvLinkInfo(sh); if(!info) return null;
+  const u = 1 / mv.zoom;
+  return { x: info.pos.x, y: info.pos.y - (info.P ? 30*u : 0) };
+}
+function mvFmtAng(a){ return a.toFixed(1) + '°'; }
+
 function mvDraw(forExport){
   if(!mv.img) return;
   const cv = $('mvCanvas'), ctx = cv.getContext('2d');
-  const u = Math.max(cv.width, cv.height) / 1000 * Math.max(1, 1/Math.max(mv.zoom,0.3)) * 0.9;
+  const u = forExport ? Math.max(cv.width, cv.height) / 1000 : 1 / mv.zoom;
   ctx.clearRect(0,0,cv.width,cv.height);
   ctx.drawImage(mv.img, 0, 0);
-  const drawShape = (sh)=>{
+  mv.shapes.forEach(sh=>{
+    const col = sh.color, lw = Math.max(1, sh.w) * 0.85 * u, dr = Math.max(4, sh.w*1.4);
+    const hl = !forExport && mv.sel === sh;
+    const hlSeg = (a,b)=>{ if(hl) mvSeg(ctx, a, b, lw + 7*u, 'rgba(255,255,255,.35)'); };
     if(sh.type === 'line' || sh.type === 'calib'){
-      const col = sh.type==='calib' ? '#4dd0e1' : '#39ff88';
-      mvLine(ctx, sh.a, sh.b, u, col); mvDot(ctx, sh.a, u, col); mvDot(ctx, sh.b, u, col);
-      const mx=(sh.a.x+sh.b.x)/2, my=(sh.a.y+sh.b.y)/2 - 16*u;
-      mvLabel(ctx, sh.type==='calib' ? `معايرة ${sh.mm} mm` : mvLen(mvDist(sh.a,sh.b)), mx, my, u);
+      hlSeg(sh.a, sh.b); mvSeg(ctx, sh.a, sh.b, lw, col); mvDot(ctx, sh.a, u, col, dr); mvDot(ctx, sh.b, u, col, dr);
+      const mx=(sh.a.x+sh.b.x)/2, my=(sh.a.y+sh.b.y)/2 - (12 + sh.w*2)*u;
+      mvLabel(ctx, sh.type==='calib' ? `معايرة ${sh.mm} mm` : mvLen(mvDist(sh.a,sh.b)), mx, my, u, col);
     } else if(sh.type === 'angle'){
-      const col = '#ff9f43';
-      mvLine(ctx, sh.v, sh.a, u, col); mvLine(ctx, sh.v, sh.b, u, col);
-      [sh.a, sh.v, sh.b].forEach(p=>mvDot(ctx,p,u,col));
+      hlSeg(sh.v, sh.a); hlSeg(sh.v, sh.b);
+      mvSeg(ctx, sh.v, sh.a, lw, col); mvSeg(ctx, sh.v, sh.b, lw, col);
+      [sh.a, sh.v, sh.b].forEach(p=>mvDot(ctx,p,u,col,dr));
       const a1 = Math.atan2(sh.a.y-sh.v.y, sh.a.x-sh.v.x), a2 = Math.atan2(sh.b.y-sh.v.y, sh.b.x-sh.v.x);
       let diff = a2 - a1; while(diff > Math.PI) diff -= 2*Math.PI; while(diff < -Math.PI) diff += 2*Math.PI;
       const r = 38*u;
       ctx.beginPath(); ctx.arc(sh.v.x, sh.v.y, r, a1, a1 + diff, diff < 0);
-      ctx.lineWidth = 2*u; ctx.strokeStyle = col; ctx.stroke();
-      const deg = mvAngleBetween({x:sh.a.x-sh.v.x,y:sh.a.y-sh.v.y},{x:sh.b.x-sh.v.x,y:sh.b.y-sh.v.y}, false);
+      ctx.lineWidth = lw*0.8; ctx.strokeStyle = col; ctx.stroke();
+      const deg = mvVecAngle({x:sh.a.x-sh.v.x,y:sh.a.y-sh.v.y},{x:sh.b.x-sh.v.x,y:sh.b.y-sh.v.y});
       const mid = a1 + diff/2;
-      mvLabel(ctx, deg.toFixed(1) + '°', sh.v.x + Math.cos(mid)*(r+34*u), sh.v.y + Math.sin(mid)*(r+34*u), u);
+      mvLabel(ctx, mvFmtAng(deg), sh.v.x + Math.cos(mid)*(r+34*u), sh.v.y + Math.sin(mid)*(r+34*u), u, col);
     } else if(sh.type === 'angle2'){
-      const col = '#c792ea';
-      mvLine(ctx, sh.a, sh.b, u, col); mvLine(ctx, sh.c, sh.d, u, col);
-      [sh.a, sh.b, sh.c, sh.d].forEach(p=>mvDot(ctx,p,u,col));
-      const deg = mvAngleBetween({x:sh.b.x-sh.a.x,y:sh.b.y-sh.a.y},{x:sh.d.x-sh.c.x,y:sh.d.y-sh.c.y}, true);
-      mvLabel(ctx, '∠ ' + deg.toFixed(1) + '°', (sh.c.x+sh.d.x)/2, (sh.c.y+sh.d.y)/2 - 18*u, u);
+      hlSeg(sh.a, sh.b); hlSeg(sh.c, sh.d);
+      mvSeg(ctx, sh.a, sh.b, lw, col); mvSeg(ctx, sh.c, sh.d, lw, col);
+      [sh.a, sh.b, sh.c, sh.d].forEach(p=>mvDot(ctx,p,u,col,dr));
+      let ang = mvVecAngle({x:sh.b.x-sh.a.x,y:sh.b.y-sh.a.y},{x:sh.d.x-sh.c.x,y:sh.d.y-sh.c.y}); if(ang > 90) ang = 180 - ang;
+      mvLabel(ctx, '∠ ' + mvFmtAng(ang), (sh.c.x+sh.d.x)/2, (sh.c.y+sh.d.y)/2 - 18*u, u, col);
+    } else if(sh.type === 'lineangle'){
+      const info = mvLinkInfo(sh); if(!info) return;
+      if(info.P){
+        ctx.setLineDash([7*u, 6*u]);
+        [info.s1, info.s2].forEach(sg=>{
+          const far = mvDist(sg[0], info.P) > mvDist(sg[1], info.P) ? sg[0] : sg[1];
+          const near = far === sg[0] ? sg[1] : sg[0];
+          mvSeg(ctx, near, info.P, lw*0.6, col);
+        });
+        ctx.setLineDash([]);
+        mvDot(ctx, info.P, u, col, 3.5);
+      } else {
+        ctx.setLineDash([5*u, 5*u]);
+        mvSeg(ctx, {x:(info.s1[0].x+info.s1[1].x)/2,y:(info.s1[0].y+info.s1[1].y)/2}, {x:(info.s2[0].x+info.s2[1].x)/2,y:(info.s2[0].y+info.s2[1].y)/2}, lw*0.5, col);
+        ctx.setLineDash([]);
+      }
+      const lp = mvLinkLabelPos(sh);
+      if(hl){ ctx.beginPath(); ctx.arc(lp.x, lp.y, 26*u, 0, Math.PI*2); ctx.strokeStyle = 'rgba(255,255,255,.7)'; ctx.lineWidth = 2*u; ctx.stroke(); }
+      mvLabel(ctx, '∠ ' + mvFmtAng(info.ang), lp.x, lp.y, u, col);
+    } else if(sh.type === 'pen'){
+      if(sh.pts.length < 2){ mvDot(ctx, sh.pts[0], u, col, lw/u/2 + 1); return; }
+      const trace = ()=>{ ctx.beginPath(); ctx.moveTo(sh.pts[0].x, sh.pts[0].y); for(let k=1;k<sh.pts.length;k++) ctx.lineTo(sh.pts[k].x, sh.pts[k].y); ctx.lineJoin='round'; ctx.lineCap='round'; };
+      if(hl){ trace(); ctx.lineWidth = lw + 7*u; ctx.strokeStyle = 'rgba(255,255,255,.35)'; ctx.stroke(); }
+      trace(); ctx.lineWidth = lw; ctx.strokeStyle = col; ctx.stroke();
+    } else if(sh.type === 'text'){
+      const size = 10 + sh.w*3;
+      mvLabel(ctx, sh.text, sh.p.x, sh.p.y, u, col, size);
+      if(hl){
+        const m = ctx.measureText(sh.text); const w = m.width + 12*u, h = size*1.3*u;
+        ctx.setLineDash([5*u,4*u]); ctx.lineWidth = 1.5*u; ctx.strokeStyle = 'rgba(255,255,255,.8)';
+        ctx.strokeRect(sh.p.x - w/2, sh.p.y - h/2, w, h); ctx.setLineDash([]);
+      }
     }
-  };
-  mv.shapes.forEach(drawShape);
+    if(hl){ mvPoints(sh).forEach(p=>{ if(sh.type==='pen') return; ctx.beginPath(); ctx.arc(p.x,p.y,(dr+5)*u,0,Math.PI*2); ctx.lineWidth=2*u; ctx.strokeStyle='#fff'; ctx.stroke(); }); }
+  });
   if(!forExport){
-    const keys = { line:['a','b'], calib:['a','b'], angle:['a','v','b'], angle2:['a','b','c','d'] }[mv.tool];
-    mv.pending.forEach((p,i)=> mvDot(ctx, p, u, '#ffffff'));
+    mv.pending.forEach(p=> mvDot(ctx, p, u, '#ffffff', 5));
+    mv.pendRefs.forEach(ref=>{ const sg = mvSegOf(ref); if(sg) mvSeg(ctx, sg[0], sg[1], 7*u, 'rgba(255,255,255,.55)'); });
     if(mv.pending.length && mv.mouse){
       const last = mv.pending[mv.pending.length-1];
-      ctx.setLineDash([8*u, 6*u]); mvLine(ctx, last, mv.mouse, u, 'rgba(255,255,255,.8)'); ctx.setLineDash([]);
+      ctx.setLineDash([8*u, 6*u]); mvSeg(ctx, last, mv.mouse, 2*u, 'rgba(255,255,255,.85)'); ctx.setLineDash([]);
     }
   }
 }
 function mvRecalcCalib(){
   const c = [...mv.shapes].reverse().find(sh => sh.type === 'calib');
-  mv.mmPerPx = c ? c.mm / mvDist(c.a, c.b) : null;
+  mv.mmPerPx = c ? c.mm / (mvDist(c.a, c.b) || 1) : null;
+}
+function mvSyncControls(){
+  const s = mv.sel;
+  if(s){ mv.color = s.color; mv.w = s.w; }
+  $('mvColor').value = mv.color; $('mvWidth').value = mv.w; $('mvWidthVal').textContent = mv.w;
+  $('mvDelSel').style.visibility = s ? 'visible' : 'hidden';
 }
 function mvSetTool(t){
-  mv.tool = t; mv.pending = [];
-  const ids = { line:'mvToolLine', angle:'mvToolAngle', angle2:'mvToolAngle2', calib:'mvToolCalib' };
+  mv.tool = t; mv.pending = []; mv.pendRefs = []; mv.drag = null;
+  if(t !== 'move') mv.sel = null;
+  const ids = { line:'mvToolLine', angle:'mvToolAngle', angle2:'mvToolAngle2', linkangle:'mvToolLink', calib:'mvToolCalib', pen:'mvToolPen', text:'mvToolText', move:'mvToolMove', pan:'mvToolPan' };
   Object.entries(ids).forEach(([k,id])=> $(id).classList.toggle('active', k === t));
-  mvUpdateHint(); mvDraw();
+  $('mvCanvas').style.cursor = t === 'move' ? 'move' : t === 'pan' ? 'grab' : t === 'text' ? 'text' : 'crosshair';
+  mvSyncControls(); mvUpdateHint(); mvDraw();
 }
-function mvClick(e){
-  const p = mvToImg(e);
+function mvNewShape(sh){
+  sh.color = mv.color; sh.w = mv.w;
+  mv.shapes.push(sh);
+  return sh;
+}
+function mvClickAt(p){
+  const tool = mv.tool;
+  if(tool === 'text'){
+    const t = prompt('اكتب النص:');
+    if(t && t.trim()){ const sh = mvNewShape({type:'text', p, text:t.trim()}); mv.sel = sh; mvSetTool('move'); mv.sel = sh; mvSyncControls(); mvDraw(); }
+    return;
+  }
+  if(tool === 'linkangle'){
+    const ref = mvHitSegRef(p);
+    if(!ref){ showToast('اضغط فوق خط موجود', true); return; }
+    if(mv.pendRefs[0] && mv.pendRefs[0].s === ref.s && mv.pendRefs[0].i === ref.i) return;
+    mv.pendRefs.push(ref);
+    if(mv.pendRefs.length >= 2){
+      const sh = mvNewShape({type:'lineangle', r1:mv.pendRefs[0], r2:mv.pendRefs[1]});
+      mv.pendRefs = [];
+    }
+    mvUpdateHint(); mvDraw(); return;
+  }
+  if(!MV_NEED[tool]) return;
   mv.pending.push(p);
-  if(mv.pending.length >= MV_NEED[mv.tool]){
+  if(mv.pending.length >= MV_NEED[tool]){
     const q = mv.pending; mv.pending = [];
-    if(mv.tool === 'line') mv.shapes.push({type:'line', a:q[0], b:q[1]});
-    else if(mv.tool === 'angle') mv.shapes.push({type:'angle', a:q[0], v:q[1], b:q[2]});
-    else if(mv.tool === 'angle2') mv.shapes.push({type:'angle2', a:q[0], b:q[1], c:q[2], d:q[3]});
-    else if(mv.tool === 'calib'){
+    if(tool === 'line') mvNewShape({type:'line', a:q[0], b:q[1]});
+    else if(tool === 'angle') mvNewShape({type:'angle', a:q[0], v:q[1], b:q[2]});
+    else if(tool === 'angle2') mvNewShape({type:'angle2', a:q[0], b:q[1], c:q[2], d:q[3]});
+    else if(tool === 'calib'){
       const len = mvDist(q[0], q[1]);
       const v = parseFloat(String(prompt('الطول الحقيقي لهذا الجزء بالملّيمتر؟') || '').replace(',', '.'));
-      if(len > 0 && v > 0){ mv.shapes.push({type:'calib', a:q[0], b:q[1], mm:v}); mvRecalcCalib(); }
+      if(len > 0 && v > 0){ mvNewShape({type:'calib', a:q[0], b:q[1], mm:v}); mvRecalcCalib(); }
     }
   }
   mvUpdateHint(); mvDraw();
 }
+function mvDeleteShape(sh){
+  const dead = new Set([sh]);
+  mv.shapes.forEach(s=>{ if(s.type === 'lineangle' && (dead.has(s.r1.s) || dead.has(s.r2.s))) dead.add(s); });
+  mv.shapes = mv.shapes.filter(s=>!dead.has(s));
+  if(dead.has(mv.sel)) mv.sel = null;
+  mvRecalcCalib();
+}
 function mvBind(){
   if(mv.bound) return; mv.bound = true;
-  const cv = $('mvCanvas');
-  cv.addEventListener('click', mvClick);
-  cv.addEventListener('mousemove', e=>{ mv.mouse = mvToImg(e); if(mv.pending.length) mvDraw(); });
-  cv.addEventListener('mouseleave', ()=>{ mv.mouse = null; mvDraw(); });
-  $('mvToolLine').onclick = ()=> mvSetTool('line');
-  $('mvToolAngle').onclick = ()=> mvSetTool('angle');
-  $('mvToolAngle2').onclick = ()=> mvSetTool('angle2');
-  $('mvToolCalib').onclick = ()=> mvSetTool('calib');
-  $('mvUndo').onclick = ()=>{
-    if(mv.pending.length) mv.pending.pop(); else { mv.shapes.pop(); mvRecalcCalib(); }
-    mvUpdateHint(); mvDraw();
+  const cv = $('mvCanvas'), st = $('mvStage');
+  cv.style.touchAction = 'none';
+  cv.addEventListener('pointerdown', e=>{
+    if(e.button > 0) return;
+    const p = mvToImg(e);
+    mv.down = { x:e.clientX, y:e.clientY, moved:false };
+    try{ cv.setPointerCapture(e.pointerId); }catch(_){}
+    if(mv.tool === 'pan'){ mv.drag = { mode:'pan', sx:e.clientX, sy:e.clientY, sl:st.scrollLeft, st:st.scrollTop }; cv.style.cursor = 'grabbing'; return; }
+    if(mv.tool === 'pen'){
+      const sh = mvNewShape({type:'pen', pts:[p]});
+      mv.drag = { mode:'pen', shape:sh }; mvDraw(); return;
+    }
+    if(!mv.pending.length && !mv.pendRefs.length){
+      const h = mvHitHandle(p);
+      if(h){ mv.sel = h.shape; mv.drag = { mode:'point', pt:h.pt, shape:h.shape }; mvSyncControls(); mvDraw(); return; }
+      if(mv.tool === 'move'){
+        const b = mvHitBody(p);
+        mv.sel = b;
+        mv.drag = b ? { mode:'shape', shape:b, last:p } : null;
+        mvSyncControls(); mvUpdateHint(); mvDraw(); return;
+      }
+    }
+    mv.drag = null;
+  });
+  cv.addEventListener('pointermove', e=>{
+    const p = mvToImg(e); mv.mouse = p;
+    if(mv.down && Math.hypot(e.clientX - mv.down.x, e.clientY - mv.down.y) > 4) mv.down.moved = true;
+    const d = mv.drag;
+    if(d){
+      if(d.mode === 'pan'){ st.scrollLeft = d.sl - (e.clientX - d.sx); st.scrollTop = d.st - (e.clientY - d.sy); return; }
+      if(d.mode === 'pen'){ if(mvDist(d.shape.pts[d.shape.pts.length-1], p) > 1.5/mv.zoom) d.shape.pts.push(p); }
+      else if(d.mode === 'point'){ d.pt.x = p.x; d.pt.y = p.y; if(d.shape.type === 'calib') mvRecalcCalib(); }
+      else if(d.mode === 'shape'){
+        const dx = p.x - d.last.x, dy = p.y - d.last.y; d.last = p;
+        mvPoints(d.shape).forEach(pt=>{ pt.x += dx; pt.y += dy; });
+        if(d.shape.type === 'calib') mvRecalcCalib();
+      }
+      mvDraw();
+    } else if(mv.pending.length) mvDraw();
+  });
+  const endPtr = e=>{
+    const d = mv.drag; mv.drag = null;
+    if(d && d.mode === 'pan'){ cv.style.cursor = 'grab'; return; }
+    if(d){ if(d.mode === 'pen' && d.shape.pts.length < 2) d.shape.pts.push({x:d.shape.pts[0].x+0.01, y:d.shape.pts[0].y}); mvDraw(); return; }
+    if(mv.down && !mv.down.moved && e.type === 'pointerup') mvClickAt(mvToImg(e));
   };
+  cv.addEventListener('pointerup', endPtr);
+  cv.addEventListener('pointercancel', ()=>{ mv.drag = null; });
+  cv.addEventListener('pointerleave', ()=>{ mv.mouse = null; if(mv.pending.length) mvDraw(); });
+  cv.addEventListener('dblclick', e=>{
+    if(mv.tool !== 'move') return;
+    const b = mvHitBody(mvToImg(e));
+    if(b && b.type === 'text'){
+      const t = prompt('عدّل النص:', b.text);
+      if(t !== null){ if(t.trim()) b.text = t.trim(); else mvDeleteShape(b); mvDraw(); }
+    }
+  });
+  const tools = { mvToolLine:'line', mvToolAngle:'angle', mvToolAngle2:'angle2', mvToolLink:'linkangle', mvToolCalib:'calib', mvToolPen:'pen', mvToolText:'text', mvToolMove:'move', mvToolPan:'pan' };
+  Object.entries(tools).forEach(([id,t])=> $(id).onclick = ()=> mvSetTool(t));
+  $('mvUndo').onclick = ()=>{
+    if(mv.pending.length) mv.pending.pop();
+    else if(mv.pendRefs.length) mv.pendRefs.pop();
+    else { const last = mv.shapes.pop(); if(last === mv.sel) mv.sel = null; mvRecalcCalib(); }
+    mvSyncControls(); mvUpdateHint(); mvDraw();
+  };
+  $('mvDelSel').onclick = ()=>{ if(mv.sel){ mvDeleteShape(mv.sel); mvSyncControls(); mvUpdateHint(); mvDraw(); } };
   $('mvClear').onclick = ()=>{
     if(!mv.shapes.length && !mv.pending.length) return;
-    if(!confirm('مسح كل القياسات على الصورة؟')) return;
-    mv.shapes = []; mv.pending = []; mv.mmPerPx = null; mvUpdateHint(); mvDraw();
+    if(!confirm('مسح كل القياسات والرسومات على الصورة؟')) return;
+    mv.shapes = []; mv.pending = []; mv.pendRefs = []; mv.sel = null; mv.mmPerPx = null;
+    mvSyncControls(); mvUpdateHint(); mvDraw();
   };
+  $('mvColor').oninput = e=>{ mv.color = e.target.value; if(mv.sel){ mv.sel.color = mv.color; } mvDraw(); };
+  document.querySelectorAll('.mv-sw').forEach(b=> b.onclick = ()=>{
+    mv.color = b.dataset.c; $('mvColor').value = mv.color; if(mv.sel) mv.sel.color = mv.color; mvDraw();
+  });
+  $('mvWidth').oninput = e=>{ mv.w = Number(e.target.value); $('mvWidthVal').textContent = mv.w; if(mv.sel) mv.sel.w = mv.w; mvDraw(); };
   $('mvZoomIn').onclick = ()=>{ mvSetZoom(mv.zoom * 1.25); mvDraw(); };
   $('mvZoomOut').onclick = ()=>{ mvSetZoom(mv.zoom / 1.25); mvDraw(); };
   $('mvZoomFit').onclick = ()=>{ mvSetZoom(mv.fit); mvDraw(); };
   $('mvSave').onclick = ()=>{
     mvDraw(true);
     $('mvCanvas').toBlob(blob=>{
-      if(!blob){ showToast('تعذر حفظ الصورة', true); mvDraw(); return; }
+      mvDraw();
+      if(!blob){ showToast('تعذر حفظ الصورة', true); return; }
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
       a.download = 'قياس-' + new Date().toISOString().slice(0,10) + '.jpg';
       document.body.appendChild(a); a.click(); a.remove();
       setTimeout(()=>URL.revokeObjectURL(a.href), 2000);
-      mvDraw();
     }, 'image/jpeg', 0.92);
   };
   $('mvClose').onclick = closeMeasureViewer;
   document.addEventListener('keydown', e=>{
     if(!$('measureViewer').classList.contains('open')) return;
-    if(e.key === 'Escape'){ if(mv.pending.length){ mv.pending = []; mvUpdateHint(); mvDraw(); } else closeMeasureViewer(); }
+    if(e.key === 'Escape'){
+      if(mv.pending.length || mv.pendRefs.length){ mv.pending = []; mv.pendRefs = []; mvUpdateHint(); mvDraw(); }
+      else if(mv.sel){ mv.sel = null; mvSyncControls(); mvDraw(); }
+      else closeMeasureViewer();
+    }
+    else if((e.key === 'Delete' || e.key === 'Backspace') && mv.sel && document.activeElement.tagName !== 'INPUT'){ $('mvDelSel').click(); }
     else if((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z'){ $('mvUndo').click(); }
   });
-  $('mvStage').addEventListener('wheel', e=>{
+  st.addEventListener('wheel', e=>{
     if(!e.ctrlKey) return;
     e.preventDefault();
     mvSetZoom(mv.zoom * (e.deltaY < 0 ? 1.1 : 1/1.1)); mvDraw();
@@ -3140,20 +3417,20 @@ function mvBind(){
 }
 function closeMeasureViewer(){
   $('measureViewer').classList.remove('open');
-  mv.img = null; mv.shapes = []; mv.pending = [];
+  mv.img = null; mv.shapes = []; mv.pending = []; mv.pendRefs = []; mv.sel = null; mv.drag = null;
 }
 function openMeasureViewer(dataUrl){
   if(!dataUrl){ showToast('الصورة دي متعذر تحميلها', true); return; }
   mvBind();
   const img = new Image();
   img.onload = ()=>{
-    mv.img = img; mv.shapes = []; mv.pending = []; mv.mmPerPx = null; mv.mouse = null;
+    mv.img = img; mv.shapes = []; mv.pending = []; mv.pendRefs = []; mv.sel = null; mv.mmPerPx = null; mv.mouse = null;
     const cv = $('mvCanvas'); cv.width = img.naturalWidth; cv.height = img.naturalHeight;
     $('measureViewer').classList.add('open');
     const st = $('mvStage');
     mv.fit = Math.min((st.clientWidth - 24) / img.naturalWidth, (st.clientHeight - 24) / img.naturalHeight);
-    mvSetTool('line');
     mvSetZoom(mv.fit);
+    mvSetTool('line');
     mvDraw();
   };
   img.onerror = ()=> showToast('تعذر فتح الصورة', true);
