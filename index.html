@@ -15,7 +15,10 @@
     --shadow:0 8px 24px rgba(0,0,0,.06);
   }
   *{box-sizing:border-box;}
-  body{margin:0; font-family:'Tajawal',sans-serif; background:var(--bg); color:var(--ink);}
+  html{overflow-x:hidden;}
+  body{margin:0; font-family:'Tajawal',sans-serif; background:var(--bg); color:var(--ink); max-width:100%; overflow-x:hidden;}
+  *,*::before,*::after{box-sizing:border-box;}
+  img,video,canvas,table{max-width:100%;}
   h2{font-family:'Cairo'; color:var(--teal-dark); margin:0 0 14px;}
   .hint{color:var(--muted); font-size:12.5px; margin-top:4px;}
   .btn{border:none; border-radius:10px; padding:10px 18px; font-family:'Tajawal'; font-weight:700; font-size:14px; cursor:pointer; transition:opacity .15s;}
@@ -62,7 +65,7 @@
   .dashboard-card .dash-empty{color:var(--muted); font-size:13px; text-align:center; padding:10px 0;}
   .dashboard-card .dash-count{font-family:'Cairo'; font-weight:800; font-size:32px; color:var(--red); text-align:center; padding:10px 0;}
 
-  main{max-width:900px; margin:0 auto; padding:24px 16px;}
+  main{max-width:900px; width:100%; margin:0 auto; padding:24px 16px;}
   .offline-badge{display:none; background:#FFF3CD; color:#8A6D00; padding:6px 12px; border-radius:20px; font-size:12.5px; font-weight:700;}
 
   .search-wrap{display:flex; gap:10px; margin-bottom:20px;}
@@ -104,7 +107,7 @@
   .vnotes-editable .template-text{ color: #9a9488 !important; }
   .kashf-layout{display:flex; gap:20px; align-items:flex-start;}
   .kashf-main{flex:3; min-width:0;}
-  .kashf-sidebar{flex:1; min-width:180px; max-width:260px; position:sticky; top:16px;}
+  .kashf-sidebar{flex:1; min-width:0; max-width:260px; position:sticky; top:16px;}
   .sidebar-visit-item{display:flex; align-items:center; gap:8px; padding:9px 10px; border:1px solid var(--line); border-radius:10px; margin-bottom:8px; cursor:pointer; background:#fff; font-size:12.5px;}
   .sidebar-visit-item:hover{border-color:var(--teal); background:#F6F3EC;}
   .sidebar-visit-item.active{background:var(--teal); border-color:var(--teal); color:#fff;}
@@ -4965,11 +4968,14 @@ function getFontScale(){
 }
 function applyFontScale(scale){
   const factor = scale / 100;
-  document.body.style.transformOrigin = 'top center';
-  document.body.style.transform = `scale(${factor})`;
-  document.body.style.width = (100 / factor) + '%';
+  // clean up any old transform-based scaling
+  document.body.style.transform = '';
+  document.body.style.transformOrigin = '';
+  document.body.style.width = '';
+  // zoom re-flows the layout (so the page still fits the screen); only set when not 100%
+  document.documentElement.style.zoom = (scale === 100) ? '' : String(factor);
   $('fontSizeValue').textContent = scale + '%';
-  localStorage.setItem('fontScale', String(scale));
+  try{ localStorage.setItem('fontScale', String(scale)); }catch(e){}
 }
 $('fontSizeDownBtn').onclick = ()=>{
   const next = Math.max(FONT_SIZE_MIN, getFontScale() - FONT_SIZE_STEP);
