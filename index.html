@@ -177,6 +177,9 @@
   .mv-stg-btns{grid-column:1/-1; display:flex; gap:6px;}
   .mv-stg-btns button{flex:1; padding:5px 4px; font-size:12px;}
   .mv-adj{display:flex; justify-content:space-between; margin-top:6px;}
+  .mv-overlay select{font-family:inherit; padding:5px; border-radius:6px; border:1px solid #3a463f; background:#26312b; color:#f2efe6; max-width:100%;}
+  .mv-loupe{position:absolute; width:160px; height:160px; border-radius:50%; border:3px solid #ffe66d; box-shadow:0 4px 18px rgba(0,0,0,.65); pointer-events:none; display:none; z-index:4; background:#000;}
+  .mv-cmp-sel{display:flex; flex-wrap:wrap; gap:8px; align-items:center; padding:6px 8px;}
   .mv-compare{position:absolute; inset:0; z-index:3; display:none; flex-direction:column; background:#0f1412; min-width:0;}
   .mv-cmp-bar{display:flex; flex-wrap:wrap; gap:6px; align-items:center; padding:6px 8px; background:#1c2420; border-bottom:1px solid #2f3a34;}
   .mv-cmp-grid{flex:1; min-height:0; display:grid; grid-template-columns:1fr 1fr; gap:6px; padding:6px;}
@@ -1285,6 +1288,9 @@
     <button id="mvZoomOut">➖</button>
     <button id="mvZoomFit">ملائمة</button>
     <button id="mvZoomIn">➕</button>
+    <button id="mvToolZoom">🔍 زووم</button>
+    <button id="mvViewBack">↩ العرض السابق</button>
+    <button id="mvLoupeBtn">🔎 عدسة</button>
     <button id="mvClose" style="margin-inline-start:auto;">✖ إغلاق</button>
   </div>
   <div class="mv-body">
@@ -1326,6 +1332,30 @@
       <div class="mv-sec" id="mvCropGrp" style="display:none;">
         <div class="mv-sh">🔲 كروب الصورة</div>
         <div class="mv-row" style="margin-top:0;"><button id="mvCropApply">✔ تطبيق الكروب</button><button id="mvCropCancel">✖ إلغاء</button></div>
+      </div>
+      <div class="mv-sec" id="mvPieceGrp" style="display:none;">
+        <div class="mv-sh">🔩 الصورة المدرجة / القطعة</div>
+        <div class="mv-adj"><span class="mv-lbl">الشفافية</span><b class="mv-lbl" id="mvPcOpV" data-i18n-skip>100%</b></div>
+        <input type="range" id="mvPcOp" min="5" max="100" step="1" value="100">
+        <div class="mv-adj"><span class="mv-lbl">العرض (تمدد أفقي)</span><b class="mv-lbl" id="mvPcSxV" data-i18n-skip>100%</b></div>
+        <input type="range" id="mvPcSx" min="10" max="500" step="1" value="100">
+        <div class="mv-adj"><span class="mv-lbl">الطول (تمدد رأسي)</span><b class="mv-lbl" id="mvPcSyV" data-i18n-skip>100%</b></div>
+        <input type="range" id="mvPcSy" min="10" max="500" step="1" value="100">
+        <div class="mv-row"><label class="mv-lbl"><input type="checkbox" id="mvPcLock" checked> ثبّت النسبة بين الطول والعرض</label></div>
+        <div class="mv-row"><button id="mvFlipX">⇋ قلب أفقي</button><button id="mvFlipY">⇅ قلب رأسي</button></div>
+        <div class="mv-row"><label class="mv-lbl"><input type="checkbox" id="mvKeyOn"> إزالة الخلفية</label></div>
+        <div class="mv-row" style="margin-top:2px;">
+          <select id="mvKeyMode"><option value="auto">تلقائي (من الأركان)</option><option value="white">أبيض</option><option value="black">أسود</option><option value="custom">لون مخصص</option></select>
+          <input type="color" id="mvKeyColor" value="#ffffff">
+        </div>
+        <div class="mv-adj"><span class="mv-lbl">درجة التحمّل (Tolerance)</span><b class="mv-lbl" id="mvKeyTolV" data-i18n-skip>25</b></div>
+        <input type="range" id="mvKeyTol" min="0" max="100" step="1" value="25">
+        <div class="mv-adj"><span class="mv-lbl">نعومة الحواف</span><b class="mv-lbl" id="mvKeySoftV" data-i18n-skip>10</b></div>
+        <input type="range" id="mvKeySoft" min="0" max="40" step="1" value="10">
+        <div class="mv-row"><label class="mv-lbl"><input type="checkbox" id="mvKeyEdge" checked> من الأطراف فقط (يحافظ على الأجزاء البيضاء جوه الجسم)</label></div>
+        <div class="mv-row"><label class="mv-lbl"><input type="checkbox" id="mvTintOn"> تلوين</label><input type="color" id="mvTintColor" value="#ffd24d"></div>
+        <div class="mv-adj"><span class="mv-lbl">قوة اللون</span><b class="mv-lbl" id="mvTintAmtV" data-i18n-skip>100%</b></div>
+        <input type="range" id="mvTintAmt" min="0" max="100" step="1" value="100">
       </div>
       <div class="mv-sec" id="mvRotGrp" style="display:none;">
         <div class="mv-sh">🔄 التدوير حول المحور</div>
@@ -1415,14 +1445,15 @@
           <button id="mvCmpZoomOut">➖</button>
           <button id="mvCmpFit">ملائمة</button>
           <button id="mvCmpZoomIn">➕</button>
-          <label class="mv-lbl"><input type="checkbox" id="mvCmpSync" checked> تزامن التمرير</label>
           <button id="mvCmpSave">⬇ حفظ المقارنة كصورة</button>
         </div>
-        <div class="mv-cmp-grid">
-          <div class="mv-cmp-pane"><select id="mvCmpSelA" data-i18n-skip></select><div class="mv-cmp-view" id="mvCmpViewA"><img id="mvCmpImgA" alt=""></div></div>
-          <div class="mv-cmp-pane"><select id="mvCmpSelB" data-i18n-skip></select><div class="mv-cmp-view" id="mvCmpViewB"><img id="mvCmpImgB" alt=""></div></div>
+        <div class="mv-cmp-sel">
+          <span class="mv-lbl">الرسمة الأولى</span><select id="mvCmpSelA" data-i18n-skip></select>
+          <span class="mv-lbl">الرسمة التانية</span><select id="mvCmpSelB" data-i18n-skip></select>
         </div>
+        <div class="mv-cmp-view" id="mvCmpView"><canvas id="mvCmpCanvas"></canvas></div>
       </div>
+      <canvas id="mvLoupe" class="mv-loupe" width="160" height="160"></canvas>
       <div class="mv-empty" id="mvEmpty">
         <div style="font-size:42px;">🖼️</div>
         <div>مساحة رسم فاضية — ابدأ بإدراج صورة (أشعة مثلًا) أو ارسم مباشرة</div>
@@ -3165,7 +3196,7 @@ function groupImagesForTimeline(images){
 
 // ===== أداة قياس الأطوال والزوايا والرسم والقص والتدوير على الصور =====
 const mv = { img:null, shapes:[], pending:[], pendRefs:[], tool:'line', zoom:1, fit:1, mmPerPx:null, mouse:null,
-             baseUrl:null, baseBlank:false, adj:null, adjCanvas:null, cropRect:null, cmp:{open:false, zoom:1, cur:null, stages:[]}, sel:null, multi:new Set(), drag:null, down:null, color:'#39ff88', w:3, bound:false,
+             baseUrl:null, baseBlank:false, adj:null, adjCanvas:null, viewStack:[], prevTool:'move', zoomRect:null, loupe:false, lastWheel:0, cropRect:null, cmp:{open:false, zoom:1, cur:null, stages:[]}, sel:null, multi:new Set(), drag:null, down:null, color:'#39ff88', w:3, bound:false,
              pivot:null, rot:{ phi:-Math.PI/2, from:null, total:0 } };
 const MV_EN = {
 "السُمك / حجم الخط:": "Thickness / font size:",
@@ -3306,7 +3337,30 @@ const MV_EN = {
 "احفظ مرحلة واحدة على الأقل من «💾 حفظ المرحلة الحالية» عشان تقارن": "Save at least one stage with “💾 Save current stage” to compare",
 "قارن بين رسمتين جنب بعض — اختار من القوائم، والتكبير والتمرير متزامنين": "Compare two drawings side by side — pick from the lists; zoom and scrolling are synced",
 "يتطبق على: الصورة الأساسية": "Applies to: base image",
-"يتطبق على: القطع المحددة": "Applies to: selected pieces"
+"يتطبق على: القطع المحددة": "Applies to: selected pieces",
+"🔍 زووم": "🔍 Zoom",
+"↩ العرض السابق": "↩ Previous view",
+"🔎 عدسة": "🔎 Loupe",
+"الرسمة الأولى": "First drawing",
+"الرسمة التانية": "Second drawing",
+"الرسمتين ظاهرين كصورة واحدة — اختار من القوائم، والتكبير للصورة كلها، وتقدر تحفظها كصورة واحدة": "Both drawings are shown as one image — pick from the lists, zoom applies to the whole image, and you can save it as one image",
+"اضغط لتكبير نقطة، أو اسحب مربع حوالين المنطقة لتكبيرها (Shift+ضغط للتصغير) — وبعدها بترجع لأداتك السابقة لوحدها": "Click to zoom in at a point, or drag a box around the area (Shift+click to zoom out) — then it returns to your previous tool automatically",
+"مفيش عرض سابق": "No previous view",
+"🔩 الصورة المدرجة / القطعة": "🔩 Inserted image / piece",
+"الشفافية": "Opacity",
+"العرض (تمدد أفقي)": "Width (horizontal stretch)",
+"الطول (تمدد رأسي)": "Height (vertical stretch)",
+"ثبّت النسبة بين الطول والعرض": "Lock aspect ratio",
+"⇋ قلب أفقي": "⇋ Flip horizontal",
+"⇅ قلب رأسي": "⇅ Flip vertical",
+"إزالة الخلفية": "Remove background",
+"تلقائي (من الأركان)": "Auto (from corners)",
+"لون مخصص": "Custom color",
+"درجة التحمّل (Tolerance)": "Tolerance",
+"نعومة الحواف": "Edge softness",
+"من الأطراف فقط (يحافظ على الأجزاء البيضاء جوه الجسم)": "From the edges only (keeps white areas inside the object)",
+"تلوين": "Tint",
+"قوة اللون": "Tint strength"
 };
 mv.lang = 'ar';
 try{ mv.lang = localStorage.getItem('mvLang') === 'en' ? 'en' : 'ar'; }catch(_){}
@@ -3336,7 +3390,7 @@ function mvApplyLang(){
   $('mvLang').title = en ? 'التبديل للعربية' : 'Switch to English';
   $('mvTitle').textContent = mvT(mv.titleAr || '📐 الرسم والقياس');
   mvUpdateHint(); mvRenderStages(); mvSyncAdjUI();
-  if(mv.cmp.open){ mvCmpFillSelects($('mvCmpSelA').value, $('mvCmpSelB').value); }
+  if(mv.cmp.open){ mvCmpFillSelects($('mvCmpSelA').value, $('mvCmpSelB').value).then(mvCmpRender); }
 }
 const MV_NEED = { line:2, seg:2, calib:2, angle:3, angle2:4 };
 const MV_HINTS = {
@@ -3353,6 +3407,7 @@ const MV_HINTS = {
   text:     ['اضغط في المكان اللي عايز تكتب فيه'],
   move:     ['اسحب أي نقطة لتحريكها، أو اسحب الخط/القطعة كلها. Shift+ضغط لتحديد أكتر من عنصر'],
   pan:      ['اسحب لتحريك الصورة (مفيد وانت مكبّر)'],
+  zoom:     ['اضغط لتكبير نقطة، أو اسحب مربع حوالين المنطقة لتكبيرها (Shift+ضغط للتصغير) — وبعدها بترجع لأداتك السابقة لوحدها'],
   crop:     ['اسحب على الصورة لتحديد منطقة الكروب، واسحب الأركان للتعديل، ثم اضغط «تطبيق الكروب» أو Enter'],
   rotate:   ['اضغط على العناصر لتحديدها (أو إلغاء تحديدها) — اسحب النقطة البرتقالي لتغيير محور الدوران — اسحب النقطة السماوي لتدوير المحدد، أو اكتب الدرجات واضغط ↺ / ↻']
 };
@@ -3376,10 +3431,48 @@ function mvUpdateHint(){
 }
 function mvSetZoom(z){
   if(!mv.img) return;
-  mv.zoom = Math.max(0.05, Math.min(8, z));
+  mv.zoom = Math.max(0.05, Math.min(16, z));
   const cv = $('mvCanvas');
   cv.style.width = (mv.img.naturalWidth * mv.zoom) + 'px';
   cv.style.height = (mv.img.naturalHeight * mv.zoom) + 'px';
+}
+function mvViewPush(){
+  const st = $('mvStage'); mv.viewStack.push({ zoom:mv.zoom, sl:st.scrollLeft, st:st.scrollTop });
+  if(mv.viewStack.length > 30) mv.viewStack.shift();
+}
+function mvZoomAt(z, clientX, clientY, push){
+  if(!mv.img) return;
+  const st = $('mvStage'), cv = $('mvCanvas');
+  if(push !== false) mvViewPush();
+  const r0 = cv.getBoundingClientRect(), fx = (clientX - r0.left) / r0.width, fy = (clientY - r0.top) / r0.height;
+  mvSetZoom(z);
+  const r1 = cv.getBoundingClientRect();
+  st.scrollLeft += (r1.left + fx * r1.width) - clientX;
+  st.scrollTop += (r1.top + fy * r1.height) - clientY;
+  mvDraw();
+}
+function mvZoomCenter(f){
+  const r = $('mvStage').getBoundingClientRect();
+  mvZoomAt(mv.zoom * f, r.left + r.width/2, r.top + r.height/2);
+}
+function mvViewBack(){
+  const v = mv.viewStack.pop();
+  if(!v){ showToast(mvT('مفيش عرض سابق'), true); return; }
+  const st = $('mvStage'); mvSetZoom(v.zoom); st.scrollLeft = v.sl; st.scrollTop = v.st; mvDraw();
+}
+function mvUpdateLoupe(e, p){
+  const L = $('mvLoupe'); if(!L) return;
+  if(!mv.loupe || !mv.img || !e){ L.style.display = 'none'; return; }
+  const S = 160, M = 3, src = S / (mv.zoom * M), x = L.getContext('2d');
+  x.fillStyle = '#000'; x.fillRect(0, 0, S, S);
+  x.drawImage($('mvCanvas'), p.x - src/2, p.y - src/2, src, src, 0, 0, S, S);
+  x.lineWidth = 3; x.strokeStyle = 'rgba(0,0,0,.8)'; x.beginPath(); x.moveTo(S/2-14, S/2); x.lineTo(S/2+14, S/2); x.moveTo(S/2, S/2-14); x.lineTo(S/2, S/2+14); x.stroke();
+  x.lineWidth = 1.2; x.strokeStyle = '#ffe66d'; x.stroke();
+  const mr = L.parentElement.getBoundingClientRect();
+  let lx = e.clientX - mr.left + 28, ly = e.clientY - mr.top - S - 28;
+  if(lx + S > mr.width) lx = e.clientX - mr.left - S - 28;
+  if(ly < 0) ly = e.clientY - mr.top + 28;
+  L.style.left = lx + 'px'; L.style.top = ly + 'px'; L.style.display = 'block';
 }
 function mvToImg(e){
   const cv = $('mvCanvas'), r = cv.getBoundingClientRect();
@@ -3423,8 +3516,8 @@ function mvSetSel(sh, toggle){
 }
 // ----- القطع المقصوصة -----
 function mvPieceWorldPoly(sh){
-  const cs = Math.cos(sh.theta), sn = Math.sin(sh.theta), sc = sh.sc || 1;
-  return sh.lpoly.map(q => ({ x: sh.C.x + (q.x*cs - q.y*sn)*sc, y: sh.C.y + (q.x*sn + q.y*cs)*sc }));
+  const cs = Math.cos(sh.theta), sn = Math.sin(sh.theta), sx = sh.sx || 1, sy = sh.sy || 1, fx = sh.fx ? -1 : 1, fy = sh.fy ? -1 : 1;
+  return sh.lpoly.map(q => { const X = q.x*sx*fx, Y = q.y*sy*fy; return { x: sh.C.x + X*cs - Y*sn, y: sh.C.y + X*sn + Y*cs }; });
 }
 function mvPtInPoly(p, poly){
   let inside = false;
@@ -3433,6 +3526,41 @@ function mvPtInPoly(p, poly){
     if(((a.y > p.y) !== (b.y > p.y)) && (p.x < (b.x - a.x) * (p.y - a.y) / ((b.y - a.y) || 1e-9) + a.x)) inside = !inside;
   }
   return inside;
+}
+function mvPieceHandlePositions(sh){
+  const cs = Math.cos(sh.theta), sn = Math.sin(sh.theta), out = [];
+  for(const hx of [-1,0,1]) for(const hy of [-1,0,1]){
+    if(!hx && !hy) continue;
+    const X = hx * sh.cw/2 * (sh.sx || 1), Y = hy * sh.ch/2 * (sh.sy || 1);
+    out.push({ hx, hy, x: sh.C.x + X*cs - Y*sn, y: sh.C.y + X*sn + Y*cs });
+  }
+  return out;
+}
+function mvHitPieceHandle(p){
+  const r = 11 / mv.zoom;
+  for(const sh of mv.shapes){
+    if(sh.type !== 'piece' || !mv.multi.has(sh)) continue;
+    for(const h of mvPieceHandlePositions(sh)) if(mvDist(p, h) <= r) return { shape:sh, hx:h.hx, hy:h.hy };
+  }
+  return null;
+}
+function mvPieceAlphaAt(sh, p){
+  const cs = Math.cos(-sh.theta), sn = Math.sin(-sh.theta), dx = p.x - sh.C.x, dy = p.y - sh.C.y;
+  let lx = (dx*cs - dy*sn) / (sh.sx || 1), ly = (dx*sn + dy*cs) / (sh.sy || 1);
+  if(sh.fx) lx = -lx; if(sh.fy) ly = -ly;
+  const ix = Math.floor(lx + sh.cw/2), iy = Math.floor(ly + sh.ch/2);
+  if(ix < 0 || iy < 0 || ix >= sh.cw || iy >= sh.ch) return 0;
+  if(!sh._al){
+    const d = sh.cvs.getContext('2d').getImageData(0, 0, sh.cw, sh.ch).data, al = new Uint8Array(sh.cw * sh.ch);
+    for(let i = 0; i < al.length; i++) al[i] = d[i*4+3];
+    sh._al = al;
+  }
+  return sh._al[iy*sh.cw + ix];
+}
+function mvPieceHitTest(sh, p){
+  if(!mvPtInPoly(p, mvPieceWorldPoly(sh))) return false;
+  if(sh.key && sh.key.on) return mvPieceAlphaAt(sh, p) > 25;
+  return true;
 }
 function mvTranslate(sh, dx, dy){
   if(sh.type === 'piece'){ sh.C.x += dx; sh.C.y += dy; }
@@ -3518,7 +3646,7 @@ function mvHitBody(p){
   }
   for(let i = mv.shapes.length-1; i >= 0; i--){
     const sh = mv.shapes[i];
-    if(sh.type === 'piece' && mvPtInPoly(p, mvPieceWorldPoly(sh))) return sh;
+    if(sh.type === 'piece' && mvPieceHitTest(sh, p)) return sh;
   }
   return null;
 }
@@ -3642,14 +3770,18 @@ function mvDraw(forExport){
   mv.shapes.forEach(sh=>{
     if(sh.type !== 'piece') return;
     const hl = !forExport && mv.multi.has(sh);
-    const sc = sh.sc || 1;
-    ctx.save(); ctx.translate(sh.C.x, sh.C.y); ctx.rotate(sh.theta); ctx.scale(sc, sc);
+    const sx = sh.sx || 1, sy = sh.sy || 1;
+    ctx.save(); ctx.translate(sh.C.x, sh.C.y); ctx.rotate(sh.theta); ctx.scale(sx * (sh.fx ? -1 : 1), sy * (sh.fy ? -1 : 1));
+    ctx.globalAlpha = sh.op == null ? 1 : sh.op;
     ctx.drawImage(sh.cvs, -sh.cw/2, -sh.ch/2);
-    ctx.beginPath(); sh.lpoly.forEach((q,i)=> i ? ctx.lineTo(q.x,q.y) : ctx.moveTo(q.x,q.y)); ctx.closePath();
-    ctx.lineJoin = 'round';
-    if(hl){ ctx.lineWidth = (sh.w*0.5 + 6)*u/sc; ctx.strokeStyle = 'rgba(255,255,255,.4)'; ctx.stroke(); }
-    ctx.lineWidth = Math.max(1, sh.w*0.5)*u/sc; ctx.strokeStyle = sh.color; ctx.stroke();
     ctx.restore();
+    const wp = mvPieceWorldPoly(sh);
+    const trace = ()=>{ ctx.beginPath(); wp.forEach((q,i)=> i ? ctx.lineTo(q.x,q.y) : ctx.moveTo(q.x,q.y)); ctx.closePath(); ctx.lineJoin = 'round'; };
+    if(hl){ trace(); ctx.lineWidth = (sh.w*0.5 + 4)*u; ctx.strokeStyle = 'rgba(255,255,255,.4)'; ctx.stroke(); }
+    if(!sh.noOutline){ trace(); ctx.lineWidth = Math.max(1, sh.w*0.5)*u; ctx.strokeStyle = sh.color; ctx.stroke(); }
+    if(hl && mv.tool === 'move'){
+      mvPieceHandlePositions(sh).forEach(h=>{ ctx.fillStyle = '#fff'; ctx.fillRect(h.x - 6*u, h.y - 6*u, 12*u, 12*u); ctx.lineWidth = 1.5*u; ctx.strokeStyle = '#000'; ctx.strokeRect(h.x - 6*u, h.y - 6*u, 12*u, 12*u); });
+    }
   });
   mv.shapes.forEach(sh=>{
     if(sh.type === 'piece') return;
@@ -3759,6 +3891,10 @@ function mvDraw(forExport){
       ctx.setLineDash([8*u, 6*u]); mvSeg(ctx, last, mv.mouse, 2*u, 'rgba(255,255,255,.85)'); ctx.setLineDash([]);
     }
   }
+  if(mv.tool === 'zoom' && mv.zoomRect){
+    const z = mv.zoomRect, zx = Math.min(z.x0, z.x1), zy = Math.min(z.y0, z.y1), zw = Math.abs(z.x1 - z.x0), zh = Math.abs(z.y1 - z.y0);
+    ctx.fillStyle = 'rgba(77,208,225,.15)'; ctx.fillRect(zx, zy, zw, zh); ctx.setLineDash([6*u,4*u]); ctx.lineWidth = 2*u; ctx.strokeStyle = '#4dd0e1'; ctx.strokeRect(zx, zy, zw, zh); ctx.setLineDash([]);
+  }
   if(mv.tool === 'crop' && mv.cropRect){
     const n = mvCropNorm(), W = cv.width, H = cv.height;
     ctx.save(); ctx.fillStyle = 'rgba(0,0,0,.55)'; ctx.beginPath(); ctx.rect(0,0,W,H); ctx.rect(n.x0, n.y0, n.x1-n.x0, n.y1-n.y0); ctx.fill('evenodd'); ctx.restore();
@@ -3802,15 +3938,18 @@ function mvSyncControls(){
   if(s){ mv.color = s.color; mv.w = s.w; }
   $('mvColor').value = mv.color; $('mvWidth').value = mv.w; $('mvWidthVal').textContent = mv.w;
   $('mvDelSel').style.visibility = mv.multi.size ? 'visible' : 'hidden';
-  mvSyncAdjUI();
+  mvSyncAdjUI(); mvSyncPieceUI();
 }
 function mvSetTool(t){
-  mv.tool = t; mv.pending = []; mv.pendRefs = []; mv.drag = null;
-  if(t !== 'move' && t !== 'rotate') mvSetSel(null);
+  const keepWork = (t === 'zoom') || (mv.tool === 'zoom');
+  if(t === 'zoom' && mv.tool !== 'zoom') mv.prevTool = mv.tool;
+  mv.tool = t; mv.drag = null; mv.zoomRect = null;
+  if(!keepWork){ mv.pending = []; mv.pendRefs = []; }
+  if(!keepWork && t !== 'move' && t !== 'rotate') mvSetSel(null);
   const ids = { line:'mvToolLine', seg:'mvToolSeg', angle:'mvToolAngle', angle2:'mvToolAngle2', linkangle:'mvToolLink', calib:'mvToolCalib',
-                pen:'mvToolPen', text:'mvToolText', curve:'mvToolCurve', mid:'mvToolMid', point:'mvToolPoint', crop:'mvToolCrop', cut:'mvToolCut', move:'mvToolMove', rotate:'mvToolRotate', pan:'mvToolPan' };
+                pen:'mvToolPen', text:'mvToolText', curve:'mvToolCurve', mid:'mvToolMid', point:'mvToolPoint', crop:'mvToolCrop', zoom:'mvToolZoom', cut:'mvToolCut', move:'mvToolMove', rotate:'mvToolRotate', pan:'mvToolPan' };
   Object.entries(ids).forEach(([k,id])=> $(id).classList.toggle('active', k === t));
-  $('mvCanvas').style.cursor = t === 'move' ? 'move' : t === 'pan' ? 'grab' : t === 'text' ? 'text' : 'crosshair';
+  $('mvCanvas').style.cursor = t === 'move' ? 'move' : t === 'pan' ? 'grab' : t === 'text' ? 'text' : t === 'zoom' ? 'zoom-in' : 'crosshair';
   $('mvRotGrp').style.display = t === 'rotate' ? 'block' : 'none';
   $('mvCutGrp').style.display = t === 'cut' ? 'block' : 'none';
   $('mvCurveGrp').style.display = t === 'curve' ? 'block' : 'none';
@@ -3848,7 +3987,7 @@ function mvFinishCut(){
   x.drawImage(tmp, -bx, -by);
   const cx = bx + bw/2, cy = by + bh/2;
   const keep = $('mvKeepOrig').checked;
-  const sh = mvNewShape({ type:'piece', cvs:pc, cw:bw, ch:bh, lpoly:q.map(p=>({x:p.x-cx, y:p.y-cy})), C:{x:cx, y:cy}, theta:0, sc:1,
+  const sh = mvNewShape({ type:'piece', cvs:pc, cw:bw, ch:bh, lpoly:q.map(p=>({x:p.x-cx, y:p.y-cy})), C:{x:cx, y:cy}, theta:0, sx:1, sy:1,
                           hole: keep ? null : q.map(p=>({x:p.x, y:p.y})) });
   mvSetTool('move'); mvSetSel(sh); mvSyncControls(); mvUpdateHint(); mvDraw();
   showToast(mvT('تم القص — اسحب القطعة لتحريكها، أو استخدم أداة التدوير'));
@@ -3942,6 +4081,10 @@ function mvBind(){
       const sh = mvNewShape({type:'pen', pts:[p]});
       mv.drag = { mode:'pen', shape:sh }; mvDraw(); return;
     }
+    if(mv.tool === 'zoom'){
+      mv.zoomRect = { x0:p.x, y0:p.y, x1:p.x, y1:p.y, cx:e.clientX, cy:e.clientY, out:(e.shiftKey || e.altKey || e.ctrlKey) };
+      mv.drag = { mode:'zoomrect' }; return;
+    }
     if(mv.tool === 'crop'){
       const rr = mvHitRadius();
       if(mv.cropRect){
@@ -3964,6 +4107,10 @@ function mvBind(){
       if(b){ mvSetSel(b, true); mvSyncControls(); mvDraw(); }
       mv.drag = null; return;
     }
+    if(mv.tool === 'move' && !mv.pending.length){
+      const ph = mvHitPieceHandle(p);
+      if(ph){ mv.drag = { mode:'presize', shape:ph.shape, hx:ph.hx, hy:ph.hy, sx0:ph.shape.sx || 1, sy0:ph.shape.sy || 1 }; return; }
+    }
     if(mv.tool !== 'cut' && mv.tool !== 'text' && mv.tool !== 'curve' && mv.tool !== 'point' && mv.tool !== 'mid' && !mv.pending.length && !mv.pendRefs.length){
       const h = mvHitHandle(p);
       if(h){ mvSetSel(h.shape); mv.drag = { mode:'point', pt:h.pt, shape:h.shape }; mvSyncControls(); mvDraw(); return; }
@@ -3981,6 +4128,7 @@ function mvBind(){
   });
   cv.addEventListener('pointermove', e=>{
     const p = mvToImg(e); mv.mouse = p;
+    mvUpdateLoupe(e, p);
     if(mv.down && Math.hypot(e.clientX - mv.down.x, e.clientY - mv.down.y) > 4) mv.down.moved = true;
     const d = mv.drag;
     if(d){
@@ -3992,6 +4140,17 @@ function mvBind(){
         d.shapes.forEach(s=>{ mvTranslate(s, dx, dy); if(s.type === 'calib') mvRecalcCalib(); });
       }
       else if(d.mode === 'pivot'){ mv.pivot.x = p.x; mv.pivot.y = p.y; }
+      else if(d.mode === 'presize'){
+        const sh = d.shape, cs = Math.cos(-sh.theta), sn = Math.sin(-sh.theta), dx = p.x - sh.C.x, dy = p.y - sh.C.y;
+        const lx = dx*cs - dy*sn, ly = dx*sn + dy*cs;
+        if(d.hx) sh.sx = Math.max(0.05, Math.abs(lx) / (sh.cw/2));
+        if(d.hy) sh.sy = Math.max(0.05, Math.abs(ly) / (sh.ch/2));
+        if(d.hx && d.hy && ($('mvPcLock').checked || e.shiftKey)){
+          const k = Math.max(sh.sx / d.sx0, sh.sy / d.sy0); sh.sx = d.sx0 * k; sh.sy = d.sy0 * k;
+        } else if(d.hx && !d.hy && $('mvPcLock').checked && e.shiftKey){ sh.sy = d.sy0 * sh.sx / d.sx0; }
+        mvSyncPieceUI();
+      }
+      else if(d.mode === 'zoomrect'){ mv.zoomRect.x1 = p.x; mv.zoomRect.y1 = p.y; }
       else if(d.mode === 'cropnew'){ mv.cropRect.x1 = p.x; mv.cropRect.y1 = p.y; }
       else if(d.mode === 'cropc'){ mv.cropRect = { x0:d.fx, y0:d.fy, x1:p.x, y1:p.y }; }
       else if(d.mode === 'cropmove'){
@@ -4011,6 +4170,22 @@ function mvBind(){
   const endPtr = e=>{
     const d = mv.drag; mv.drag = null;
     if(d && d.mode === 'pan'){ cv.style.cursor = 'grab'; return; }
+    if(d && d.mode === 'presize'){ mvDraw(); return; }
+    if(d && d.mode === 'zoomrect'){
+      const zr = mv.zoomRect; mv.zoomRect = null;
+      const st = $('mvStage'), cvv = $('mvCanvas'), W = cvv.width, H = cvv.height;
+      const rw = Math.abs(zr.x1 - zr.x0), rh = Math.abs(zr.y1 - zr.y0);
+      if(mv.down && mv.down.moved && rw * mv.zoom > 12 && rh * mv.zoom > 12){
+        const z = Math.min(16, (st.clientWidth - 24) / rw, (st.clientHeight - 24) / rh);
+        mvViewPush(); mvSetZoom(z);
+        const r = cvv.getBoundingClientRect(), sr = st.getBoundingClientRect();
+        const tx = r.left + ((zr.x0 + zr.x1)/2) / W * r.width, ty = r.top + ((zr.y0 + zr.y1)/2) / H * r.height;
+        st.scrollLeft += tx - (sr.left + sr.width/2); st.scrollTop += ty - (sr.top + sr.height/2);
+      } else {
+        mvZoomAt(zr.out ? mv.zoom / 2 : mv.zoom * 2, zr.cx, zr.cy);
+      }
+      mvSetTool(mv.prevTool && mv.prevTool !== 'zoom' ? mv.prevTool : 'move'); mvDraw(); return;
+    }
     if(d && String(d.mode).startsWith('crop')){
       if(mv.cropRect){ const n = mvCropNorm(); if(n.x1 - n.x0 < 6 || n.y1 - n.y0 < 6) mv.cropRect = null; }
       mvDraw(); return;
@@ -4023,7 +4198,7 @@ function mvBind(){
   };
   cv.addEventListener('pointerup', endPtr);
   cv.addEventListener('pointercancel', ()=>{ mv.drag = null; });
-  cv.addEventListener('pointerleave', ()=>{ mv.mouse = null; if(mv.pending.length) mvDraw(); });
+  cv.addEventListener('pointerleave', ()=>{ mv.mouse = null; mvUpdateLoupe(null); if(mv.pending.length) mvDraw(); });
   cv.addEventListener('dblclick', e=>{
     if(mv.tool === 'curve'){
       if(mv.pending.length > 2) mv.pending.pop();
@@ -4050,7 +4225,7 @@ function mvBind(){
     }
   });
   const tools = { mvToolLine:'line', mvToolSeg:'seg', mvToolAngle:'angle', mvToolAngle2:'angle2', mvToolLink:'linkangle', mvToolCalib:'calib',
-                  mvToolPen:'pen', mvToolText:'text', mvToolCurve:'curve', mvToolMid:'mid', mvToolPoint:'point', mvToolCrop:'crop', mvToolCut:'cut', mvToolMove:'move', mvToolRotate:'rotate', mvToolPan:'pan' };
+                  mvToolPen:'pen', mvToolText:'text', mvToolCurve:'curve', mvToolMid:'mid', mvToolPoint:'point', mvToolCrop:'crop', mvToolZoom:'zoom', mvToolCut:'cut', mvToolMove:'move', mvToolRotate:'rotate', mvToolPan:'pan' };
   Object.entries(tools).forEach(([id,t])=> $(id).onclick = ()=> mvSetTool(t));
   $('mvUndo').onclick = ()=>{
     if(mv.pending.length) mv.pending.pop();
@@ -4075,9 +4250,11 @@ function mvBind(){
   $('mvPivotCenter').onclick = ()=>{ mvEnsurePivot(true); mvDraw(); };
   $('mvSelAll').onclick = ()=>{ mv.multi = new Set(mv.shapes.filter(s=>s.type !== 'lineangle' && s.type !== 'cropmark')); mv.sel = [...mv.multi].pop() || null; mv.rot.from = null; mvSyncControls(); mvDraw(); };
   $('mvCutDone').onclick = mvFinishCut;
-  $('mvZoomIn').onclick = ()=>{ mvSetZoom(mv.zoom * 1.25); mvDraw(); };
-  $('mvZoomOut').onclick = ()=>{ mvSetZoom(mv.zoom / 1.25); mvDraw(); };
-  $('mvZoomFit').onclick = ()=>{ mvSetZoom(mv.fit); mvDraw(); };
+  $('mvZoomIn').onclick = ()=> mvZoomCenter(1.4);
+  $('mvZoomOut').onclick = ()=> mvZoomCenter(1/1.4);
+  $('mvZoomFit').onclick = ()=>{ mvViewPush(); mvSetZoom(mv.fit); const st = $('mvStage'); st.scrollLeft = 0; st.scrollTop = 0; mvDraw(); };
+  $('mvViewBack').onclick = mvViewBack;
+  $('mvLoupeBtn').onclick = ()=>{ mv.loupe = !mv.loupe; $('mvLoupeBtn').classList.toggle('active', mv.loupe); if(!mv.loupe) mvUpdateLoupe(null); };
   $('mvSave').onclick = ()=>{
     mvDraw(true);
     $('mvCanvas').toBlob(blob=>{
@@ -4091,6 +4268,11 @@ function mvBind(){
     }, 'image/jpeg', 0.92);
   };
   $('mvCurveDone').onclick = mvFinishCurve;
+  [['mvPcOp','op'],['mvPcSx','sx'],['mvPcSy','sy']].forEach(([id,w])=> $(id).addEventListener('input', ()=> mvOnPieceInput(w)));
+  ['mvKeyTol','mvKeySoft','mvTintAmt','mvKeyColor','mvTintColor'].forEach(id=> $(id).addEventListener('input', ()=> mvOnPieceInput('rebuild')));
+  ['mvKeyOn','mvKeyMode','mvKeyEdge','mvTintOn'].forEach(id=> $(id).addEventListener('change', ()=> mvOnPieceInput('rebuild')));
+  $('mvFlipX').onclick = ()=>{ mvSelPieces().forEach(s=> s.fx = !s.fx); mvDraw(); };
+  $('mvFlipY').onclick = ()=>{ mvSelPieces().forEach(s=> s.fy = !s.fy); mvDraw(); };
   ['mvAdjB','mvAdjC','mvAdjG','mvAdjS','mvAdjSh'].forEach(id=> $(id).addEventListener('input', mvOnAdjInput));
   ['mvAdjInv','mvAdjGray','mvAdjAuto'].forEach(id=> $(id).addEventListener('change', mvOnAdjInput));
   $('mvAdjReset').onclick = mvResetAdj;
@@ -4100,27 +4282,14 @@ function mvBind(){
   $('mvCmpBack').onclick = mvCloseCompare;
   $('mvCmpRefresh').onclick = async ()=>{
     const a = $('mvCmpSelA').value, b2 = $('mvCmpSelB').value;
-    mv.cmp.cur = mvCmpSnapshot(); await mvCmpFillSelects(a, b2);
-    ['A','B'].forEach(sd=> $('mvCmpImg'+sd).removeAttribute('data-u')); mvCmpRender();
+    mv.cmp.cur = mvCmpSnapshot(); await mvCmpFillSelects(a, b2); await mvCmpRender();
   };
   $('mvCmpSelA').onchange = mvCmpRender; $('mvCmpSelB').onchange = mvCmpRender;
-  $('mvCmpZoomIn').onclick = ()=>{ mv.cmp.zoom = Math.min(8, mv.cmp.zoom * 1.25); mvCmpLayout('A'); mvCmpLayout('B'); };
-  $('mvCmpZoomOut').onclick = ()=>{ mv.cmp.zoom = Math.max(0.3, mv.cmp.zoom / 1.25); mvCmpLayout('A'); mvCmpLayout('B'); };
-  $('mvCmpFit').onclick = ()=>{ mv.cmp.zoom = 1; mvCmpLayout('A'); mvCmpLayout('B'); };
+  $('mvCmpZoomIn').onclick = ()=>{ mv.cmp.zoom = Math.min(8, mv.cmp.zoom * 1.25); mvCmpLayout(); };
+  $('mvCmpZoomOut').onclick = ()=>{ mv.cmp.zoom = Math.max(0.3, mv.cmp.zoom / 1.25); mvCmpLayout(); };
+  $('mvCmpFit').onclick = ()=>{ mv.cmp.zoom = 1; mvCmpLayout(); };
   $('mvCmpSave').onclick = mvCmpSave;
-  let syncing = false;
-  [['A','B'],['B','A']].forEach(([from, to])=>{
-    $('mvCmpView' + from).addEventListener('scroll', ()=>{
-      if(syncing || !$('mvCmpSync').checked) return;
-      const a = $('mvCmpView' + from), b2 = $('mvCmpView' + to);
-      syncing = true;
-      const rx = a.scrollWidth - a.clientWidth, ry = a.scrollHeight - a.clientHeight;
-      b2.scrollLeft = rx > 0 ? a.scrollLeft / rx * (b2.scrollWidth - b2.clientWidth) : 0;
-      b2.scrollTop = ry > 0 ? a.scrollTop / ry * (b2.scrollHeight - b2.clientHeight) : 0;
-      requestAnimationFrame(()=>{ syncing = false; });
-    });
-  });
-  window.addEventListener('resize', ()=>{ if(mv.cmp.open){ mvCmpLayout('A'); mvCmpLayout('B'); } });
+  window.addEventListener('resize', ()=>{ if(mv.cmp.open) mvCmpLayout(); });
   $('mvScaleUp').onclick = ()=> mvScaleSel(1.1);
   $('mvScaleDown').onclick = ()=> mvScaleSel(1/1.1);
   $('mvInsert').onclick = ()=> $('mvFile').click();
@@ -4142,11 +4311,16 @@ function mvBind(){
     const typing = ['INPUT','TEXTAREA'].includes(document.activeElement.tagName);
     if(e.key === 'Escape'){
       if(mv.tool === 'crop' && mv.cropRect){ mv.cropRect = null; mvDraw(); }
+      else if(mv.tool === 'zoom'){ mvSetTool(mv.prevTool || 'move'); }
       else if(mv.cmp.open){ mvCloseCompare(); }
       else if(mv.pending.length || mv.pendRefs.length){ mv.pending = []; mv.pendRefs = []; mvUpdateHint(); mvDraw(); }
       else if(mv.multi.size){ mvSetSel(null); mvSyncControls(); mvDraw(); }
       else closeMeasureViewer();
     }
+    else if(!typing && !e.ctrlKey && !e.metaKey && (e.key === 'z' || e.key === 'Z' || e.key === 'ز') && mv.tool !== 'zoom'){ mvSetTool('zoom'); }
+    else if(!typing && (e.key === '+' || e.key === '=')){ mvZoomCenter(1.4); }
+    else if(!typing && (e.key === '-' || e.key === '_')){ mvZoomCenter(1/1.4); }
+    else if(!typing && e.key === '0'){ $('mvZoomFit').click(); }
     else if(e.key === 'Enter' && mv.tool === 'cut' && !typing){ mvFinishCut(); }
     else if(e.key === 'Enter' && mv.tool === 'crop' && !typing){ mvApplyCrop(); }
     else if(e.key === 'Enter' && mv.tool === 'curve' && !typing){ mvFinishCurve(); }
@@ -4156,7 +4330,8 @@ function mvBind(){
   st.addEventListener('wheel', e=>{
     if(!e.ctrlKey) return;
     e.preventDefault();
-    mvSetZoom(mv.zoom * (e.deltaY < 0 ? 1.1 : 1/1.1)); mvDraw();
+    const now = Date.now(), push = now - mv.lastWheel > 700; mv.lastWheel = now;
+    mvZoomAt(mv.zoom * (e.deltaY < 0 ? 1.15 : 1/1.15), e.clientX, e.clientY, push);
   }, {passive:false});
 }
 // ===== استوديو الرسم: صور مدرجة + حفظ المراحل =====
@@ -4203,8 +4378,9 @@ async function mvInsertFiles(files){
       const c = document.createElement('canvas'); c.width = cw; c.height = ch;
       c.getContext('2d').drawImage(im, 0, 0, cw, ch);
       const n = mv.shapes.filter(s=>s.type === 'piece').length * 30;
-      const sh = mvNewShape({ type:'piece', cvs:c, cw, ch, lpoly:[{x:-cw/2,y:-ch/2},{x:cw/2,y:-ch/2},{x:cw/2,y:ch/2},{x:-cw/2,y:ch/2}],
-                              C:{x:W/2 + n, y:H/2 + n}, theta:0, sc:1, hole:null });
+      const sc0 = document.createElement('canvas'); sc0.width = cw; sc0.height = ch; sc0.getContext('2d').drawImage(c, 0, 0);
+      const sh = mvNewShape({ type:'piece', cvs:c, src:sc0, cw, ch, lpoly:[{x:-cw/2,y:-ch/2},{x:cw/2,y:-ch/2},{x:cw/2,y:ch/2},{x:-cw/2,y:ch/2}],
+                              C:{x:W/2 + n, y:H/2 + n}, theta:0, sx:1, sy:1, op:1, noOutline:true, hole:null });
       mvSetTool('move'); mvSetSel(sh);
     }
     mvSyncControls(); mvUpdateHint(); mvDraw();
@@ -4212,16 +4388,17 @@ async function mvInsertFiles(files){
 }
 function mvScaleSel(f){
   let n = 0;
-  mv.multi.forEach(s=>{ if(s.type === 'piece'){ s.sc = Math.max(0.05, Math.min(20, (s.sc || 1) * f)); n++; } });
+  mv.multi.forEach(s=>{ if(s.type === 'piece'){ s.sx = Math.max(0.05, Math.min(20, (s.sx || 1) * f)); s.sy = Math.max(0.05, Math.min(20, (s.sy || 1) * f)); n++; } });
   if(!n) showToast(mvT('حدد قطعة مقصوصة أو صورة مدرجة الأول (بأداة التحريك)'), true);
-  mvDraw();
+  mvSyncPieceUI(); mvDraw();
 }
 // ----- التسلسل (حفظ/فتح) -----
 function mvSerialize(){
   const list = mv.shapes.filter(s => s.type !== 'cropmark');
   const idx = new Map(list.map((s,i)=>[s,i]));
   const shapes = list.map(s=>{
-    if(s.type === 'piece') return { type:'piece', color:s.color, w:s.w, cw:s.cw, ch:s.ch, lpoly:s.lpoly, C:s.C, theta:s.theta, sc:s.sc || 1, hole:s.hole, png:s.cvs.toDataURL('image/png'), adj:s.adj || null, srcPng: s.src ? s.src.toDataURL('image/png') : null };
+    if(s.type === 'piece') return { type:'piece', color:s.color, w:s.w, cw:s.cw, ch:s.ch, lpoly:s.lpoly, C:s.C, theta:s.theta, sx:s.sx || 1, sy:s.sy || 1, fx:!!s.fx, fy:!!s.fy, op:s.op == null ? 1 : s.op, key:s.key || null, tint:s.tint || null, noOutline:!!s.noOutline, hole:s.hole, png:s.cvs.toDataURL('image/png'), adj:s.adj || null,
+      srcPng: (s.src && (!mvAdjIsDefault(s.adj) || (s.key && s.key.on) || (s.tint && s.tint.on))) ? s.src.toDataURL('image/png') : null };
     if(s.type === 'mid') return { type:'mid', color:s.color, w:s.w, ref:{si:idx.get(s.ref.s), i:s.ref.i} };
     if(s.type === 'lineangle') return { type:'lineangle', color:s.color, w:s.w, r1:{si:idx.get(s.r1.s), i:s.r1.i}, r2:{si:idx.get(s.r2.s), i:s.r2.i} };
     return JSON.parse(JSON.stringify(s));
@@ -4235,7 +4412,7 @@ async function mvDeserialize(state){
     if(s.type === 'piece'){
       const im = await mvLoadImg(s.png);
       const c = document.createElement('canvas'); c.width = s.cw; c.height = s.ch; c.getContext('2d').drawImage(im, 0, 0);
-      const pc = { type:'piece', color:s.color, w:s.w, cw:s.cw, ch:s.ch, lpoly:s.lpoly, C:s.C, theta:s.theta, sc:s.sc || 1, hole:s.hole, cvs:c, adj:s.adj || undefined };
+      const pc = { type:'piece', color:s.color, w:s.w, cw:s.cw, ch:s.ch, lpoly:s.lpoly, C:s.C, theta:s.theta, sx:(s.sx != null ? s.sx : (s.sc || 1)), sy:(s.sy != null ? s.sy : (s.sc || 1)), fx:!!s.fx, fy:!!s.fy, op:(s.op == null ? 1 : s.op), key:s.key || undefined, tint:s.tint || undefined, noOutline:!!s.noOutline, hole:s.hole, cvs:c, adj:s.adj || undefined };
       if(s.srcPng){ const sim = await mvLoadImg(s.srcPng); const sc2 = document.createElement('canvas'); sc2.width = s.cw; sc2.height = s.ch; sc2.getContext('2d').drawImage(sim, 0, 0); pc.src = sc2; }
       out.push(pc);
     } else out.push(s);
@@ -4299,9 +4476,107 @@ function mvReprocessBase(){
   if(!mv.img) return;
   mv.adjCanvas = mvAdjIsDefault(mv.adj) ? null : mvProcess(mv.img, mv.img.naturalWidth, mv.img.naturalHeight, mv.adj);
 }
-function mvReprocessPiece(sh){
-  if(!sh.src){ const c = document.createElement('canvas'); c.width = sh.cw; c.height = sh.ch; c.getContext('2d').drawImage(sh.cvs, 0, 0); sh.src = c; }
-  sh.cvs = mvProcess(sh.src, sh.cw, sh.ch, sh.adj || mvAdjDefault());
+function mvReprocessPiece(sh){ mvRebuildPiece(sh); }
+function mvHexRgb(h){ const m = /^#?([0-9a-f]{6})$/i.exec(h || ''); if(!m) return [255,255,255]; const n = parseInt(m[1], 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; }
+function mvKeyCanvas(src, k){
+  const w = src.width, h = src.height, c = document.createElement('canvas'); c.width = w; c.height = h;
+  const x = c.getContext('2d', { willReadFrequently:true }); x.drawImage(src, 0, 0);
+  const id = x.getImageData(0, 0, w, h), d = id.data;
+  let bg = null;
+  if(k.mode === 'white') bg = [255,255,255]; else if(k.mode === 'black') bg = [0,0,0]; else if(k.mode === 'custom') bg = mvHexRgb(k.color);
+  else {
+    let rr = 0, gg = 0, bb = 0, n = 0;
+    [[0,0],[w-5,0],[0,h-5],[w-5,h-5]].forEach(([px,py])=>{
+      for(let yy = Math.max(0,py); yy < Math.min(h,py+5); yy++) for(let xx = Math.max(0,px); xx < Math.min(w,px+5); xx++){
+        const i = (yy*w + xx)*4; if(d[i+3] > 200){ rr += d[i]; gg += d[i+1]; bb += d[i+2]; n++; }
+      }
+    });
+    if(n > 0) bg = [rr/n, gg/n, bb/n];
+  }
+  const Dt = k.tol * 3, soft = Math.max(1, k.soft * 3);
+  const dist = i => bg ? Math.hypot(d[i]-bg[0], d[i+1]-bg[1], d[i+2]-bg[2]) : 1e9;
+  if(k.edge !== false){
+    const mask = new Uint8Array(w*h), stack = [];
+    const push = p => { if(!mask[p]){ const i = p*4; if(d[i+3] < 8 || dist(i) <= Dt){ mask[p] = 1; stack.push(p); } } };
+    for(let xx = 0; xx < w; xx++){ push(xx); push((h-1)*w + xx); }
+    for(let yy = 0; yy < h; yy++){ push(yy*w); push(yy*w + w - 1); }
+    while(stack.length){
+      const p = stack.pop(), xx = p % w, yy = (p / w) | 0;
+      if(xx > 0) push(p-1); if(xx < w-1) push(p+1); if(yy > 0) push(p-w); if(yy < h-1) push(p+w);
+    }
+    for(let p = 0; p < w*h; p++){
+      const i = p*4;
+      if(mask[p]){ d[i+3] = 0; continue; }
+      if(!bg) continue;
+      const xx = p % w, yy = (p / w) | 0;
+      const nb = (xx > 0 && mask[p-1]) || (xx < w-1 && mask[p+1]) || (yy > 0 && mask[p-w]) || (yy < h-1 && mask[p+w]);
+      if(nb){ const dd = dist(i); if(dd < Dt + soft) d[i+3] = Math.min(d[i+3], 255 * (dd - Dt) / soft); }
+    }
+  } else {
+    for(let p = 0; p < w*h; p++){
+      const i = p*4, dd = dist(i);
+      if(dd <= Dt) d[i+3] = 0; else if(dd < Dt + soft) d[i+3] = Math.min(d[i+3], 255 * (dd - Dt) / soft);
+    }
+  }
+  x.putImageData(id, 0, 0);
+  return c;
+}
+function mvTintCanvas(src, t){
+  const w = src.width, h = src.height, c = document.createElement('canvas'); c.width = w; c.height = h;
+  const x = c.getContext('2d', { willReadFrequently:true }); x.drawImage(src, 0, 0);
+  const id = x.getImageData(0, 0, w, h), d = id.data, col = mvHexRgb(t.color), amt = Math.max(0, Math.min(1, t.amt / 100));
+  for(let i = 0; i < d.length; i += 4){
+    if(d[i+3] === 0) continue;
+    const l = (0.299*d[i] + 0.587*d[i+1] + 0.114*d[i+2]) / 255, f = 0.35 + 0.65*l;
+    d[i] = d[i]*(1-amt) + col[0]*f*amt; d[i+1] = d[i+1]*(1-amt) + col[1]*f*amt; d[i+2] = d[i+2]*(1-amt) + col[2]*f*amt;
+  }
+  x.putImageData(id, 0, 0);
+  return c;
+}
+function mvRebuildPiece(sh){
+  if(!sh.src){ const c0 = document.createElement('canvas'); c0.width = sh.cw; c0.height = sh.ch; c0.getContext('2d').drawImage(sh.cvs, 0, 0); sh.src = c0; }
+  let c = mvProcess(sh.src, sh.cw, sh.ch, sh.adj || mvAdjDefault());
+  if(sh.key && sh.key.on) c = mvKeyCanvas(c, sh.key);
+  if(sh.tint && sh.tint.on) c = mvTintCanvas(c, sh.tint);
+  sh.cvs = c; sh._al = null;
+}
+// ----- لوحة الصورة المدرجة / القطعة -----
+function mvSelPieces(){ return [...mv.multi].filter(s => s.type === 'piece'); }
+function mvShowPieceVals(){
+  $('mvPcOpV').textContent = $('mvPcOp').value + '%'; $('mvPcSxV').textContent = $('mvPcSx').value + '%'; $('mvPcSyV').textContent = $('mvPcSy').value + '%';
+  $('mvKeyTolV').textContent = $('mvKeyTol').value; $('mvKeySoftV').textContent = $('mvKeySoft').value; $('mvTintAmtV').textContent = $('mvTintAmt').value + '%';
+}
+function mvSyncPieceUI(){
+  const g = $('mvPieceGrp'); if(!g) return;
+  const ps = mvSelPieces();
+  g.style.display = ps.length ? 'block' : 'none';
+  if(!ps.length) return;
+  const sh = ps[0], k = sh.key || {}, t = sh.tint || {};
+  $('mvPcOp').value = Math.round((sh.op == null ? 1 : sh.op) * 100);
+  $('mvPcSx').value = Math.round((sh.sx || 1) * 100); $('mvPcSy').value = Math.round((sh.sy || 1) * 100);
+  $('mvKeyOn').checked = !!k.on; $('mvKeyMode').value = k.mode || 'auto'; $('mvKeyColor').value = k.color || '#ffffff';
+  $('mvKeyTol').value = k.tol == null ? 25 : k.tol; $('mvKeySoft').value = k.soft == null ? 10 : k.soft; $('mvKeyEdge').checked = k.edge !== false;
+  $('mvTintOn').checked = !!t.on; $('mvTintColor').value = t.color || '#ffd24d'; $('mvTintAmt').value = t.amt == null ? 100 : t.amt;
+  mvShowPieceVals();
+}
+let mvPcQueued = false;
+function mvOnPieceInput(which){
+  const ps = mvSelPieces(); if(!ps.length) return;
+  const op = Number($('mvPcOp').value) / 100, sxv = Number($('mvPcSx').value) / 100, syv = Number($('mvPcSy').value) / 100;
+  ps.forEach(sh=>{
+    sh.op = op;
+    if(which === 'sx'){ const old = sh.sx || 1; sh.sx = sxv; if($('mvPcLock').checked) sh.sy = (sh.sy || 1) * sxv / old; }
+    else if(which === 'sy'){ const old = sh.sy || 1; sh.sy = syv; if($('mvPcLock').checked) sh.sx = (sh.sx || 1) * syv / old; }
+    if(which === 'rebuild'){
+      sh.key = { on:$('mvKeyOn').checked, mode:$('mvKeyMode').value, color:$('mvKeyColor').value, tol:Number($('mvKeyTol').value), soft:Number($('mvKeySoft').value), edge:$('mvKeyEdge').checked };
+      sh.tint = { on:$('mvTintOn').checked, color:$('mvTintColor').value, amt:Number($('mvTintAmt').value) };
+    }
+  });
+  if(which === 'sx' || which === 'sy'){ $('mvPcSx').value = Math.round((ps[0].sx || 1) * 100); $('mvPcSy').value = Math.round((ps[0].sy || 1) * 100); }
+  mvShowPieceVals();
+  if(which !== 'rebuild'){ mvDraw(); return; }
+  if(mvPcQueued) return; mvPcQueued = true;
+  requestAnimationFrame(()=>{ mvPcQueued = false; mvSelPieces().forEach(mvRebuildPiece); mvDraw(); });
 }
 function mvAdjTargets(){
   const ps = [...mv.multi].filter(s => s.type === 'piece');
@@ -4374,7 +4649,7 @@ function mvUndoCrop(mark){
   const cv = $('mvCanvas'); cv.width = mv.img.naturalWidth; cv.height = mv.img.naturalHeight;
   mvShiftAll(mark.dx, mark.dy); mvReprocessBase(); mvRefit();
 }
-// ----- المقارنة جنب بعض -----
+// ----- المقارنة (صورة واحدة مدموجة) -----
 function mvCmpSnapshot(){
   if(!mv.img) return null;
   mvDraw(true); const url = $('mvCanvas').toDataURL('image/jpeg', 0.9); mvDraw(); return url;
@@ -4393,18 +4668,34 @@ function mvCmpUrl(v){
   const rec = mv.cmp.stages.find(x => String(x.id) === String(v));
   return rec ? rec.image : null;
 }
-function mvCmpLayout(side){
-  const view = $('mvCmpView' + side), im = $('mvCmpImg' + side);
-  if(!im.naturalWidth) return;
-  const fit = Math.min((view.clientWidth - 10) / im.naturalWidth, (view.clientHeight - 10) / im.naturalHeight);
-  im.style.width = (im.naturalWidth * fit * mv.cmp.zoom) + 'px'; im.style.height = 'auto';
+function mvCmpName(v){
+  return v === 'cur' ? mvT('الرسمة الحالية') : ((mv.cmp.stages.find(r => String(r.id) === String(v)) || {}).name || '');
 }
-function mvCmpRender(){
-  ['A','B'].forEach(side=>{
-    const im = $('mvCmpImg' + side), url = mvCmpUrl($('mvCmpSel' + side).value);
-    im.onload = ()=> mvCmpLayout(side);
-    if(url && im.getAttribute('data-u') !== url){ im.setAttribute('data-u', url); im.src = url; } else mvCmpLayout(side);
-  });
+async function mvCmpBuild(){
+  const ua = mvCmpUrl($('mvCmpSelA').value), ub = mvCmpUrl($('mvCmpSelB').value);
+  if(!ua || !ub) return null;
+  const [ia, ib] = await Promise.all([mvLoadImg(ua), mvLoadImg(ub)]);
+  const H = Math.min(1400, Math.max(ia.naturalHeight, ib.naturalHeight)), wa = Math.round(ia.naturalWidth * H / ia.naturalHeight), wb = Math.round(ib.naturalWidth * H / ib.naturalHeight);
+  const T = 48, gap = 14, c = document.createElement('canvas'); c.width = wa + wb + gap; c.height = H + T;
+  const x = c.getContext('2d'); x.fillStyle = '#0f1412'; x.fillRect(0, 0, c.width, c.height);
+  x.drawImage(ia, 0, T, wa, H); x.drawImage(ib, wa + gap, T, wb, H);
+  x.fillStyle = '#ffffff'; x.fillRect(wa + gap/2 - 1, T, 2, H);
+  x.fillStyle = '#fff'; x.font = 'bold 24px sans-serif'; x.textBaseline = 'middle'; x.textAlign = 'center';
+  x.fillText(mvCmpName($('mvCmpSelA').value), wa/2, T/2); x.fillText(mvCmpName($('mvCmpSelB').value), wa + gap + wb/2, T/2);
+  return c;
+}
+function mvCmpLayout(){
+  const c = mv.cmp.canvas, view = $('mvCmpView'), el = $('mvCmpCanvas');
+  if(!c) return;
+  const fit = Math.min((view.clientWidth - 10) / c.width, (view.clientHeight - 10) / c.height);
+  el.style.width = (c.width * fit * mv.cmp.zoom) + 'px'; el.style.height = (c.height * fit * mv.cmp.zoom) + 'px';
+}
+async function mvCmpRender(){
+  const c = await mvCmpBuild(), el = $('mvCmpCanvas');
+  mv.cmp.canvas = c;
+  if(!c){ el.width = 2; el.height = 2; el.style.width = '0px'; el.style.height = '0px'; return; }
+  el.width = c.width; el.height = c.height; el.getContext('2d').drawImage(c, 0, 0);
+  mvCmpLayout();
 }
 async function mvOpenCompare(){
   if(!mv.img) return;
@@ -4412,27 +4703,18 @@ async function mvOpenCompare(){
   await mvCmpFillSelects();
   mv.cmp.open = true;
   $('mvCompare').style.display = 'flex'; $('mvEmpty').style.display = 'none';
-  $('mvHint').textContent = mvT('قارن بين رسمتين جنب بعض — اختار من القوائم، والتكبير والتمرير متزامنين');
+  $('mvHint').textContent = mvT('الرسمتين ظاهرين كصورة واحدة — اختار من القوائم، والتكبير للصورة كلها، وتقدر تحفظها كصورة واحدة');
   if(!mv.cmp.stages.length) showToast(mvT('احفظ مرحلة واحدة على الأقل من «💾 حفظ المرحلة الحالية» عشان تقارن'), true);
-  ['A','B'].forEach(sd=>{ $('mvCmpImg'+sd).removeAttribute('data-u'); });
-  mvCmpRender();
+  await mvCmpRender();
 }
 function mvCloseCompare(){
   mv.cmp.open = false; $('mvCompare').style.display = 'none'; mvUpdateEmpty(); mvUpdateHint();
 }
 async function mvCmpSave(){
-  const ua = mvCmpUrl($('mvCmpSelA').value), ub = mvCmpUrl($('mvCmpSelB').value);
-  if(!ua || !ub) return;
-  const [ia, ib] = await Promise.all([mvLoadImg(ua), mvLoadImg(ub)]);
-  const H = Math.min(1400, Math.max(ia.naturalHeight, ib.naturalHeight)), wa = Math.round(ia.naturalWidth * H / ia.naturalHeight), wb = Math.round(ib.naturalWidth * H / ib.naturalHeight);
-  const T = 44, gap = 12, c = document.createElement('canvas'); c.width = wa + wb + gap; c.height = H + T;
-  const x = c.getContext('2d'); x.fillStyle = '#0f1412'; x.fillRect(0, 0, c.width, c.height);
-  x.drawImage(ia, 0, T, wa, H); x.drawImage(ib, wa + gap, T, wb, H);
-  const nm = v => v === 'cur' ? mvT('الرسمة الحالية') : ((mv.cmp.stages.find(r => String(r.id) === String(v)) || {}).name || '');
-  x.fillStyle = '#fff'; x.font = 'bold 24px sans-serif'; x.textBaseline = 'middle'; x.textAlign = 'center';
-  x.fillText(nm($('mvCmpSelA').value), wa/2, T/2); x.fillText(nm($('mvCmpSelB').value), wa + gap + wb/2, T/2);
+  const c = mv.cmp.canvas || await mvCmpBuild();
+  if(!c) return;
   c.toBlob(blob=>{
-    if(!blob) return;
+    if(!blob){ showToast(mvT('تعذر حفظ الصورة'), true); return; }
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = mvL('مقارنة-', 'compare-') + new Date().toISOString().slice(0,10) + '.jpg';
     document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href), 2000);
   }, 'image/jpeg', 0.92);
