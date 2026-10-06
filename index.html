@@ -140,6 +140,16 @@
   .timeline-count{color:var(--muted); font-size:12.5px; white-space:nowrap;}
   .timeline-images{padding:12px 14px;}
   .img-card{display:flex; flex-direction:column;}
+
+  .mv-overlay{display:none; position:fixed; inset:0; background:rgba(15,20,18,.95); z-index:1000001; flex-direction:column; direction:rtl;}
+  .mv-overlay.open{display:flex;}
+  .mv-bar{display:flex; flex-wrap:wrap; gap:6px; padding:8px 10px; background:#1c2420; align-items:center;}
+  .mv-bar button{font-family:inherit; font-size:13px; padding:7px 11px; border-radius:8px; border:1px solid #3a463f; background:#26312b; color:#f2efe6; cursor:pointer;}
+  .mv-bar button.active{background:#2f8f6b; border-color:#2f8f6b; color:#fff;}
+  .mv-bar .mv-sep{width:1px; height:22px; background:#3a463f; margin:0 2px;}
+  .mv-stage{flex:1; overflow:auto; padding:10px; text-align:center; direction:ltr;}
+  .mv-stage canvas{cursor:crosshair; background:#000; display:inline-block; max-width:none;}
+  .mv-hint{padding:7px 12px; background:#1c2420; color:#d9d4c2; font-size:13px; text-align:center;}
   .img-thumb{width:100%; height:110px; border-radius:10px; border:1px solid var(--line); background:#F2F0E9; overflow:hidden; cursor:pointer; display:flex; align-items:center; justify-content:center;}
   .img-thumb img{width:100%; height:100%; object-fit:cover;}
   .img-date{font-size:11px; color:var(--muted); text-align:center; margin-top:5px;}
@@ -1212,6 +1222,27 @@
     <button class="tab-bar-btn" data-mgr-tab="services">الخدمات</button>
   </div>
   <div id="mgrContent"></div>
+</div>
+
+<div id="measureViewer" class="mv-overlay">
+  <div class="mv-bar">
+    <button id="mvToolLine" class="active">📏 طول</button>
+    <button id="mvToolAngle">📐 زاوية (3 نقاط)</button>
+    <button id="mvToolAngle2">∠ زاوية بين خطين</button>
+    <button id="mvToolCalib">🎯 معايرة (مم)</button>
+    <span class="mv-sep"></span>
+    <button id="mvUndo">↩ تراجع</button>
+    <button id="mvClear">🗑 مسح الكل</button>
+    <span class="mv-sep"></span>
+    <button id="mvZoomOut">➖</button>
+    <button id="mvZoomFit">ملائمة</button>
+    <button id="mvZoomIn">➕</button>
+    <span class="mv-sep"></span>
+    <button id="mvSave">⬇ حفظ بالقياسات</button>
+    <button id="mvClose" style="margin-inline-start:auto;">✖ إغلاق</button>
+  </div>
+  <div class="mv-stage" id="mvStage"><canvas id="mvCanvas"></canvas></div>
+  <div class="mv-hint" id="mvHint"></div>
 </div>
 
 <div id="rxTemplate" style="position:fixed; left:-9999px; top:0; width:420px; background:#ffffff; padding:36px 32px; font-family:'Tajawal', sans-serif; color:#1c2420; direction:rtl; font-size:10pt; line-height:1;">
@@ -2943,10 +2974,197 @@ function groupImagesForTimeline(images){
   return order.map(k => groups[k]);
 }
 
+
+// ===== أداة قياس الأطوال والزوايا على الصور =====
+const mv = { img:null, shapes:[], pending:[], tool:'line', zoom:1, fit:1, mmPerPx:null, mouse:null, bound:false };
+const MV_NEED = { line:2, calib:2, angle:3, angle2:4 };
+const MV_HINTS = {
+  line:   ['اضغط على بداية الخط', 'اضغط على نهاية الخط'],
+  calib:  ['اضغط على بداية جسم معروف الطول (مسطرة/مسمار/كرة معايرة)', 'اضغط على نهايته ثم اكتب طوله الحقيقي بالمم'],
+  angle:  ['اضغط على النقطة الأولى', 'اضغط على رأس الزاوية', 'اضغط على النقطة الثالثة'],
+  angle2: ['الخط الأول: نقطة البداية', 'الخط الأول: نقطة النهاية', 'الخط الثاني: نقطة البداية', 'الخط الثاني: نقطة النهاية']
+};
+function mvUpdateHint(){
+  const h = MV_HINTS[mv.tool];
+  let t = h[Math.min(mv.pending.length, h.length-1)];
+  if(!mv.mmPerPx) t += ' — القياسات بالبكسل لحد ما تعمل معايرة';
+  else t += ` — معايرة: 1 بكسل = ${mv.mmPerPx.toFixed(3)} مم`;
+  $('mvHint').textContent = t;
+}
+function mvSetZoom(z){
+  if(!mv.img) return;
+  mv.zoom = Math.max(0.05, Math.min(8, z));
+  const cv = $('mvCanvas');
+  cv.style.width = (mv.img.naturalWidth * mv.zoom) + 'px';
+  cv.style.height = (mv.img.naturalHeight * mv.zoom) + 'px';
+}
+function mvToImg(e){
+  const cv = $('mvCanvas'), r = cv.getBoundingClientRect();
+  return { x:(e.clientX - r.left) * cv.width / r.width, y:(e.clientY - r.top) * cv.height / r.height };
+}
+function mvDist(a,b){ return Math.hypot(b.x-a.x, b.y-a.y); }
+function mvAngleBetween(v1, v2, acute){
+  const d = (v1.x*v2.x + v1.y*v2.y) / ((Math.hypot(v1.x,v1.y) * Math.hypot(v2.x,v2.y)) || 1);
+  let a = Math.acos(Math.max(-1, Math.min(1, acute ? Math.abs(d) : d))) * 180 / Math.PI;
+  return a;
+}
+function mvLen(px){ return mv.mmPerPx ? (px * mv.mmPerPx).toFixed(1) + ' mm' : Math.round(px) + ' px'; }
+function mvLabel(ctx, text, x, y, u){
+  ctx.font = `bold ${Math.round(17*u)}px sans-serif`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.lineWidth = 4*u; ctx.strokeStyle = 'rgba(0,0,0,.85)'; ctx.strokeText(text, x, y);
+  ctx.fillStyle = '#ffe66d'; ctx.fillText(text, x, y);
+}
+function mvDot(ctx, p, u, color){
+  ctx.beginPath(); ctx.arc(p.x, p.y, 4.5*u, 0, Math.PI*2);
+  ctx.fillStyle = color; ctx.fill();
+  ctx.lineWidth = 1.5*u; ctx.strokeStyle = '#000'; ctx.stroke();
+}
+function mvLine(ctx, a, b, u, color){
+  ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y);
+  ctx.lineWidth = 2.5*u; ctx.strokeStyle = color; ctx.stroke();
+}
+function mvDraw(forExport){
+  if(!mv.img) return;
+  const cv = $('mvCanvas'), ctx = cv.getContext('2d');
+  const u = Math.max(cv.width, cv.height) / 1000 * Math.max(1, 1/Math.max(mv.zoom,0.3)) * 0.9;
+  ctx.clearRect(0,0,cv.width,cv.height);
+  ctx.drawImage(mv.img, 0, 0);
+  const drawShape = (sh)=>{
+    if(sh.type === 'line' || sh.type === 'calib'){
+      const col = sh.type==='calib' ? '#4dd0e1' : '#39ff88';
+      mvLine(ctx, sh.a, sh.b, u, col); mvDot(ctx, sh.a, u, col); mvDot(ctx, sh.b, u, col);
+      const mx=(sh.a.x+sh.b.x)/2, my=(sh.a.y+sh.b.y)/2 - 16*u;
+      mvLabel(ctx, sh.type==='calib' ? `معايرة ${sh.mm} mm` : mvLen(mvDist(sh.a,sh.b)), mx, my, u);
+    } else if(sh.type === 'angle'){
+      const col = '#ff9f43';
+      mvLine(ctx, sh.v, sh.a, u, col); mvLine(ctx, sh.v, sh.b, u, col);
+      [sh.a, sh.v, sh.b].forEach(p=>mvDot(ctx,p,u,col));
+      const a1 = Math.atan2(sh.a.y-sh.v.y, sh.a.x-sh.v.x), a2 = Math.atan2(sh.b.y-sh.v.y, sh.b.x-sh.v.x);
+      let diff = a2 - a1; while(diff > Math.PI) diff -= 2*Math.PI; while(diff < -Math.PI) diff += 2*Math.PI;
+      const r = 38*u;
+      ctx.beginPath(); ctx.arc(sh.v.x, sh.v.y, r, a1, a1 + diff, diff < 0);
+      ctx.lineWidth = 2*u; ctx.strokeStyle = col; ctx.stroke();
+      const deg = mvAngleBetween({x:sh.a.x-sh.v.x,y:sh.a.y-sh.v.y},{x:sh.b.x-sh.v.x,y:sh.b.y-sh.v.y}, false);
+      const mid = a1 + diff/2;
+      mvLabel(ctx, deg.toFixed(1) + '°', sh.v.x + Math.cos(mid)*(r+34*u), sh.v.y + Math.sin(mid)*(r+34*u), u);
+    } else if(sh.type === 'angle2'){
+      const col = '#c792ea';
+      mvLine(ctx, sh.a, sh.b, u, col); mvLine(ctx, sh.c, sh.d, u, col);
+      [sh.a, sh.b, sh.c, sh.d].forEach(p=>mvDot(ctx,p,u,col));
+      const deg = mvAngleBetween({x:sh.b.x-sh.a.x,y:sh.b.y-sh.a.y},{x:sh.d.x-sh.c.x,y:sh.d.y-sh.c.y}, true);
+      mvLabel(ctx, '∠ ' + deg.toFixed(1) + '°', (sh.c.x+sh.d.x)/2, (sh.c.y+sh.d.y)/2 - 18*u, u);
+    }
+  };
+  mv.shapes.forEach(drawShape);
+  if(!forExport){
+    const keys = { line:['a','b'], calib:['a','b'], angle:['a','v','b'], angle2:['a','b','c','d'] }[mv.tool];
+    mv.pending.forEach((p,i)=> mvDot(ctx, p, u, '#ffffff'));
+    if(mv.pending.length && mv.mouse){
+      const last = mv.pending[mv.pending.length-1];
+      ctx.setLineDash([8*u, 6*u]); mvLine(ctx, last, mv.mouse, u, 'rgba(255,255,255,.8)'); ctx.setLineDash([]);
+    }
+  }
+}
+function mvRecalcCalib(){
+  const c = [...mv.shapes].reverse().find(sh => sh.type === 'calib');
+  mv.mmPerPx = c ? c.mm / mvDist(c.a, c.b) : null;
+}
+function mvSetTool(t){
+  mv.tool = t; mv.pending = [];
+  const ids = { line:'mvToolLine', angle:'mvToolAngle', angle2:'mvToolAngle2', calib:'mvToolCalib' };
+  Object.entries(ids).forEach(([k,id])=> $(id).classList.toggle('active', k === t));
+  mvUpdateHint(); mvDraw();
+}
+function mvClick(e){
+  const p = mvToImg(e);
+  mv.pending.push(p);
+  if(mv.pending.length >= MV_NEED[mv.tool]){
+    const q = mv.pending; mv.pending = [];
+    if(mv.tool === 'line') mv.shapes.push({type:'line', a:q[0], b:q[1]});
+    else if(mv.tool === 'angle') mv.shapes.push({type:'angle', a:q[0], v:q[1], b:q[2]});
+    else if(mv.tool === 'angle2') mv.shapes.push({type:'angle2', a:q[0], b:q[1], c:q[2], d:q[3]});
+    else if(mv.tool === 'calib'){
+      const len = mvDist(q[0], q[1]);
+      const v = parseFloat(String(prompt('الطول الحقيقي لهذا الجزء بالملّيمتر؟') || '').replace(',', '.'));
+      if(len > 0 && v > 0){ mv.shapes.push({type:'calib', a:q[0], b:q[1], mm:v}); mvRecalcCalib(); }
+    }
+  }
+  mvUpdateHint(); mvDraw();
+}
+function mvBind(){
+  if(mv.bound) return; mv.bound = true;
+  const cv = $('mvCanvas');
+  cv.addEventListener('click', mvClick);
+  cv.addEventListener('mousemove', e=>{ mv.mouse = mvToImg(e); if(mv.pending.length) mvDraw(); });
+  cv.addEventListener('mouseleave', ()=>{ mv.mouse = null; mvDraw(); });
+  $('mvToolLine').onclick = ()=> mvSetTool('line');
+  $('mvToolAngle').onclick = ()=> mvSetTool('angle');
+  $('mvToolAngle2').onclick = ()=> mvSetTool('angle2');
+  $('mvToolCalib').onclick = ()=> mvSetTool('calib');
+  $('mvUndo').onclick = ()=>{
+    if(mv.pending.length) mv.pending.pop(); else { mv.shapes.pop(); mvRecalcCalib(); }
+    mvUpdateHint(); mvDraw();
+  };
+  $('mvClear').onclick = ()=>{
+    if(!mv.shapes.length && !mv.pending.length) return;
+    if(!confirm('مسح كل القياسات على الصورة؟')) return;
+    mv.shapes = []; mv.pending = []; mv.mmPerPx = null; mvUpdateHint(); mvDraw();
+  };
+  $('mvZoomIn').onclick = ()=>{ mvSetZoom(mv.zoom * 1.25); mvDraw(); };
+  $('mvZoomOut').onclick = ()=>{ mvSetZoom(mv.zoom / 1.25); mvDraw(); };
+  $('mvZoomFit').onclick = ()=>{ mvSetZoom(mv.fit); mvDraw(); };
+  $('mvSave').onclick = ()=>{
+    mvDraw(true);
+    $('mvCanvas').toBlob(blob=>{
+      if(!blob){ showToast('تعذر حفظ الصورة', true); mvDraw(); return; }
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'قياس-' + new Date().toISOString().slice(0,10) + '.jpg';
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(()=>URL.revokeObjectURL(a.href), 2000);
+      mvDraw();
+    }, 'image/jpeg', 0.92);
+  };
+  $('mvClose').onclick = closeMeasureViewer;
+  document.addEventListener('keydown', e=>{
+    if(!$('measureViewer').classList.contains('open')) return;
+    if(e.key === 'Escape'){ if(mv.pending.length){ mv.pending = []; mvUpdateHint(); mvDraw(); } else closeMeasureViewer(); }
+    else if((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z'){ $('mvUndo').click(); }
+  });
+  $('mvStage').addEventListener('wheel', e=>{
+    if(!e.ctrlKey) return;
+    e.preventDefault();
+    mvSetZoom(mv.zoom * (e.deltaY < 0 ? 1.1 : 1/1.1)); mvDraw();
+  }, {passive:false});
+}
+function closeMeasureViewer(){
+  $('measureViewer').classList.remove('open');
+  mv.img = null; mv.shapes = []; mv.pending = [];
+}
+function openMeasureViewer(dataUrl){
+  if(!dataUrl){ showToast('الصورة دي متعذر تحميلها', true); return; }
+  mvBind();
+  const img = new Image();
+  img.onload = ()=>{
+    mv.img = img; mv.shapes = []; mv.pending = []; mv.mmPerPx = null; mv.mouse = null;
+    const cv = $('mvCanvas'); cv.width = img.naturalWidth; cv.height = img.naturalHeight;
+    $('measureViewer').classList.add('open');
+    const st = $('mvStage');
+    mv.fit = Math.min((st.clientWidth - 24) / img.naturalWidth, (st.clientHeight - 24) / img.naturalHeight);
+    mvSetTool('line');
+    mvSetZoom(mv.fit);
+    mvDraw();
+  };
+  img.onerror = ()=> showToast('تعذر فتح الصورة', true);
+  img.src = dataUrl;
+}
+
 function renderImageCards(gridBox, items){
   gridBox.innerHTML = items.map(im => `
     <div class="img-card" data-id="${escapeHtml(String(im.ImageID))}">
       <div class="img-thumb">${im.dataUrl ? `<img src="${im.dataUrl}">` : '<span style="font-size:11px;color:var(--muted);">تعذر التحميل</span>'}</div>
+      <button class="btn btn-ghost img-measure-btn" style="margin-top:4px;">📏 قياس</button>
       <button class="btn btn-ghost img-download-btn" style="margin-top:4px;">⬇ تنزيل</button>
       <button class="btn btn-outline-red img-delete-btn">حذف</button>
     </div>`).join('');
@@ -2955,10 +3173,9 @@ function renderImageCards(gridBox, items){
     const im = items.find(x => String(x.ImageID) === id);
     if(!im) return;
     card.querySelector('.img-thumb').addEventListener('click', ()=>{
-      if(!im.dataUrl) return;
-      const w = window.open('');
-      w.document.write(`<img src="${im.dataUrl}" style="max-width:100%;">`);
+      openMeasureViewer(im.dataUrl);
     });
+    card.querySelector('.img-measure-btn').addEventListener('click', ()=> openMeasureViewer(im.dataUrl));
     card.querySelector('.img-download-btn').addEventListener('click', ()=>{
       if(!im.dataUrl){ showToast('الصورة دي متعذر تحميلها', true); return; }
       const a = document.createElement('a');
