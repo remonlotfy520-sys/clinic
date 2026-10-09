@@ -143,21 +143,30 @@
 
   .mv-overlay{display:none; position:fixed; inset:0; background:#0f1412; z-index:1000001; flex-direction:column; direction:rtl; color:#f2efe6;}
   .mv-overlay.open{display:flex;}
-  .mv-overlay button{font-family:inherit; font-size:13px; padding:7px 10px; border-radius:8px; border:1px solid #3a463f; background:#26312b; color:#f2efe6; cursor:pointer;}
+  .mv-overlay button{font-family:inherit; font-size:12px; padding:5px 8px; border-radius:7px; border:1px solid #3a463f; background:#26312b; color:#f2efe6; cursor:pointer;}
   .mv-overlay button:hover{background:#2f3b35;}
   .mv-overlay button.active{background:#2f8f6b; border-color:#2f8f6b; color:#fff;}
-  .mv-top{display:flex; flex-wrap:wrap; gap:6px; padding:8px 10px; background:#1c2420; align-items:center; border-bottom:1px solid #2f3a34;}
-  .mv-title{font-weight:800; color:#fff; margin-inline-end:8px;}
+  .mv-top{display:flex; flex-wrap:wrap; gap:4px; padding:4px 8px 4px 42px; background:#1c2420; align-items:center; border-bottom:1px solid #2f3a34;}
+  .mv-title{font-weight:800; color:#fff; margin-inline-end:6px; font-size:13.5px;}
+  .mv-top.mv-top-hide{display:none;}
+  .mv-overlay.ltr .mv-top{padding:4px 42px 4px 8px;}
   .mv-sep{width:1px; height:22px; background:#3a463f; margin:0 2px;}
   .mv-body{flex:1; display:flex; min-height:0; position:relative;}
-  .mv-side{width:244px; flex:none; overflow-y:auto; background:#1c2420; border-inline-end:1px solid #2f3a34; padding:4px 10px 14px;}
-  .mv-sec{padding:9px 0; border-bottom:1px solid #2a352f;}
-  .mv-sh{font-size:12px; font-weight:800; color:#9fb3a8; margin-bottom:7px;}
-  .mv-tgrid{display:grid; grid-template-columns:1fr 1fr; gap:6px;}
-  .mv-tgrid button{padding:8px 4px; font-size:12.5px;}
+  .mv-side{width:196px; flex:none; overflow-y:auto; background:#1c2420; border-inline-end:1px solid #2f3a34; padding:2px 8px 12px; font-size:12px;}
+  .mv-side.mv-hide{display:none;}
+  .mv-side-head{display:flex; justify-content:space-between; align-items:center; padding:6px 0 2px; font-weight:800; font-size:12px; color:#fff;}
+  .mv-fab{position:absolute; z-index:6; width:34px; height:34px; padding:0 !important; border-radius:50% !important; font-size:15px !important; background:#2f8f6b !important; border:1px solid #3fae83 !important; box-shadow:0 2px 8px rgba(0,0,0,.5); line-height:1;}
+  #mvSideFab{top:10px; right:10px; display:none;}
+  .mv-overlay.ltr #mvSideFab{right:auto; left:10px;}
+  #mvTopFab{position:absolute; top:4px; left:6px; z-index:7; width:30px; height:30px; font-size:13px !important;}
+  .mv-overlay.ltr #mvTopFab{left:auto; right:6px;}
+  .mv-sec{padding:6px 0; border-bottom:1px solid #2a352f;}
+  .mv-sh{font-size:11.5px; font-weight:800; color:#9fb3a8; margin-bottom:5px;}
+  .mv-tgrid{display:grid; grid-template-columns:1fr 1fr; gap:4px;}
+  .mv-tgrid button{padding:5px 3px; font-size:11.5px;}
   .mv-tgrid .wide{grid-column:1/-1;}
-  .mv-row{display:flex; gap:6px; align-items:center; flex-wrap:wrap; margin-top:6px;}
-  .mv-lbl{color:#d9d4c2; font-size:12px;}
+  .mv-row{display:flex; gap:4px; align-items:center; flex-wrap:wrap; margin-top:4px;}
+  .mv-lbl{color:#d9d4c2; font-size:11.5px;}
   .mv-overlay input[type=number]{width:64px; padding:6px; border-radius:6px; border:1px solid #3a463f; background:#26312b; color:#f2efe6; font-family:inherit;}
   .mv-overlay input[type=color]{width:34px; height:30px; padding:0; border:1px solid #3a463f; border-radius:6px; background:none; cursor:pointer;}
   .mv-overlay input[type=range]{width:100%;}
@@ -167,7 +176,7 @@
   .mv-stage canvas{cursor:crosshair; background:#000; display:inline-block; max-width:none;}
   .mv-empty{position:absolute; inset:0; display:none; align-items:center; justify-content:center; flex-direction:column; gap:10px; pointer-events:none; text-align:center; color:#d9d4c2;}
   .mv-empty button{pointer-events:auto; font-size:15px; padding:12px 20px; background:#2f8f6b; border-color:#2f8f6b;}
-  .mv-hint{min-height:2.8em; display:flex; align-items:center; justify-content:center; padding:7px 12px; background:#1c2420; color:#d9d4c2; font-size:13px; text-align:center; border-top:1px solid #2f3a34;}
+  .mv-hint{min-height:2.4em; display:flex; align-items:center; justify-content:center; padding:4px 10px; background:#1c2420; color:#d9d4c2; font-size:12px; text-align:center; border-top:1px solid #2f3a34;}
   .mv-stages{display:flex; flex-direction:column; gap:8px; margin-top:8px;}
   .mv-stg{display:grid; grid-template-columns:62px 1fr; gap:6px 8px; align-items:center; background:#222c27; border:1px solid #2f3a34; border-radius:8px; padding:6px;}
   .mv-stg img{width:62px; height:46px; object-fit:cover; border-radius:5px; background:#000;}
@@ -180,6 +189,11 @@
   .mv-overlay select{font-family:inherit; padding:5px; border-radius:6px; border:1px solid #3a463f; background:#26312b; color:#f2efe6; max-width:100%;}
   .mv-loupe{position:absolute; width:160px; height:160px; border-radius:50%; border:3px solid #ffe66d; box-shadow:0 4px 18px rgba(0,0,0,.65); pointer-events:none; display:none; z-index:4; background:#000;}
   .mv-cmp-sel{display:flex; flex-wrap:wrap; gap:8px; align-items:center; padding:6px 8px;}
+  .mv-hlist{max-height:190px; overflow:auto; margin-top:6px; border:1px solid #3a463f; border-radius:8px; background:#1d2622;}
+  .mv-hitem{padding:5px 8px; font-size:12px; cursor:pointer; display:flex; gap:6px; border-bottom:1px solid #2a352f;}
+  .mv-hitem:hover{background:#26312b;}
+  .mv-hitem.cur{background:#2f8f6b; color:#fff;}
+  .mv-hitem.fut{opacity:.5;}
   .mv-compare{position:absolute; inset:0; z-index:3; display:none; flex-direction:column; background:#0f1412; min-width:0;}
   .mv-cmp-bar{display:flex; flex-wrap:wrap; gap:6px; align-items:center; padding:6px 8px; background:#1c2420; border-bottom:1px solid #2f3a34;}
   .mv-cmp-grid{flex:1; min-height:0; display:grid; grid-template-columns:1fr 1fr; gap:6px; padding:6px;}
@@ -191,7 +205,9 @@
   .mv-overlay.ltr .mv-side{border-inline-end:1px solid #2f3a34;}
   @media (max-width:760px){
     .mv-only-mobile{display:inline-block !important;}
-    .mv-side{position:absolute; top:0; bottom:0; right:0; z-index:5; width:min(84vw,270px); transform:translateX(100%); transition:transform .2s; box-shadow:-6px 0 20px rgba(0,0,0,.5);}
+    .mv-side.mv-hide{display:block;}
+    #mvSideFab{display:none;}
+    .mv-side{position:absolute; top:0; bottom:0; right:0; z-index:5; width:min(78vw,230px); transform:translateX(100%); transition:transform .2s; box-shadow:-6px 0 20px rgba(0,0,0,.5);}
     .mv-side.open{transform:none;}
     .mv-cmp-grid{grid-template-columns:1fr; grid-template-rows:1fr 1fr;}
     .mv-overlay.ltr .mv-side{right:auto; left:0; transform:translateX(-100%); box-shadow:6px 0 20px rgba(0,0,0,.5);}
@@ -1273,8 +1289,8 @@
 </div>
 
 <div id="measureViewer" class="mv-overlay">
-  <div class="mv-top">
-    <button id="mvSideToggle" class="mv-only-mobile">☰ الأدوات</button>
+  <button id="mvTopFab" class="mv-fab" title="إظهار/إخفاء الشريط العلوي">▲</button>
+  <div class="mv-top" id="mvTop">
     <span class="mv-title" id="mvTitle" data-i18n-skip>📐 الرسم والقياس</span>
     <button id="mvLang" data-i18n-skip title="Switch to English">🌐 EN</button>
     <button id="mvInsert">🖼 إدراج صورة</button>
@@ -1283,6 +1299,7 @@
     <input type="file" id="mvJsonFile" accept=".json,application/json" style="display:none;">
     <span class="mv-sep"></span>
     <button id="mvUndo">↩ تراجع</button>
+    <button id="mvRedo">↪ إعادة</button>
     <button id="mvClear">🗑 مسح الكل</button>
     <span class="mv-sep"></span>
     <button id="mvZoomOut">➖</button>
@@ -1295,6 +1312,7 @@
   </div>
   <div class="mv-body">
     <aside class="mv-side" id="mvSide">
+      <div class="mv-side-head"><span>🛠 الأدوات</span><button id="mvSideHide">✕ إخفاء</button></div>
       <div class="mv-sec">
         <div class="mv-sh">📏 القياس</div>
         <div class="mv-tgrid">
@@ -1334,6 +1352,19 @@
         <div class="mv-lbl" id="mvCropTarget" style="margin-bottom:4px;"></div>
         <div class="mv-lbl" style="opacity:.7;font-size:11px;">لكروب صورة مدرجة: حددها بأداة التحريك الأول، وبعدين اختار كروب</div>
         <div class="mv-row" style="margin-top:0;"><button id="mvCropApply">✔ تطبيق الكروب</button><button id="mvCropCancel">✖ إلغاء</button></div>
+      </div>
+      <div class="mv-sec" id="mvHistGrp">
+        <details open>
+          <summary class="mv-sh" style="cursor:pointer;">🎞 الخطوات</summary>
+          <div class="mv-row" style="margin-top:4px;">
+            <button id="mvHFirst" title="البداية">⏮</button><button id="mvHPrev" title="خطوة للخلف">⏪</button><button id="mvHPlay" title="تشغيل">▶</button><button id="mvHNext" title="خطوة للأمام">⏩</button><button id="mvHLast" title="النهاية">⏭</button>
+          </div>
+          <div class="mv-row"><span class="mv-lbl">السرعة</span>
+            <select id="mvHSpeed"><option value="1800">بطيء</option><option value="900" selected>عادي</option><option value="400">سريع</option></select>
+            <b class="mv-lbl" id="mvHCount" data-i18n-skip></b></div>
+          <div class="mv-lbl" style="opacity:.7;font-size:11px;">تسجيل الخطوات بيتم تلقائيًا — اضغط على أي خطوة للرجوع لها</div>
+          <div id="mvHList" class="mv-hlist" data-i18n-skip></div>
+        </details>
       </div>
       <div class="mv-sec" id="mvPieceGrp" style="display:none;">
         <div class="mv-sh">🔩 الصورة المدرجة / القطعة</div>
@@ -1442,6 +1473,7 @@
       </div>
     </aside>
     <div class="mv-main">
+      <button id="mvSideFab" class="mv-fab" title="إظهار/إخفاء الأدوات">🛠</button>
       <div class="mv-stage" id="mvStage"><canvas id="mvCanvas"></canvas></div>
       <div class="mv-compare" id="mvCompare" style="display:none;">
         <div class="mv-cmp-bar">
@@ -3222,7 +3254,7 @@ const MV_EN = {
 "✂️ قص": "✂️ Cut",
 "✋ تحريك/تحديد": "✋ Move / Select",
 "✏️ الرسم": "✏️ Drawing",
-"✏️ رسم حر": "✏️ Freehand",
+"✏️ رسم حر": "✏️ Free draw",
 "✔ إنهاء القص": "✔ Finish cut",
 "✔ إنهاء المنحنى": "✔ Finish curve",
 "✖ إغلاق": "✖ Close",
@@ -3246,7 +3278,7 @@ const MV_EN = {
 "🔄 تدوير": "🔄 Rotate",
 "🔍➕ تكبير القطعة": "🔍➕ Enlarge piece",
 "🔍➖ تصغير القطعة": "🔍➖ Shrink piece",
-"🔗 زاوية بين خطين موجودين": "🔗 Angle between two lines",
+"🔗 زاوية بين خطين موجودين": "🔗 Angle between existing lines",
 "🔤 كتابة": "🔤 Text",
 "🖐 تنقّل": "🖐 Pan",
 "🖼 إدراج صورة": "🖼 Insert image",
@@ -3317,7 +3349,7 @@ const MV_EN = {
 "تنزيل صورة": "Download image",
 "حذف": "Delete",
 "🔲 كروب": "🔲 Crop",
-"🎚 تعديل الصورة": "🎚 Image adjustments",
+"🎚 تعديل الصورة": "🎚 Image adjust",
 "السطوع": "Brightness",
 "التباين": "Contrast",
 "جاما (الإضاءة المتوسطة)": "Gamma (midtones)",
@@ -3372,7 +3404,32 @@ const MV_EN = {
 "الخطوة (درجة)": "Step (deg)",
 "الهدف: الصورة المدرجة المحددة فقط": "Target: the selected inserted image only",
 "الهدف: الصورة الأساسية (الخلفية)": "Target: the base image (background)",
-"لكروب صورة مدرجة: حددها بأداة التحريك الأول، وبعدين اختار كروب": "To crop an inserted image: select it with the Move tool first, then choose Crop"
+"لكروب صورة مدرجة: حددها بأداة التحريك الأول، وبعدين اختار كروب": "To crop an inserted image: select it with the Move tool first, then choose Crop",
+"الحالة الأولى": "Initial state",
+"📏 خط قياس": "📏 Measuring line",
+"📐 معايرة": "📐 Calibration",
+"∠ زاوية": "∠ Angle",
+"🔤 نص": "🔤 Text",
+"〰 منحنى": "〰 Curve",
+"⚪ نقطة": "⚪ Point",
+"➗ منتصف": "➗ Midpoint",
+"✂️ قص قطعة": "✂️ Cut piece",
+"🗑 حذف": "🗑 Delete",
+"✏️ تعديل": "✏️ Edit",
+"↪ إعادة": "↪ Redo",
+"🎞 الخطوات": "🎞 Steps",
+"خطوة": "Step",
+"عرض الخطوات بالتسلسل": "Play steps in order",
+"السرعة": "Speed",
+"بطيء": "Slow",
+"عادي": "Normal",
+"سريع": "Fast",
+"تسجيل الخطوات بيتم تلقائيًا — اضغط على أي خطوة للرجوع لها": "Steps are recorded automatically — click any step to jump to it",
+"📐 زاوية بين خطين": "📐 Angle between lines",
+"🛠 الأدوات": "🛠 Tools",
+"✕ إخفاء": "✕ Hide",
+"إظهار/إخفاء الأدوات": "Show/hide tools",
+"إظهار/إخفاء الشريط العلوي": "Show/hide top bar"
 };
 mv.lang = 'ar';
 try{ mv.lang = localStorage.getItem('mvLang') === 'en' ? 'en' : 'ar'; }catch(_){}
@@ -3447,6 +3504,35 @@ function mvSetZoom(z){
   const cv = $('mvCanvas');
   cv.style.width = (mv.img.naturalWidth * mv.zoom) + 'px';
   cv.style.height = (mv.img.naturalHeight * mv.zoom) + 'px';
+}
+// ===== إظهار/إخفاء الشريط العلوي وشريط الأدوات =====
+const mvIsMobile = ()=> window.innerWidth <= 760;
+function mvSideIsOpen(){ const sd = $('mvSide'); return mvIsMobile() ? sd.classList.contains('open') : !sd.classList.contains('mv-hide'); }
+function mvUiSave(){ try{ localStorage.setItem('mvUi', JSON.stringify({ top:!$('mvTop').classList.contains('mv-top-hide'), side:!$('mvSide').classList.contains('mv-hide') })); }catch(_){} }
+function mvUiRefit(fn){
+  const wasFit = mv.img && Math.abs(mv.zoom - mv.fit) < 0.002;
+  fn();
+  if(mv.img){ if(wasFit) mvRefit(); mvDraw(); }
+}
+function mvUiSync(){
+  $('mvSideFab').style.display = mvSideIsOpen() ? 'none' : 'block';
+  $('mvTopFab').textContent = $('mvTop').classList.contains('mv-top-hide') ? '▼' : '▲';
+}
+function mvToggleSide(force){
+  const open = force === undefined ? !mvSideIsOpen() : force, sd = $('mvSide');
+  mvUiRefit(()=>{ if(mvIsMobile()) sd.classList.toggle('open', open); else sd.classList.toggle('mv-hide', !open); });
+  mvUiSync(); if(!mvIsMobile()) mvUiSave();
+}
+function mvToggleTop(force){
+  const show = force === undefined ? $('mvTop').classList.contains('mv-top-hide') : force;
+  mvUiRefit(()=> $('mvTop').classList.toggle('mv-top-hide', !show));
+  mvUiSync(); mvUiSave();
+}
+function mvApplyUi(){
+  let st = null; try{ st = JSON.parse(localStorage.getItem('mvUi') || 'null'); }catch(_){}
+  $('mvTop').classList.toggle('mv-top-hide', !!(st && st.top === false));
+  if(mvIsMobile()) $('mvSide').classList.remove('open'); else $('mvSide').classList.toggle('mv-hide', !!(st && st.side === false));
+  mvUiSync();
 }
 function mvViewPush(){
   const st = $('mvStage'); mv.viewStack.push({ zoom:mv.zoom, sl:st.scrollLeft, st:st.scrollTop });
@@ -3971,7 +4057,7 @@ function mvSetTool(t){
   if(t !== 'crop'){ mv.cropRect = null; mv.cropTarget = null; }
   else $('mvCropTarget').textContent = mvT(mv.cropTarget ? 'الهدف: الصورة المدرجة المحددة فقط' : 'الهدف: الصورة الأساسية (الخلفية)');
   $('mvLineGrp').style.display = (t === 'line' || t === 'seg') ? 'block' : 'none';
-  if(window.innerWidth <= 760) $('mvSide').classList.remove('open');
+  if(window.innerWidth <= 760){ $('mvSide').classList.remove('open'); if(typeof mvUiSync === 'function') mvUiSync(); }
   if(t === 'rotate') mvEnsurePivot();
   if(mv.img){
     const st = $('mvStage'), wasFit = Math.abs(mv.zoom - mv.fit) < 1e-6;
@@ -4244,9 +4330,10 @@ function mvBind(){
   $('mvUndo').onclick = ()=>{
     if(mv.pending.length) mv.pending.pop();
     else if(mv.pendRefs.length) mv.pendRefs.pop();
-    else { const last = mv.shapes.pop(); if(last){ mv.multi.delete(last); if(last === mv.sel) mv.sel = [...mv.multi].pop() || null; if(last.type === 'cropmark') mvUndoCrop(last); } mvRecalcCalib(); }
+    else { mvHStop(); mvHGo(mvH.i - 1); return; }
     mvSyncControls(); mvUpdateHint(); mvDraw();
   };
+  mvHBind();
   $('mvDelSel').onclick = ()=>{ [...mv.multi].forEach(s=> mvDeleteShape(s)); mvSyncControls(); mvUpdateHint(); mvDraw(); };
   $('mvClear').onclick = ()=>{
     if(!mv.shapes.length && !mv.pending.length) return;
@@ -4319,7 +4406,9 @@ function mvBind(){
   $('mvExportJson').onclick = mvDownloadJson;
   $('mvImportBtn').onclick = ()=> $('mvJsonFile').click();
   $('mvJsonFile').onchange = async e=>{ const f = e.target.files[0]; e.target.value = ''; if(f) await mvImportJson(f); };
-  $('mvSideToggle').onclick = ()=> $('mvSide').classList.toggle('open');
+  $('mvSideHide').onclick = ()=> mvToggleSide(false);
+  $('mvSideFab').onclick = ()=> mvToggleSide(true);
+  $('mvTopFab').onclick = ()=> mvToggleTop();
   $('mvLang').onclick = ()=>{
     mv.lang = mv.lang === 'en' ? 'ar' : 'en';
     try{ localStorage.setItem('mvLang', mv.lang); }catch(_){}
@@ -4345,7 +4434,8 @@ function mvBind(){
     else if(e.key === 'Enter' && mv.tool === 'crop' && !typing){ mvApplyCrop(); }
     else if(e.key === 'Enter' && mv.tool === 'curve' && !typing){ mvFinishCurve(); }
     else if((e.key === 'Delete' || e.key === 'Backspace') && mv.multi.size && !typing){ $('mvDelSel').click(); }
-    else if((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && !typing){ $('mvUndo').click(); }
+    else if((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && !typing){ if(e.shiftKey) $('mvRedo').click(); else $('mvUndo').click(); }
+    else if((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y' && !typing){ $('mvRedo').click(); }
   });
   st.addEventListener('wheel', e=>{
     if(!e.ctrlKey) return;
@@ -4441,7 +4531,7 @@ async function mvDeserialize(state){
   out.forEach(s=>{ if(s.type === 'lineangle'){ s.r1 = { s:out[s.r1.si], i:s.r1.i }; s.r2 = { s:out[s.r2.si], i:s.r2.i }; } });
   mv.adj = state.adj ? { ...mvAdjDefault(), ...state.adj } : mvAdjDefault(); mvReprocessBase();
   mv.shapes = out; mv.pending = []; mv.pendRefs = []; mvSetSel(null); mv.pivot = null; mvRecalcCalib();
-  mvRefit(); mvSetTool('move'); mvDraw();
+  mvRefit(); mvSetTool('move'); mvDraw(); mvHReset();
 }
 // ----- تعديل الألوان والحدّة -----
 function mvAdjDefault(){ return { b:0, c:0, g:100, s:0, sh:0, inv:false, gray:false, auto:false }; }
@@ -4702,6 +4792,117 @@ function mvUndoCrop(mark){
   const cv = $('mvCanvas'); cv.width = mv.img.naturalWidth; cv.height = mv.img.naturalHeight;
   mvShiftAll(mark.dx, mark.dy); mvReprocessBase(); mvRefit();
 }
+
+// ===== سجل الخطوات: رجوع / تقدم / عرض متسلسل =====
+const mvH = { snaps:[], i:-1, sig:'', busy:false, play:null, ids:new WeakMap(), nid:1, idx:new Map() };
+function mvHId(o){ let v = mvH.ids.get(o); if(!v){ v = mvH.nid++; mvH.ids.set(o, v); } return v; }
+function mvHSig(){
+  const shapes = mv.shapes;
+  mvH.idx = new Map(shapes.map((x,i)=>[x,i]));
+  const rep = function(k, v){
+    if(typeof k === 'string' && k[0] === '_') return undefined;
+    if(v && typeof v === 'object'){
+      if(v instanceof HTMLCanvasElement || v instanceof HTMLImageElement) return '@' + mvHId(v);
+      if(ArrayBuffer.isView(v)) return undefined;
+      if(this !== shapes && mvH.idx.has(v)) return '#' + mvH.idx.get(v);
+    }
+    return v;
+  };
+  return JSON.stringify([shapes, mv.adj, mv.mmPerPx, mv.pivot, mv.img ? mvHId(mv.img) : 0], rep);
+}
+function mvHClone(o, memo){
+  if(o === null || typeof o !== 'object') return o;
+  if(o instanceof HTMLCanvasElement || o instanceof HTMLImageElement || ArrayBuffer.isView(o)) return o;
+  if(memo.has(o)) return memo.get(o);
+  if(Array.isArray(o)){ const a = []; memo.set(o, a); o.forEach(x => a.push(mvHClone(x, memo))); return a; }
+  const r = {}; memo.set(o, r);
+  for(const k in o) r[k] = mvHClone(o[k], memo);
+  return r;
+}
+function mvHSnap(label){
+  const memo = new Map();
+  return { label, sig:mvHSig(), shapes:mvHClone(mv.shapes, memo), adj:mvHClone(mv.adj, memo), pivot:mv.pivot ? mvHClone(mv.pivot, memo) : null,
+           mm:mv.mmPerPx, img:mv.img, baseUrl:mv.baseUrl, baseBlank:mv.baseBlank, cw:$('mvCanvas').width, ch:$('mvCanvas').height };
+}
+function mvHLabel(prev){
+  const cur = mv.shapes;
+  if(cur.length > prev.shapes.length){
+    const t = cur[cur.length - 1];
+    const map = { line:'📏 خط قياس', calib:'📐 معايرة', angle:'∠ زاوية', angle2:'∠ زاوية', lineangle:'∠ زاوية', pen:'✏️ رسم حر', text:'🔤 نص', curve:'〰 منحنى', point:'⚪ نقطة', mid:'➗ منتصف', cropmark:'🔲 كروب' };
+    if(t.type === 'piece') return (t.noOutline && !t.hole) ? '🖼 إدراج صورة' : '✂️ قص قطعة';
+    return map[t.type] || '✏️ تعديل';
+  }
+  if(cur.length < prev.shapes.length) return '🗑 حذف';
+  if(mv.img !== prev.img) return '🖼 إدراج صورة';
+  if(JSON.stringify(mv.adj) !== JSON.stringify(prev.adj)) return '🎚 تعديل الصورة';
+  return '✏️ تعديل';
+}
+function mvHReset(){
+  mvH.snaps = [mvHSnap('الحالة الأولى')]; mvH.i = 0; mvH.sig = mvH.snaps[0].sig; mvHStop(); mvHRender();
+}
+function mvHCheck(){
+  if(mvH.busy || mv.drag || !mv.img || !$('measureViewer').classList.contains('open') || mvH.i < 0) return;
+  const sig = mvHSig(); if(sig === mvH.sig) return;
+  const prev = mvH.snaps[mvH.i], sn = mvHSnap(mvHLabel(prev));
+  mvH.snaps.length = mvH.i + 1; mvH.snaps.push(sn);
+  if(mvH.snaps.length > 150) mvH.snaps.shift();
+  mvH.i = mvH.snaps.length - 1; mvH.sig = sig; mvHRender();
+}
+function mvHRestore(sn){
+  mvH.busy = true;
+  try{
+    const memo = new Map();
+    mv.shapes = mvHClone(sn.shapes, memo); mv.adj = mvHClone(sn.adj, memo); mv.pivot = sn.pivot ? mvHClone(sn.pivot, memo) : null; mv.mmPerPx = sn.mm;
+    mv.img = sn.img; mv.baseUrl = sn.baseUrl; mv.baseBlank = sn.baseBlank;
+    const cv = $('mvCanvas'), resized = cv.width !== sn.cw || cv.height !== sn.ch;
+    if(resized){ cv.width = sn.cw; cv.height = sn.ch; }
+    mv.pending = []; mv.pendRefs = []; mvSetSel(null); mvReprocessBase();
+    if(resized) mvRefit();
+    mvSyncControls(); mvUpdateHint(); mvDraw();
+    mvH.sig = mvHSig();
+  } finally { mvH.busy = false; }
+}
+function mvHGo(i){
+  mvHCheck();
+  i = Math.max(0, Math.min(mvH.snaps.length - 1, i));
+  mvH.i = i; mvHRestore(mvH.snaps[i]); mvHRender();
+}
+function mvHStop(){ if(mvH.play){ clearInterval(mvH.play); mvH.play = null; } const b = $('mvHPlay'); if(b) b.textContent = '▶'; }
+function mvHPlay(){
+  if(mvH.play){ mvHStop(); return; }
+  mvHCheck();
+  if(mvH.snaps.length < 2) return;
+  if(mvH.i >= mvH.snaps.length - 1) mvHGo(0);
+  $('mvHPlay').textContent = '⏸';
+  mvH.play = setInterval(()=>{
+    if(mvH.i >= mvH.snaps.length - 1){ mvHStop(); return; }
+    mvHGo(mvH.i + 1);
+  }, Number($('mvHSpeed').value) || 900);
+}
+function mvHRender(){
+  const L = $('mvHList'); if(!L) return;
+  L.innerHTML = mvH.snaps.map((sn, i) => `<div class="mv-hitem${i === mvH.i ? ' cur' : ''}${i > mvH.i ? ' fut' : ''}" data-i="${i}"><b>${i}</b><span>${mvT(sn.label)}</span></div>`).join('');
+  L.querySelectorAll('.mv-hitem').forEach(el => el.onclick = ()=>{ mvHStop(); mvHGo(Number(el.dataset.i)); });
+  const cur = L.querySelector('.cur'); if(cur) cur.scrollIntoView({ block:'nearest' });
+  $('mvHCount').textContent = mvT('خطوة') + ' ' + mvH.i + ' / ' + (mvH.snaps.length - 1);
+  $('mvRedo').style.opacity = mvH.i < mvH.snaps.length - 1 ? '1' : '.45';
+  $('mvUndo').style.opacity = '1';
+}
+function mvHBind(){
+  $('mvHFirst').onclick = ()=>{ mvHStop(); mvHGo(0); };
+  $('mvHPrev').onclick = ()=>{ mvHStop(); mvHGo(mvH.i - 1); };
+  $('mvHNext').onclick = ()=>{ mvHStop(); mvHGo(mvH.i + 1); };
+  $('mvHLast').onclick = ()=>{ mvHStop(); mvHGo(mvH.snaps.length - 1); };
+  $('mvHPlay').onclick = mvHPlay;
+  $('mvHSpeed').onchange = ()=>{ if(mvH.play){ mvHStop(); mvHPlay(); } };
+  $('mvRedo').onclick = ()=>{ mvHStop(); mvHGo(mvH.i + 1); };
+  const ov = $('measureViewer'), soon = ()=> setTimeout(mvHCheck, 40);
+  ov.addEventListener('pointerup', soon); ov.addEventListener('click', soon); ov.addEventListener('change', soon); ov.addEventListener('keyup', soon);
+  let t = 0; ov.addEventListener('input', ()=>{ clearTimeout(t); t = setTimeout(mvHCheck, 500); });
+  $('mvCanvas').addEventListener('pointerdown', mvHStop);
+  setInterval(mvHCheck, 600);
+}
+
 // ----- المقارنة (صورة واحدة مدموجة) -----
 function mvCmpSnapshot(){
   if(!mv.img) return null;
@@ -4866,7 +5067,7 @@ async function mvOpen(dataUrl){
   mv.shapes = []; mv.pending = []; mv.pendRefs = []; mvSetSel(null); mv.mmPerPx = null; mv.mouse = null; mv.pivot = null;
   mv.titleAr = dataUrl ? '📐 قياس على صورة المريض' : '📐 الرسم والقياس'; $('mvTitle').textContent = mvT(mv.titleAr);
   $('measureViewer').classList.add('open');
-  mvApplyLang(); mvRefit(); mvSetTool('line'); mvRenderStages(); mvDraw();
+  mvApplyLang(); mvRefit(); mvSetTool('line'); mvRenderStages(); mvDraw(); mvHReset(); mvApplyUi();
 }
 function openMeasureViewer(dataUrl){
   if(!dataUrl){ showToast(mvT('الصورة دي متعذر تحميلها'), true); return; }
