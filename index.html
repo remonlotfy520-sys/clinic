@@ -291,6 +291,26 @@
   .fab-btn{display:none; position:fixed; bottom:20px; width:52px; height:52px; border-radius:50%; background:var(--teal); color:#fff; border:none; font-size:22px; align-items:center; justify-content:center; cursor:pointer; box-shadow:0 4px 14px rgba(0,0,0,.25); z-index:99998;}
   .fab-badge{position:absolute; top:-4px; left:-4px; background:var(--red); color:#fff; border-radius:999px; font-size:11px; font-weight:800; padding:2px 6px; min-width:18px; text-align:center; line-height:1.3; font-family:'Tajawal';}
   #todoFabBtn{width:38px; height:38px; font-size:16px;}
+  #fabDial{display:none; position:fixed; left:20px; bottom:20px; z-index:99999;}
+  #boneFab{width:50px; height:50px; border-radius:50%; background:var(--teal); border:none; cursor:pointer; box-shadow:0 4px 14px rgba(0,0,0,.3); display:flex; align-items:center; justify-content:center; position:relative; transition:transform .2s;}
+  #boneFab svg{width:34px; height:34px;}
+  #fabDial.open #boneFab{transform:rotate(90deg); background:var(--teal-dark);}
+  #fabMenu{display:none; position:absolute; left:4px; bottom:62px; flex-direction:column; gap:10px; align-items:flex-start;}
+  #fabDial.open #fabMenu{display:flex;}
+  .fab-item{display:flex; align-items:center; gap:8px;}
+  .fab-label{background:#fff; color:var(--ink,#222); border:1px solid var(--line); border-radius:999px; padding:4px 10px; font-size:12.5px; font-weight:700; box-shadow:0 2px 8px rgba(0,0,0,.15); white-space:nowrap; font-family:'Tajawal',sans-serif;}
+  #fabDial .fab-btn{position:relative; display:flex !important; left:auto !important; bottom:auto !important; width:42px; height:42px; font-size:18px; flex:none;}
+  #stickyFabBtn{background:#E8B923;}
+  #calcFabBtn{background:#6C63B5;}
+  #boneBadge{position:absolute; top:-4px; right:-4px; left:auto; background:var(--red); color:#fff; border-radius:999px; font-size:11px; font-weight:800; padding:2px 6px; min-width:18px; text-align:center; line-height:1.3; display:none; font-family:'Tajawal';}
+  #calcPanel{width:310px; max-height:82vh;}
+  .calc-sec{border:1px solid var(--line); border-radius:10px; padding:10px; margin-bottom:10px; background:#FAFAF7;}
+  .calc-sec h3{margin:0 0 8px; font-size:13.5px;}
+  .calc-row{display:flex; gap:6px; align-items:center; margin-bottom:6px; flex-wrap:wrap;}
+  .calc-row label{font-size:12.5px; min-width:48px;}
+  .calc-row input,.calc-row select{flex:1; min-width:0; padding:7px 8px; border-radius:8px; border:1px solid var(--line); font-family:'Tajawal'; font-size:13.5px;}
+  .calc-res{background:#fff; border:1px dashed var(--line); border-radius:8px; padding:8px 10px; font-size:13.5px; line-height:1.9; min-height:20px;}
+  .calc-res b{color:var(--teal-dark);}
   #stickyFabBtn{left:20px; background:#E8B923; width:38px; height:38px; font-size:16px;}
 
   .todo-panel{display:none; position:fixed; width:300px; max-height:70vh; overflow-y:auto; background:#fff; border:1px solid var(--line); border-radius:14px; box-shadow:0 8px 28px rgba(0,0,0,.22); z-index:99998; padding:16px;}
@@ -1534,10 +1554,17 @@
   </div>
 </div>
 
-<button class="fab-btn" id="todoFabBtn">
-  ✅
-  <span class="fab-badge" id="todoBadge" style="display:none;">0</span>
-</button>
+<div id="fabDial">
+  <div id="fabMenu">
+    <div class="fab-item"><button class="fab-btn" id="calcFabBtn" title="حاسبة السن والمدة">🧮</button><span class="fab-label">حاسبة السن والمدة</span></div>
+    <div class="fab-item"><button class="fab-btn" id="stickyFabBtn" title="الملاحظات">📝</button><span class="fab-label">ملاحظات</span></div>
+    <div class="fab-item"><button class="fab-btn" id="todoFabBtn" title="قائمة المهام">✅<span class="fab-badge" id="todoBadge" style="display:none;">0</span></button><span class="fab-label">قائمة المهام</span></div>
+  </div>
+  <button id="boneFab" title="أدواتي: مهام / ملاحظات / حاسبة">
+    <svg viewBox="0 0 48 48" aria-hidden="true"><g transform="rotate(-45 24 24)" fill="#fff"><rect x="9" y="20" width="30" height="8" rx="3"/><circle cx="9" cy="19" r="5.2"/><circle cx="9" cy="29" r="5.2"/><circle cx="39" cy="19" r="5.2"/><circle cx="39" cy="29" r="5.2"/></g></svg>
+    <span id="boneBadge">0</span>
+  </button>
+</div>
 <div class="todo-panel" id="todoPanel">
   <div class="visits-head" id="todoPanelHeader" style="margin:-16px -16px 10px; padding:10px 16px; background:var(--teal); border-radius:14px 14px 0 0; cursor:move;">
     <h2 style="margin:0; font-size:15px; color:#fff;">✅ قائمة المهام</h2>
@@ -1552,7 +1579,27 @@
   <div id="todoDoneList" style="display:none; margin-top:8px;"></div>
 </div>
 
-<button class="fab-btn" id="stickyFabBtn">📝</button>
+
+<div class="todo-panel" id="calcPanel">
+  <div class="visits-head" id="calcPanelHeader" style="margin:-16px -16px 10px; padding:10px 16px; background:#6C63B5; border-radius:14px 14px 0 0; cursor:move;">
+    <h2 style="margin:0; font-size:15px; color:#fff;">🧮 حاسبة السن والمدة</h2>
+    <button class="btn btn-ghost" id="closeCalcBtn" style="padding:4px 10px; background:rgba(255,255,255,.25); color:#fff;">✕</button>
+  </div>
+  <div class="calc-sec">
+    <h3>⏱ كم مرّ من تاريخ معيّن (عمر / مدة)</h3>
+    <div class="calc-row"><label>من تاريخ</label><input type="date" id="calcFrom"></div>
+    <div class="calc-row"><label>إلى تاريخ</label><input type="date" id="calcTo"><button class="btn btn-ghost" id="calcToday" style="padding:6px 10px;">اليوم</button></div>
+    <div class="calc-res" id="calcRes">اختار التاريخ علشان تتحسب المدة</div>
+  </div>
+  <div class="calc-sec">
+    <h3>📅 تاريخ + مدة (موعد متابعة / ما بعد العملية)</h3>
+    <div class="calc-row"><label>من</label><input type="date" id="calcAddBase"></div>
+    <div class="calc-row"><label>مدة</label><input type="number" id="calcAddN" min="0" value="2" style="max-width:80px;"><select id="calcAddU"><option value="d">يوم</option><option value="w" selected>أسبوع</option><option value="m">شهر</option><option value="y">سنة</option></select></div>
+    <div class="calc-row"><select id="calcAddDir"><option value="1">بعد</option><option value="-1">قبل</option></select></div>
+    <div class="calc-res" id="calcAddRes">—</div>
+  </div>
+</div>
+
 <div class="sticky-note" id="stickyNoteWindow">
   <div class="sticky-header" id="stickyHeader">
     <div class="sticky-tabs" id="stickyTabs"></div>
@@ -2375,15 +2422,14 @@ function setCachedOperations(patientId, list){
 /* ---------- تسجيل الدخول ---------- */
 function showLoginScreen(){
   $('loginScreen').style.display = 'flex';
-  $('todoFabBtn').style.display = 'none';
-  $('stickyFabBtn').style.display = 'none';
+  $('fabDial').style.display = 'none'; $('fabDial').classList.remove('open');
   $('todoPanel').style.display = 'none';
   $('stickyNoteWindow').style.display = 'none';
+  $('calcPanel').style.display = 'none';
 }
 function hideLoginScreen(){
   $('loginScreen').style.display = 'none';
-  $('todoFabBtn').style.display = 'flex';
-  $('stickyFabBtn').style.display = 'flex';
+  $('fabDial').style.display = 'block';
 }
 
 $('loginBtn').onclick = async ()=>{
@@ -7878,7 +7924,7 @@ $('todoFabBtn').onclick = ()=>{
   if(isOpen){ panel.style.display = 'none'; return; }
   const savedPos = JSON.parse(localStorage.getItem('clinicTodoPos') || 'null');
   if(savedPos){ panel.style.left = savedPos.left; panel.style.top = savedPos.top; panel.style.bottom = 'auto'; panel.style.right = 'auto'; }
-  else{ panel.style.left = (window.innerWidth - 300 - 20) + 'px'; panel.style.bottom = '66px'; panel.style.top = 'auto'; panel.style.right = 'auto'; }
+  else{ panel.style.left = Math.max(10, Math.min(window.innerWidth - 320, 380)) + 'px'; panel.style.bottom = '84px'; panel.style.top = 'auto'; panel.style.right = 'auto'; }
   panel.style.display = 'block';
 };
 $('closeTodoPanelBtn').onclick = ()=>{ $('todoPanel').style.display = 'none'; };
@@ -7949,11 +7995,90 @@ $('toggleTodoDoneBtn').onclick = ()=>{
 };
 renderTodos();
 
-function positionTodoFab(){
-  $('todoFabBtn').style.left = (window.innerWidth - 38 - 20) + 'px';
-}
-positionTodoFab();
-window.addEventListener('resize', positionTodoFab);
+
+
+/* ---------- أيقونة العظمة العايمة (مهام / ملاحظات / حاسبة) ---------- */
+(function(){
+  const dial = $('fabDial');
+  $('boneFab').onclick = (e)=>{ e.stopPropagation(); dial.classList.toggle('open'); };
+  ['todoFabBtn','stickyFabBtn','calcFabBtn'].forEach(id => $(id).addEventListener('click', ()=> dial.classList.remove('open')));
+  document.addEventListener('click', (e)=>{ if(!e.target.closest('#fabDial')) dial.classList.remove('open'); });
+  const tb = $('todoBadge'), bb = $('boneBadge');
+  const sync = ()=>{ bb.textContent = tb.textContent; bb.style.display = tb.style.display === 'none' ? 'none' : 'block'; };
+  new MutationObserver(sync).observe(tb, { childList:true, characterData:true, subtree:true, attributes:true });
+  sync();
+})();
+
+/* ---------- حاسبة السن والمدة ---------- */
+(function(){
+  const pad = n => String(n).padStart(2, '0');
+  const iso = d => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+  const parse = v => { if(!v) return null; const [y,m,d] = v.split('-').map(Number); return new Date(y, m - 1, d); };
+  const unit = (n, f) => n === 1 ? f[0] : n === 2 ? f[1] : (n >= 3 && n <= 10) ? f[2] : f[3];
+  const U = { y:['سنة','سنتين','سنين','سنة'], m:['شهر','شهرين','شهور','شهر'], w:['أسبوع','أسبوعين','أسابيع','أسبوع'], d:['يوم','يومين','أيام','يوم'] };
+  const fmt = (n, k) => n === 2 ? U[k][1] : (n === 1 ? U[k][0] + (k === 'y' ? ' واحدة' : ' واحد') : n + ' ' + unit(n, U[k]));
+  const dim = (y, m) => new Date(y, m + 1, 0).getDate();
+  const DAYS = ['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
+  const dstr = d => DAYS[d.getDay()] + ' ' + d.getDate() + '/' + (d.getMonth() + 1) + '/' + d.getFullYear();
+  function addM(d, n){ const r = new Date(d.getFullYear(), d.getMonth() + n, 1); r.setDate(Math.min(d.getDate(), dim(r.getFullYear(), r.getMonth()))); return r; }
+  function diff(a, b){
+    let tm = (b.getFullYear() - a.getFullYear()) * 12 + (b.getMonth() - a.getMonth());
+    let c = addM(a, tm); if(c > b){ tm--; c = addM(a, tm); }
+    return { y: Math.floor(tm / 12), m: tm % 12, d: Math.round((b - c) / 864e5) };
+  }
+  function calc(){
+    const a = parse($('calcFrom').value), b = parse($('calcTo').value), box = $('calcRes');
+    if(!a || !b){ box.textContent = 'اختار التاريخ علشان تتحسب المدة'; return; }
+    const neg = b < a, from = neg ? b : a, to = neg ? a : b;
+    const days = Math.round((to - from) / 864e5), D = diff(from, to);
+    const parts = [];
+    if(D.y) parts.push(fmt(D.y, 'y')); if(D.m) parts.push(fmt(D.m, 'm')); if(D.d || !parts.length) parts.push(fmt(D.d, 'd'));
+    const totMonths = D.y * 12 + D.m, wk = Math.floor(days / 7), rd = days % 7;
+    box.innerHTML = (neg ? '<small>(التاريخ في المستقبل — المتبقي)</small><br>' : '') +
+      '<b>' + parts.join(' و ') + '</b><br>' +
+      '= <b>' + days + '</b> يوم<br>' +
+      '= <b>' + wk + '</b> أسبوع' + (rd ? ' و ' + rd + ' يوم' : '') + '<br>' +
+      (totMonths ? '= <b>' + totMonths + '</b> شهر' + (D.d ? ' و ' + D.d + ' يوم' : '') + '<br>' : '') +
+      '<small>' + dstr(a) + ' ← ' + dstr(b) + '</small>';
+  }
+  function addCalc(){
+    const base = parse($('calcAddBase').value), n = Number($('calcAddN').value), box = $('calcAddRes');
+    if(!base || !isFinite(n)){ box.textContent = '—'; return; }
+    const sgn = Number($('calcAddDir').value), u = $('calcAddU').value, r = new Date(base);
+    if(u === 'd') r.setDate(r.getDate() + sgn * n);
+    else if(u === 'w') r.setDate(r.getDate() + sgn * n * 7);
+    else {
+      const total = (u === 'y' ? n * 12 : n) * sgn, day = base.getDate();
+      r.setDate(1); r.setMonth(r.getMonth() + total); r.setDate(Math.min(day, dim(r.getFullYear(), r.getMonth())));
+    }
+    box.innerHTML = '<b>' + dstr(r) + '</b>';
+  }
+  ['calcFrom','calcTo'].forEach(id => $(id).addEventListener('input', calc));
+  ['calcAddBase','calcAddN','calcAddU','calcAddDir'].forEach(id => { $(id).addEventListener('input', addCalc); $(id).addEventListener('change', addCalc); });
+  $('calcToday').onclick = ()=>{ $('calcTo').value = iso(new Date()); calc(); };
+  $('calcFabBtn').onclick = ()=>{
+    const panel = $('calcPanel');
+    if(panel.style.display === 'block'){ panel.style.display = 'none'; return; }
+    const saved = JSON.parse(localStorage.getItem('clinicCalcPos') || 'null');
+    if(saved){ panel.style.left = saved.left; panel.style.top = saved.top; panel.style.bottom = 'auto'; }
+    else { panel.style.left = '84px'; panel.style.bottom = '84px'; panel.style.top = 'auto'; }
+    panel.style.right = 'auto';
+    if(!$('calcTo').value) $('calcTo').value = iso(new Date());
+    if(!$('calcAddBase').value) $('calcAddBase').value = iso(new Date());
+    panel.style.display = 'block'; calc(); addCalc();
+  };
+  $('closeCalcBtn').onclick = ()=>{ $('calcPanel').style.display = 'none'; };
+  /* سحب اللوحة */
+  const panel = $('calcPanel'), header = $('calcPanelHeader'); let drag = false, ox = 0, oy = 0;
+  const start = (cx, cy)=>{ drag = true; const r = panel.getBoundingClientRect(); ox = cx - r.left; oy = cy - r.top; panel.style.left = r.left + 'px'; panel.style.top = r.top + 'px'; panel.style.bottom = 'auto'; panel.style.right = 'auto'; };
+  const move = (cx, cy)=>{ if(!drag) return; panel.style.left = (cx - ox) + 'px'; panel.style.top = (cy - oy) + 'px'; };
+  const end = ()=>{ if(!drag) return; drag = false; localStorage.setItem('clinicCalcPos', JSON.stringify({ left: panel.style.left, top: panel.style.top })); };
+  header.addEventListener('mousedown', e=>{ if(e.target.closest('#closeCalcBtn')) return; start(e.clientX, e.clientY); });
+  document.addEventListener('mousemove', e=> move(e.clientX, e.clientY)); document.addEventListener('mouseup', end);
+  header.addEventListener('touchstart', e=>{ if(e.target.closest('#closeCalcBtn')) return; start(e.touches[0].clientX, e.touches[0].clientY); }, {passive:true});
+  document.addEventListener('touchmove', e=>{ if(drag) move(e.touches[0].clientX, e.touches[0].clientY); }, {passive:true}); document.addEventListener('touchend', end);
+  window.__calcDiff = diff;
+})();
 
 /* ---------- الملاحظات اللاصقة (Sticky Notes) ---------- */
 function getStickyNotes(){
@@ -8001,7 +8126,7 @@ $('stickyFabBtn').onclick = ()=>{
   if(isOpen){ win.style.display = 'none'; return; }
   const savedPos = JSON.parse(localStorage.getItem('clinicStickyPos') || 'null');
   if(savedPos){ win.style.left = savedPos.left; win.style.top = savedPos.top; win.style.bottom = 'auto'; }
-  else{ win.style.left = '82px'; win.style.bottom = '82px'; win.style.top = 'auto'; }
+  else{ win.style.left = '84px'; win.style.bottom = '84px'; win.style.top = 'auto'; }
   win.style.display = 'block';
   renderStickyTabs();
   $('stickyTextarea').value = stickyState.notes.find(n => n.id === stickyState.activeId).text;
