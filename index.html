@@ -2,7 +2,13 @@
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<title>ملفات المرضى - العيادة (نسخة سريعة)</title>
+<title>عيادة د ريمون لطفي</title>
+<script>
+(function(){try{var h=document.documentElement,t=localStorage.getItem('clinicTheme'),l=localStorage.getItem('clinicLang');
+if(t&&t!=='green')h.setAttribute('data-theme',t);
+if(l==='en'){h.lang='en';h.dir='ltr';}
+var n=localStorage.getItem('clinicName');if(n)document.title=n;}catch(e){}})();
+</script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@500;700;800&family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
@@ -10,10 +16,24 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
   :root{
-    --teal:#2C6E63; --teal-dark:#1F4A40; --bg:#F7F4EC; --card:#FFFFFF;
-    --line:#E7E2D3; --ink:#1c2420; --muted:#7c7466; --red:#B23B3B;
+    --teal:#2C6E63; --teal-dark:#1F4A40; --bg:#F7F4EC; --card:#FFFFFF; --card2:#FAFAF7; --inp:#FCFBF8; --hov:#F6F3EC;
+    --line:#E7E2D3; --ink:#1c2420; --muted:#7c7466; --red:#B23B3B; --inkblue:#1450C4; --inputink:#000;
     --shadow:0 8px 24px rgba(0,0,0,.06);
   }
+  html[data-theme="blue"]{--teal:#2563A8; --teal-dark:#173F73; --bg:#EEF3F9; --card2:#F4F7FB; --inp:#F7FAFD; --hov:#E6EEF8; --line:#D3DEEB; --ink:#17212e; --muted:#6b7686;}
+  html[data-theme="rose"]{--teal:#B0476B; --teal-dark:#7C2C49; --bg:#FBF1F4; --card2:#FDF6F8; --inp:#FFF9FB; --hov:#F8E7ED; --line:#EBD3DB; --ink:#2a1c22; --muted:#86707a;}
+  html[data-theme="dark"]{color-scheme:dark; --teal:#2F9C88; --teal-dark:#3AA895; --bg:#14191C; --card:#1D2429; --card2:#232B31; --inp:#262F36; --hov:#2B353C; --line:#323D45; --ink:#E4EAEC; --muted:#94A3AA; --red:#E06A6A; --inkblue:#8DB8FF; --inputink:#E8EEF0; --shadow:0 8px 24px rgba(0,0,0,.35);}
+  html[data-theme="navy"]{color-scheme:dark; --teal:#4A7BE0; --teal-dark:#5B8DF0; --bg:#0D1424; --card:#151E33; --card2:#1A2540; --inp:#1B2742; --hov:#212F50; --line:#2A3A5E; --ink:#E3E9F5; --muted:#8FA0C2; --red:#E8727A; --inkblue:#9CC1FF; --inputink:#E8EEFA; --shadow:0 8px 24px rgba(0,0,0,.45);}
+  html[data-theme="dark"] .toast, html[data-theme="navy"] .toast{background:var(--teal);}
+  html[data-theme="dark"] img.keep-light, html[data-theme="navy"] img.keep-light{filter:none;}
+  html[data-theme="dark"] select, html[data-theme="navy"] select{background-color:var(--inp); color:var(--inputink) !important;}
+  html[data-theme="dark"] option, html[data-theme="navy"] option{background:var(--card); color:var(--inputink);}
+  html[dir="ltr"] [style*="text-align:right"]{text-align:left !important;}
+  html[dir="ltr"] body{direction:ltr;}
+  .theme-sw{width:38px; height:38px; border-radius:50%; border:3px solid var(--line); cursor:pointer; padding:0; position:relative; overflow:hidden;}
+  .theme-sw.sel{border-color:var(--teal); box-shadow:0 0 0 2px var(--card), 0 0 0 4px var(--teal);}
+  .set-sec{border:1px solid var(--line); border-radius:9px; padding:10px 14px;}
+  .set-sec .ttl{font-weight:700; font-size:13.5px; margin-bottom:8px;}
   *{box-sizing:border-box;}
   html{overflow-x:hidden;}
   body{margin:0; font-family:'Tajawal',sans-serif; background:var(--bg); color:var(--ink); max-width:100%; overflow-x:hidden;}
@@ -25,25 +45,25 @@
   .btn:disabled{opacity:.6; cursor:default;}
   .btn-primary{background:var(--teal); color:#fff;}
   .btn-primary:hover{opacity:.9;}
-  .btn-ghost{background:#fff; border:1px solid var(--line); color:var(--ink);}
-  .btn-outline-red{background:#fff; border:1px solid var(--red); color:var(--red);}
+  .btn-ghost{background:var(--card); border:1px solid var(--line); color:var(--ink);}
+  .btn-outline-red{background:var(--card); border:1px solid var(--red); color:var(--red);}
   .card{background:var(--card); border-radius:16px; border:1px solid var(--line); box-shadow:var(--shadow); padding:26px;}
   .field{margin-bottom:14px;}
   .field label{display:block; font-size:13px; font-weight:700; color:var(--teal-dark); margin-bottom:6px;}
   .field input, .field textarea, .field select{
     width:100%; padding:10px 12px; border-radius:9px; border:1px solid var(--line);
-    font-family:'Tajawal'; font-size:14.5px; background:#FCFBF8; outline:none; color:#1450C4;
+    font-family:'Tajawal'; font-size:14.5px; background:var(--inp); outline:none; color:var(--inkblue);
   }
-  .field input:focus, .field textarea:focus, .field select:focus{border-color:var(--teal); background:#fff;}
+  .field input:focus, .field textarea:focus, .field select:focus{border-color:var(--teal); background:var(--card);}
   .field-row{display:grid; grid-template-columns:1fr 1fr; gap:12px;}
   @media (max-width:600px){.field-row{grid-template-columns:1fr;}}
 
-  header{display:flex; align-items:center; gap:10px; padding:14px 24px; background:#fff; border-bottom:1px solid var(--line); flex-wrap:wrap;}
+  header{display:flex; align-items:center; gap:10px; padding:14px 24px; background:var(--card); border-bottom:1px solid var(--line); flex-wrap:wrap;}
   .brand{display:flex; align-items:center; gap:10px;}
   .mark{width:38px; height:38px; border-radius:10px; background:var(--teal); color:#fff; display:flex; align-items:center; justify-content:center; font-family:'Cairo'; font-weight:800; font-size:18px;}
   .header-search{flex:1; min-width:180px; max-width:340px;}
-  .header-search input{width:100%; padding:10px 14px; border-radius:10px; border:1px solid var(--line); font-family:'Tajawal'; font-size:14px; background:#FCFBF8; outline:none;}
-  .header-search input:focus{border-color:var(--teal); background:#fff;}
+  .header-search input{width:100%; padding:10px 14px; border-radius:10px; border:1px solid var(--line); font-family:'Tajawal'; font-size:14px; background:var(--inp); outline:none;}
+  .header-search input:focus{border-color:var(--teal); background:var(--card);}
   .header-icons{display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-right:auto;}
   .icon-group-sm{display:flex; align-items:center; gap:3px;}
   .icon-sm{padding:6px 8px !important; font-size:13px !important; line-height:1;}
@@ -51,13 +71,13 @@
   .icon-sm-toggle input{width:13px; height:13px;}
   .icon-md{padding:9px 14px; font-size:14px;}
   .menu-wrap{position:relative;}
-  .dropdown-menu{display:none; position:absolute; top:calc(100% + 6px); left:0; background:#fff; border:1px solid var(--line); border-radius:12px; box-shadow:var(--shadow); min-width:190px; padding:6px; z-index:120; flex-direction:column; gap:2px;}
+  .dropdown-menu{display:none; position:absolute; top:calc(100% + 6px); left:0; background:var(--card); border:1px solid var(--line); border-radius:12px; box-shadow:var(--shadow); min-width:190px; padding:6px; z-index:120; flex-direction:column; gap:2px;}
   .dropdown-menu.open{display:flex;}
   .dropdown-item{background:none; border:none; text-align:right; padding:10px 12px; border-radius:8px; font-family:'Tajawal'; font-weight:700; font-size:13.5px; color:var(--ink); cursor:pointer;}
-  .dropdown-item:hover{background:#F6F3EC;}
+  .dropdown-item:hover{background:var(--hov);}
   .header-icons .btn{padding:9px 12px; font-size:13px;}
   .dashboard-grid{display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:16px; margin-bottom:24px;}
-  .dashboard-card{background:#fff; border:1px solid var(--line); border-radius:14px; padding:16px 18px; box-shadow:var(--shadow);}
+  .dashboard-card{background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px 18px; box-shadow:var(--shadow);}
   .dashboard-card h3{margin:0 0 12px; font-family:'Cairo'; font-size:14.5px; color:var(--teal-dark); display:flex; align-items:center; gap:6px;}
   .dashboard-card .dash-row{padding:8px 0; border-bottom:1px solid var(--line); font-size:13.5px; cursor:pointer;}
   .dashboard-card .dash-row:last-child{border-bottom:none;}
@@ -73,7 +93,7 @@
 
   .patient-row{
     display:flex; justify-content:space-between; align-items:center; padding:14px 16px;
-    background:#fff; border:1px solid var(--line); border-radius:12px; margin-bottom:10px; cursor:pointer;
+    background:var(--card); border:1px solid var(--line); border-radius:12px; margin-bottom:10px; cursor:pointer;
   }
   .patient-row:hover{border-color:var(--teal);}
   .patient-row .pname{font-weight:700;}
@@ -97,7 +117,7 @@
   .collapsible-content{display:none; margin-top:12px;}
   .collapsible-content.open{display:block;}
   .gdoc-preview-frame{width:100%; height:420px; border:1px solid var(--line); border-radius:10px;}
-  .vnotes-editable{min-height:180px; max-height:420px; overflow-y:auto; direction:ltr; text-align:left; border:1px solid var(--line); border-radius:10px; padding:10px 12px; font-family:'Tajawal'; font-size:14px; background:#fff; white-space:pre-wrap; line-height:1.6;}
+  .vnotes-editable{min-height:180px; max-height:420px; overflow-y:auto; direction:ltr; text-align:left; border:1px solid var(--line); border-radius:10px; padding:10px 12px; font-family:'Tajawal'; font-size:14px; background:var(--card); white-space:pre-wrap; line-height:1.6;}
   .vnotes-editable:empty::before{content:attr(data-placeholder); color:var(--muted);}
   .vnotes-editable .template-text{color:#9a9488; font-style:italic;}
   .highlight-toolbar{display:flex; align-items:center; gap:6px; margin-bottom:6px; flex-wrap:wrap;}
@@ -108,8 +128,8 @@
   .kashf-layout{display:flex; gap:20px; align-items:flex-start;}
   .kashf-main{flex:3; min-width:0;}
   .kashf-sidebar{flex:1; min-width:0; max-width:260px; position:sticky; top:16px;}
-  .sidebar-visit-item{display:flex; align-items:center; gap:8px; padding:9px 10px; border:1px solid var(--line); border-radius:10px; margin-bottom:8px; cursor:pointer; background:#fff; font-size:12.5px;}
-  .sidebar-visit-item:hover{border-color:var(--teal); background:#F6F3EC;}
+  .sidebar-visit-item{display:flex; align-items:center; gap:8px; padding:9px 10px; border:1px solid var(--line); border-radius:10px; margin-bottom:8px; cursor:pointer; background:var(--card); font-size:12.5px;}
+  .sidebar-visit-item:hover{border-color:var(--teal); background:var(--hov);}
   .sidebar-visit-item.active{background:var(--teal); border-color:var(--teal); color:#fff;}
   .sidebar-visit-item .sv-icon{flex-shrink:0;}
   .sidebar-visit-item .sv-text{flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
@@ -119,22 +139,22 @@
   }
   .exam-card textarea, .exam-card input[type="text"]{
     width:100%; padding:10px 12px; border-radius:9px; border:1px solid var(--line);
-    font-family:'Tajawal'; font-size:14.5px; background:#FCFBF8; outline:none; color:#1450C4;
+    font-family:'Tajawal'; font-size:14.5px; background:var(--inp); outline:none; color:var(--inkblue);
   }
-  .exam-card textarea:focus, .exam-card input[type="text"]:focus{border-color:var(--teal); background:#fff;}
+  .exam-card textarea:focus, .exam-card input[type="text"]:focus{border-color:var(--teal); background:var(--card);}
   .exam-card textarea{min-height:150px;}
   .visits-head{display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;}
-  .new-visit-form{display:none; background:#FCFBF8; border:1px solid var(--line); border-radius:12px; padding:16px; margin-bottom:16px;}
+  .new-visit-form{display:none; background:var(--inp); border:1px solid var(--line); border-radius:12px; padding:16px; margin-bottom:16px;}
   .new-visit-form.open{display:block;}
-  .visit-item{background:#fff; border:1px solid var(--line); border-radius:12px; padding:14px 16px; margin-bottom:10px;}
+  .visit-item{background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px 16px; margin-bottom:10px;}
   .visit-date{font-weight:700; color:var(--teal-dark); font-size:13px; margin-bottom:6px;}
   .visit-notes{font-size:13.5px; white-space:pre-wrap; margin-bottom:4px;}
   .visit-label{color:var(--teal-dark);}
   .no-visits{color:var(--muted); text-align:center; padding:20px 0; font-size:13.5px;}
   .images-grid{display:grid; grid-template-columns:repeat(auto-fill, minmax(110px, 1fr)); gap:12px; margin-top:14px;}
   .timeline-entry{border:1px solid var(--line); border-radius:12px; margin-bottom:10px; overflow:hidden;}
-  .timeline-header{display:flex; justify-content:space-between; align-items:center; padding:12px 14px; cursor:pointer; background:#FCFBF8;}
-  .timeline-header:hover{background:#F6F3EC;}
+  .timeline-header{display:flex; justify-content:space-between; align-items:center; padding:12px 14px; cursor:pointer; background:var(--inp);}
+  .timeline-header:hover{background:var(--hov);}
   .timeline-date{font-weight:800; color:var(--teal-dark); font-family:'Cairo'; font-size:13.5px;}
   .timeline-note{margin-right:10px; color:var(--ink); font-size:13px;}
   .timeline-count{color:var(--muted); font-size:12.5px; white-space:nowrap;}
@@ -226,7 +246,7 @@
     .mv-overlay.ltr .mv-side{right:auto; left:0; transform:translateX(-100%); box-shadow:6px 0 20px rgba(0,0,0,.5);}
     .mv-overlay.ltr .mv-side.open{transform:none;}
   }
-  .img-thumb{width:100%; height:110px; border-radius:10px; border:1px solid var(--line); background:#F2F0E9; overflow:hidden; cursor:pointer; display:flex; align-items:center; justify-content:center;}
+  .img-thumb{width:100%; height:110px; border-radius:10px; border:1px solid var(--line); background:var(--card2); overflow:hidden; cursor:pointer; display:flex; align-items:center; justify-content:center;}
   .img-thumb img{width:100%; height:100%; object-fit:cover;}
   .img-date{font-size:11px; color:var(--muted); text-align:center; margin-top:5px;}
   .img-delete-btn{width:100%; margin-top:4px; padding:5px; font-size:11px;}
@@ -234,7 +254,7 @@
   .chips{display:flex;flex-wrap:wrap;gap:8px;}
   .chip{
     padding:7px 14px;border-radius:999px;border:1px solid var(--line);
-    background:#FCFBF8;font-size:13.5px;font-weight:700;color:var(--muted);
+    background:var(--inp);font-size:13.5px;font-weight:700;color:var(--muted);
     transition:all .15s ease; user-select:none; cursor:pointer;
   }
   .chip:hover{border-color:var(--teal);}
@@ -244,29 +264,29 @@
 
   .dropdown-add-select{
     width:100%;padding:10px 12px;border-radius:9px;border:1px solid var(--line);
-    font-family:'Tajawal';font-size:14px;background:#FCFBF8;outline:none;color:var(--ink);
+    font-family:'Tajawal';font-size:14px;background:var(--inp);outline:none;color:var(--ink);
   }
   .dropdown-add-select:focus{border-color:var(--teal);}
 
   .rx-med-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;}
   .rx-med-row input{
     width:100%;padding:9px 10px;border-radius:9px;border:1px solid var(--line);
-    font-family:'Tajawal';font-size:13.5px;background:#FCFBF8;outline:none;color:#1450C4;
+    font-family:'Tajawal';font-size:13.5px;background:var(--inp);outline:none;color:var(--inkblue);
   }
   @media (max-width:480px){.rx-med-row{grid-template-columns:1fr;}}
 
   .autocomplete-wrap{position:relative;}
   .autocomplete-list{
-    position:absolute;top:100%;right:0;left:0;margin-top:2px;background:#fff;
+    position:absolute;top:100%;right:0;left:0;margin-top:2px;background:var(--card);
     border:1px solid var(--line);border-radius:10px;max-height:180px;overflow-y:auto;
     z-index:60;box-shadow:var(--shadow);display:none;
   }
   .autocomplete-item{padding:9px 12px;cursor:pointer;font-size:13.5px;font-family:'Tajawal';}
-  .autocomplete-item:hover{background:#F6F3EC;}
+  .autocomplete-item:hover{background:var(--hov);}
 
   .history-icons{display:flex;flex-wrap:wrap;gap:14px;}
   .history-icon-card{width:88px;text-align:center;cursor:pointer;}
-  .history-icon-card .icon-box{width:68px;height:68px;margin:0 auto 6px;background:#fff;border:1px solid var(--line);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:28px;transition:border-color .15s ease, transform .1s ease;box-shadow:var(--shadow);}
+  .history-icon-card .icon-box{width:68px;height:68px;margin:0 auto 6px;background:var(--card);border:1px solid var(--line);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:28px;transition:border-color .15s ease, transform .1s ease;box-shadow:var(--shadow);}
   .history-icon-card:hover .icon-box{border-color:var(--teal);transform:translateY(-2px);}
   .history-icon-card .icon-date{font-size:11.5px;color:var(--muted);font-weight:700;}
 
@@ -277,15 +297,15 @@
   .cal-weekdays{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:4px;}
   .cal-weekday{text-align:center;font-size:11.5px;color:var(--muted);font-weight:700;padding:4px 0;}
   .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;}
-  .cal-daycell{aspect-ratio:1;border:1px solid var(--line);border-radius:8px;padding:5px;font-size:12.5px;cursor:pointer;position:relative;background:#fff;transition:background .1s ease;}
-  .cal-daycell:hover{background:#F6F3EC;}
+  .cal-daycell{aspect-ratio:1;border:1px solid var(--line);border-radius:8px;padding:5px;font-size:12.5px;cursor:pointer;position:relative;background:var(--card);transition:background .1s ease;}
+  .cal-daycell:hover{background:var(--hov);}
   .cal-daycell.other-month{opacity:.3;}
   .cal-daycell.today{border-color:var(--teal);border-width:2px;}
   .cal-daycell.selected{background:var(--teal);color:#fff;}
   .cal-daynum{font-weight:700;}
   .cal-dot{position:absolute;bottom:4px;right:50%;transform:translateX(50%);width:6px;height:6px;border-radius:50%;background:var(--red);}
-  .cal-daycell.selected .cal-dot{background:#fff;}
-  .appt-item{border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:10px;position:relative; background:#fff;}
+  .cal-daycell.selected .cal-dot{background:var(--card);}
+  .appt-item{border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:10px;position:relative; background:var(--card);}
   .appt-date-header{font-family:'Cairo';font-weight:800;color:var(--teal-dark);font-size:14px;margin:14px 0 8px;}
 
   .fab-btn{display:none; position:fixed; bottom:20px; width:52px; height:52px; border-radius:50%; background:var(--teal); color:#fff; border:none; font-size:22px; align-items:center; justify-content:center; cursor:pointer; box-shadow:0 4px 14px rgba(0,0,0,.25); z-index:99998;}
@@ -298,22 +318,22 @@
   #fabMenu{display:none; position:absolute; left:4px; bottom:62px; flex-direction:column; gap:10px; align-items:flex-start;}
   #fabDial.open #fabMenu{display:flex;}
   .fab-item{display:flex; align-items:center; gap:8px;}
-  .fab-label{background:#fff; color:var(--ink,#222); border:1px solid var(--line); border-radius:999px; padding:4px 10px; font-size:12.5px; font-weight:700; box-shadow:0 2px 8px rgba(0,0,0,.15); white-space:nowrap; font-family:'Tajawal',sans-serif;}
+  .fab-label{background:var(--card); color:var(--ink,#222); border:1px solid var(--line); border-radius:999px; padding:4px 10px; font-size:12.5px; font-weight:700; box-shadow:0 2px 8px rgba(0,0,0,.15); white-space:nowrap; font-family:'Tajawal',sans-serif;}
   #fabDial .fab-btn{position:relative; display:flex !important; left:auto !important; bottom:auto !important; width:42px; height:42px; font-size:18px; flex:none;}
   #stickyFabBtn{background:#E8B923;}
   #calcFabBtn{background:#6C63B5;}
   #boneBadge{position:absolute; top:-4px; right:-4px; left:auto; background:var(--red); color:#fff; border-radius:999px; font-size:11px; font-weight:800; padding:2px 6px; min-width:18px; text-align:center; line-height:1.3; display:none; font-family:'Tajawal';}
   #calcPanel{width:310px; max-height:82vh;}
-  .calc-sec{border:1px solid var(--line); border-radius:10px; padding:10px; margin-bottom:10px; background:#FAFAF7;}
+  .calc-sec{border:1px solid var(--line); border-radius:10px; padding:10px; margin-bottom:10px; background:var(--card2);}
   .calc-sec h3{margin:0 0 8px; font-size:13.5px;}
   .calc-row{display:flex; gap:6px; align-items:center; margin-bottom:6px; flex-wrap:wrap;}
   .calc-row label{font-size:12.5px; min-width:48px;}
   .calc-row input,.calc-row select{flex:1; min-width:0; padding:7px 8px; border-radius:8px; border:1px solid var(--line); font-family:'Tajawal'; font-size:13.5px;}
-  .calc-res{background:#fff; border:1px dashed var(--line); border-radius:8px; padding:8px 10px; font-size:13.5px; line-height:1.9; min-height:20px;}
+  .calc-res{background:var(--card); border:1px dashed var(--line); border-radius:8px; padding:8px 10px; font-size:13.5px; line-height:1.9; min-height:20px;}
   .calc-res b{color:var(--teal-dark);}
   #stickyFabBtn{left:20px; background:#E8B923; width:38px; height:38px; font-size:16px;}
 
-  .todo-panel{display:none; position:fixed; width:300px; max-height:70vh; overflow-y:auto; background:#fff; border:1px solid var(--line); border-radius:14px; box-shadow:0 8px 28px rgba(0,0,0,.22); z-index:99998; padding:16px;}
+  .todo-panel{display:none; position:fixed; width:300px; max-height:70vh; overflow-y:auto; background:var(--card); border:1px solid var(--line); border-radius:14px; box-shadow:0 8px 28px rgba(0,0,0,.22); z-index:99998; padding:16px;}
   .todo-item{display:flex; align-items:center; gap:8px; padding:8px 4px; border-bottom:1px solid var(--line); font-size:13.5px;}
   .todo-item input[type=checkbox]{width:17px; height:17px; flex-shrink:0;}
   .todo-item .todo-text{flex:1;}
@@ -324,7 +344,7 @@
   .sticky-header{background:#F5E27A; padding:8px 10px; display:flex; align-items:center; gap:6px; cursor:move; user-select:none;}
   .sticky-tabs{display:flex; gap:4px; flex:1; overflow-x:auto;}
   .sticky-tab{background:rgba(255,255,255,.5); border:1px solid #ddc65a; border-radius:6px; padding:3px 9px; font-size:12px; font-weight:700; cursor:pointer; white-space:nowrap; font-family:'Tajawal';}
-  .sticky-tab.active{background:#fff;}
+  .sticky-tab.active{background:var(--card);}
   .sticky-add-tab, .sticky-close{background:none; border:none; cursor:pointer; font-size:15px; padding:2px 6px; font-weight:800;}
   .sticky-note textarea{width:100%; height:180px; border:none; background:transparent; padding:12px; font-family:'Tajawal'; font-size:13.5px; resize:vertical; outline:none; color:#4a3f00;}
 </style>
@@ -334,7 +354,7 @@
 <div id="loginScreen">
   <div class="card" style="max-width:360px; width:100%; text-align:center;">
     <div class="mark" style="margin:0 auto 14px;">ع</div>
-    <h2 style="font-size:20px;">ملفات المرضى</h2>
+    <h2 style="font-size:20px;" id="loginTitle">عيادة د ريمون لطفي</h2>
     <div class="hint" style="margin-bottom:22px;">النسخة السريعة - Firebase</div>
     <div class="field" style="text-align:right;">
       <label>الإيميل</label>
@@ -353,7 +373,7 @@
   <div class="brand">
     <div class="mark">ع</div>
     <div>
-      <div style="font-family:'Cairo'; font-weight:800; color:var(--teal-dark); font-size:16px;">ملفات المرضى</div>
+      <div style="font-family:'Cairo'; font-weight:800; color:var(--teal-dark); font-size:16px;" id="brandName">عيادة د ريمون لطفي</div>
       <div class="hint">النسخة السريعة</div>
     </div>
   </div>
@@ -476,9 +496,9 @@
       <button class="btn btn-ghost" id="closeOperationsViewBtn">✕ إغلاق</button>
     </div>
     <h2 style="margin:0 0 10px; font-size:15px;">حالات مستقلة</h2>
-    <div id="operationCasesList" style="background:#FCFBF8; border:1px solid var(--line); border-radius:10px; padding:8px; margin-bottom:20px;"></div>
+    <div id="operationCasesList" style="background:var(--inp); border:1px solid var(--line); border-radius:10px; padding:8px; margin-bottom:20px;"></div>
     <h2 style="margin:0 0 10px; font-size:15px;">مرضى ليهم عملية في ملفهم</h2>
-    <div id="operationsPatientsList" style="background:#FCFBF8; border:1px solid var(--line); border-radius:10px; padding:8px;"></div>
+    <div id="operationsPatientsList" style="background:var(--inp); border:1px solid var(--line); border-radius:10px; padding:8px;"></div>
   </div>
 
   <div id="redFlagPatientsView" style="display:none;">
@@ -486,7 +506,7 @@
       <h2 style="margin:0;">🚩 حالات Red Flag</h2>
       <button class="btn btn-ghost" id="closeRedFlagsViewBtn">✕ إغلاق</button>
     </div>
-    <div id="redFlagPatientsList" style="background:#FCFBF8; border:1px solid var(--line); border-radius:10px; padding:8px;"></div>
+    <div id="redFlagPatientsList" style="background:var(--inp); border:1px solid var(--line); border-radius:10px; padding:8px;"></div>
   </div>
 
   <div id="imagesPatientsView" style="display:none;">
@@ -495,9 +515,9 @@
       <button class="btn btn-ghost" id="closeImagesPatientsViewBtn">✕ إغلاق</button>
     </div>
     <h2 style="margin:0 0 10px; font-size:15px;">حالات عمليات ليها صور</h2>
-    <div id="imagesCasesList" style="background:#FCFBF8; border:1px solid var(--line); border-radius:10px; padding:8px; margin-bottom:20px;"></div>
+    <div id="imagesCasesList" style="background:var(--inp); border:1px solid var(--line); border-radius:10px; padding:8px; margin-bottom:20px;"></div>
     <h2 style="margin:0 0 10px; font-size:15px;">مرضى ليهم صور</h2>
-    <div id="imagesPatientsList" style="background:#FCFBF8; border:1px solid var(--line); border-radius:10px; padding:8px;"></div>
+    <div id="imagesPatientsList" style="background:var(--inp); border:1px solid var(--line); border-radius:10px; padding:8px;"></div>
   </div>
 
   <div id="messagesView" style="display:none;">
@@ -518,7 +538,7 @@
       </div>
     </div>
 
-    <div id="msgPatientsList" style="background:#FCFBF8; border:1px solid var(--line); border-radius:10px; padding:8px; max-height:50vh; overflow-y:auto;"></div>
+    <div id="msgPatientsList" style="background:var(--inp); border:1px solid var(--line); border-radius:10px; padding:8px; max-height:50vh; overflow-y:auto;"></div>
 
     <div style="margin-top:16px;">
       <button class="btn btn-primary" id="prepareMessagesBtn">تجهيز روابط الإرسال</button>
@@ -1053,7 +1073,7 @@
               </div>
 
               <div class="field">
-                <div id="invItemsList" style="background:#FCFBF8; border:1px solid var(--line); border-radius:10px; padding:8px;"></div>
+                <div id="invItemsList" style="background:var(--inp); border:1px solid var(--line); border-radius:10px; padding:8px;"></div>
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-top:12px; padding:0 6px;">
                   <span style="font-weight:800; font-family:'Cairo';">الإجمالي</span>
                   <span id="invTotal" style="font-weight:800; font-family:'Cairo'; font-size:20px; color:var(--teal-dark);">0</span>
@@ -1269,7 +1289,7 @@
 </div>
 
 <div id="settingsModal" style="display:none; position:fixed; inset:0; background:rgba(31,74,64,.45); z-index:200; align-items:center; justify-content:center; padding:20px;">
-  <div class="card" style="max-width:440px; width:100%; position:relative;">
+  <div class="card" style="max-width:440px; width:100%; position:relative; max-height:92vh; overflow-y:auto;">
     <button id="closeSettingsBtn" class="btn btn-ghost" style="position:absolute; top:14px; left:14px; padding:6px 12px;">✕</button>
     <h2 style="margin:0 0 18px;">⚙️ الضبط</h2>
     <div style="display:flex; flex-direction:column; gap:10px;">
@@ -1296,6 +1316,41 @@
         </select>
       </div>
       <button class="btn btn-ghost" id="runClinicNumberMigrationBtn" style="text-align:right;">🔢 ترقيم المرضى تلقائيًا (رقم العيادة)</button>
+      <div class="set-sec">
+        <div class="ttl">🌐 اللغة</div>
+        <div style="display:flex; gap:8px;">
+          <button type="button" class="btn btn-ghost" id="langArBtn" style="flex:1;" data-i18n-skip>العربية</button>
+          <button type="button" class="btn btn-ghost" id="langEnBtn" style="flex:1;" data-i18n-skip>English</button>
+        </div>
+      </div>
+      <div class="set-sec">
+        <div class="ttl">🎨 الألوان</div>
+        <div id="themeRow" style="display:flex; gap:10px; flex-wrap:wrap;">
+          <button type="button" class="theme-sw" data-th="green" title="فاتح أخضر" style="background:linear-gradient(135deg,#F7F4EC 50%,#2C6E63 50%);"></button>
+          <button type="button" class="theme-sw" data-th="blue" title="فاتح أزرق" style="background:linear-gradient(135deg,#EEF3F9 50%,#2563A8 50%);"></button>
+          <button type="button" class="theme-sw" data-th="rose" title="فاتح وردي" style="background:linear-gradient(135deg,#FBF1F4 50%,#B0476B 50%);"></button>
+          <button type="button" class="theme-sw" data-th="dark" title="غامق رمادي" style="background:linear-gradient(135deg,#14191C 50%,#2F9C88 50%);"></button>
+          <button type="button" class="theme-sw" data-th="navy" title="غامق أزرق" style="background:linear-gradient(135deg,#0D1424 50%,#4A7BE0 50%);"></button>
+        </div>
+      </div>
+      <div class="set-sec">
+        <div class="ttl">اسم العيادة / الدكتور (بيظهر كعنوان)</div>
+        <div style="display:flex; gap:8px;">
+          <input type="text" id="clinicNameInput" data-i18n-skip style="flex:1; padding:9px 12px; border:1px solid var(--line); border-radius:9px; font-family:'Tajawal'; font-size:14px; background:var(--inp); color:var(--inputink);">
+          <button type="button" class="btn btn-primary" id="clinicNameSaveBtn" style="padding:8px 16px;">حفظ</button>
+        </div>
+      </div>
+      <div class="set-sec">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
+          <div class="ttl" style="margin:0;">ℹ️ حول البرنامج</div>
+          <button type="button" class="btn btn-ghost" id="aboutEditBtn" style="display:none; padding:4px 12px; font-size:12.5px;">تعديل</button>
+        </div>
+        <div id="aboutText" data-i18n-skip style="font-size:13.5px; line-height:1.8; white-space:pre-wrap;"></div>
+        <div id="aboutEditBox" style="display:none;">
+          <textarea id="aboutInput" rows="3" data-i18n-skip style="width:100%; padding:9px 12px; border:1px solid var(--line); border-radius:9px; font-family:'Tajawal'; font-size:14px; background:var(--inp); color:var(--inputink);"></textarea>
+          <div style="display:flex; gap:8px; margin-top:8px;"><button type="button" class="btn btn-primary" id="aboutSaveBtn" style="padding:7px 16px;">حفظ</button><button type="button" class="btn btn-ghost" id="aboutCancelBtn" style="padding:7px 16px;">إلغاء</button></div>
+        </div>
+      </div>
     </div>
     <div class="hint" style="margin-top:16px;">الاستعادة بتكتب فوق أي بيانات اتضافت بعد وقت آخر نسخة احتياطية - استخدمها بحذر.</div>
   </div>
@@ -2289,7 +2344,7 @@ let editingAppointmentId = null;
 /* ---------- Toast ---------- */
 function showToast(msg, isError){
   const t = $('toast');
-  t.textContent = msg;
+  t.textContent = window.__trEn ? window.__trEn(msg) : msg;
   t.className = 'toast show' + (isError ? ' error' : '');
   setTimeout(()=> t.classList.remove('show'), 2500);
 }
@@ -2463,6 +2518,7 @@ onAuthStateChanged(auth, (user)=>{
   if(user){
     hideLoginScreen();
     initApp();
+    loadClinicSettings();
   } else {
     showLoginScreen();
   }
@@ -8517,6 +8573,176 @@ async function checkUrlPatientParam(){
     }
   }catch(err){ showToast('تعذر فتح المريض من الرابط', true); }
 }
+
+
+/* ---------- اللغة + الألوان + اسم العيادة + حول البرنامج ---------- */
+const I18N_EN = {"آخر الحالات فتحتها": "Recently opened cases", "أبريل": "April", "أحد": "Sun", "أحمر": "Red", "أخرى": "Other", "أخضر": "Green", "أدواتي: مهام / ملاحظات / حاسبة": "My tools: tasks / notes / calculator", "أربعاء": "Wed", "أزرق": "Blue", "أسابيع": "weeks", "أسبوع": "week", "أسبوعين": "2 weeks", "أسماء متكررة": "Duplicate names", "أشعة عادية": "Plain X-ray", "أشعة:": "X-ray:", "أضف جملة": "Add phrase", "أضف نوع جديد": "Add new type", "أغسطس": "August", "أكتر الخدمات دخلًا": "Top earning services", "أكتوبر": "October", "أهلاً بيك، يسعدنا زيارتك لعيادتنا. لو محتاج أي استفسار احنا في خدمتك.": "Welcome, we're glad to have you at our clinic. If you have any questions, we're at your service.", "أو أضف بند مخصص (زي": "Or add a custom item (like", "أو أي حاجة مش في القايمة)": "or anything not in the list)", "أوفلاين - بيانات محفوظة": "Offline - saved data", "أوميبرازول": "Omeprazole", "أي تعديل هنا بيتكتب مباشرة في نفس الجوجل شيت القديم - زي ما لو عدّلته بإيدك من الشيت.": "Any change here is written directly to the same old Google Sheet - just as if you edited it by hand.", "أي حد معاه الرابط": "Anyone with the link", "أي حفظ هنا بيتسجل كزيارة جديدة - الخانات هنا دايمًا فاضية لتسجيل حاجة جديدة، أو دوس على أي زيارة قديمة من القايمة جنبها عشان تفتحها هنا": "Any save here is recorded as a new visit - the fields are always empty for a new entry, or click an old visit in the list beside it to open it here", "أي حفظ هنا بيتسجل كعملية جديدة، أو دوس على أي عملية قديمة من القايمة جنبها عشان تفتحها هنا": "Any save here is recorded as a new operation, or click an old operation in the list beside it to open it here", "أي حفظ هنا بيتسجل كفاتورة جديدة، أو دوس على فاتورة قديمة من القايمة جنبها عشان تفتحها هنا": "Any save here is recorded as a new invoice, or click an old invoice in the list beside it to open it here", "أي ملاحظة عن المريض...": "Any note about the patient...", "أيام": "days", "إجازة مرضية": "Sick leave", "إجمالي الدخل:": "Total income:", "إحصائيات": "Statistics", "إدارة القوايم": "Manage Lists", "إدارة القوايم (أدوية، خدمات، مستخدمين...)": "Manage lists (drugs, services, users...)", "إدراج": "Insert", "إرسال رسالة واتساب": "Send WhatsApp message", "إزالة غرز": "Stitch removal", "إضافة": "Add", "إضافة خدمة": "Add service", "إضافة دواء": "Add drug", "إضافة روشتة": "Add prescription", "إضافة عملية": "Add operation", "إضافة غيار فاضي": "Add empty dressing", "إضافة مرض من القايمة": "Add disease from list", "إضافة مستخدم": "Add user", "إضافة موعد": "Add appointment", "إغلاق": "Close", "إلغاء": "Cancel", "إلغاء التحديد": "Deselect", "إلغاء التعديل": "Cancel edit", "إلغاء التلوين": "Remove coloring", "إلى تاريخ": "To date", "ابحث بالاسم...": "Search by name...", "ابعت رسالة واتساب لهذا المريض": "Send a WhatsApp message to this patient", "اتحدثت الزيارة ✓": "Visit updated ✓", "اتحدثت العملية ✓": "Operation updated ✓", "اتحدّث السجل ✓": "Record updated ✓", "اتحدّث الموعد ✓": "Appointment updated ✓", "اتحدّثت الفاتورة ✓": "Invoice updated ✓", "اتحدّثت القوايم (الأدوية، الأمراض، الروشتات الجاهزة...) ✓": "Lists updated (drugs, diseases, ready prescriptions...) ✓", "اتحدّثت بيانات الحالة ✓": "Case data updated ✓", "اتحذف السجل ✓": "Record deleted ✓", "اتحذف المريض ✓": "Patient deleted ✓", "اتحذف الموعد ✓": "Appointment deleted ✓", "اتحذف ✓": "Deleted ✓", "اتحذفت الحالة ✓": "Case deleted ✓", "اتحذفت الزيارة ✓": "Visit deleted ✓", "اتحذفت الصورة ✓": "Image deleted ✓", "اتحذفت العملية ✓": "Operation deleted ✓", "اتحذفت الفاتورة ✓": "Invoice deleted ✓", "اتحفظ": "Saved", "اتحفظ الرابط ✓": "Link saved ✓", "اتحفظ الميعاد في الكالندر ✓": "Appointment saved to calendar ✓", "اتحفظ بنجاح ✓": "Saved successfully ✓", "اتحفظ في التقارير الجاهزة ✓": "Saved to ready reports ✓", "اتحفظت": "Saved", "اتحفظت الحالة ✓ - دلوقتي تقدر ترفع صورها": "Case saved ✓ - you can now upload its images", "اتحفظت الروشتة ✓": "Prescription saved ✓", "اتحفظت في الروشتات الجاهزة ✓": "Saved to ready prescriptions ✓", "اتحفظت كل التعديلات اللي كانت متأخرة وانت أوفلاين ✓": "All pending changes made while offline were saved ✓", "اترقّم": "Numbered", "اتسجل الموعد ✓": "Appointment recorded ✓", "اتسجلت الزيارة ✓": "Visit recorded ✓", "اتسجلت العملية ✓": "Operation recorded ✓", "اتسجلت الفاتورة ✓": "Invoice recorded ✓", "اتضاف النوع ✓": "Type added ✓", "اتضاف ✓": "Added ✓", "اتعدّل ✓": "Updated ✓", "اثنين": "Mon", "احذف النوع المختار": "Delete selected type", "احفظ بيانات المريض الأول": "Save the patient's data first", "احفظ بيانات المريض الأول قبل تسجيل زيارات": "Save the patient's data before recording visits", "احفظ بيانات المريض الأول قبل تسجيل عمليات": "Save the patient's data before recording operations", "احفظ بيانات المريض الأول قبل تسجيل فواتير": "Save the patient's data before recording invoices", "احفظ بيانات المريض الأول قبل رفع صور": "Save the patient's data before uploading images", "احفظ بيانات المريض الأول من تاب البيانات الأساسية": "Save the patient's data first from the Basic Data tab", "اختار": "Choose", "اختار الأقسام اللي تتصدّر": "Choose sections to export", "اختار التاريخ": "Choose date", "اختار التاريخ علشان تتحسب المدة": "Choose a date to calculate the duration", "اختار الصور": "Choose images", "اختار تاريخ الزيارة": "Choose visit date", "اختار تاريخ العملية": "Choose operation date", "اختار تاريخ الفاتورة": "Choose invoice date", "اختار تاريخ الموعد": "Choose appointment date", "اختار سكشن صحيح": "Choose a valid section", "اختار سكشن من القايمة": "Choose a section from the list", "اختار مريض واحد على الأقل": "Choose at least one patient", "اختار مستلزم من القايمة الأول عشان تمسحه": "Choose a supply from the list first to delete it", "اختر": "Select", "اختر خدمة": "Select service", "اختر دواء أو اكتب اسم جديد...": "Select a drug or type a new name...", "اختر غيار من القايمة": "Select a dressing from the list", "اختر مرض من القايمة": "Select a disease from the list", "اختر مستلزم": "Select supply", "اختر نوع أو اكتب في الخانة تحت": "Select a type or type in the box below", "اختصارات الكتابة": "Typing shortcuts", "استخدم صورة الشعار المرفوعة على درايف بدل الورقة البيضاء في كل ملفات PDF": "Use the logo image uploaded to Drive instead of the white paper in all PDF files", "استشارة": "Consultation", "استعادة آخر نسخة احتياطية": "Restore last backup", "اسم البند...": "Item name...", "اسم الحالة": "Case name", "اسم الخدمة": "Service name", "اسم الروشتة": "Prescription name", "اسم الروشتة الجاهزة (سيبها فاضية لو عايزها من غير اسم):": "Ready prescription name (leave empty for no name):", "اسم العملية": "Operation name", "اسم العملية...": "Operation name...", "اسم الغيار... (تقدر تعدّل أو تضيف تفاصيل)": "Dressing name... (you can edit or add details)", "اسم المرض... (تقدر تضيف تفاصيل زي": "Disease name... (you can add details like", "اسم المريض": "Patient name", "اسم المستخدم": "Username", "اسم حر يميّز الحالة...": "A free name to identify the case...", "اكتب": "Type", "اكتب أو اختار نوع الحجز فوق...": "Type or choose the booking type above...", "اكتب أو اختار نوع الميعاد": "Type or choose the appointment type", "اكتب اسم البند الأول": "Type the item name first", "اكتب اسم الحالة": "Type the case name", "اكتب اسم الخدمة": "Type the service name", "اكتب اسم الدواء": "Type the drug name", "اكتب اسم الروشتة": "Type the prescription name", "اكتب اسم المريض الأول": "Type the patient name first", "اكتب اسم المستخدم": "Type the username", "اكتب اسم مستلزم جديد يتضاف للقايمة:": "Type a new supply name to add to the list:", "اكتب اسم مكان جديد:": "Type a new place name:", "اكتب اسم نوع التقرير الجديد:": "Type the new report type name:", "اكتب الإيميل وكلمة المرور": "Enter email and password", "اكتب الاختصار في أي خانة كتابة في التطبيق وامسح مسافة بعده، وهيتحول تلقائي للنص الكامل.": "Type the shortcut in any text field in the app followed by a space, and it will automatically expand to the full text.", "اكتب الاختصار والنص الكامل": "Type the shortcut and the full text", "اكتب اليوزر والباسورد": "Enter username and password", "اكتب بحرية أو اختار من القايمة عشان تضاف كسطر جديد": "Type freely or choose from the list to add as a new line", "اكتب توصية جديدة مش موجودة في القايمة...": "Type a new recommendation not in the list...", "اكتب رقم تليفون المريض الأول": "Type the patient's phone number first", "اكتب عنوان السكشن": "Type the section title", "اكتب كلمة سر للمستخدم الجديد": "Type a password for the new user", "اكتب ملاحظتك هنا...": "Type your note here...", "اكتب موضوع الموعد": "Type the appointment subject", "اكتب نص التقرير الأول": "Type the report text first", "اكتب نص التقرير هنا...": "Type the report text here...", "اكتب نص الرسالة الأول": "Type the message text first", "الأحد": "Sunday", "الأدوية": "Drugs", "الأدوية (سطر لكل دواء)": "Drugs (one line per drug)", "الأربعاء": "Wednesday", "الأشعة": "X-rays", "الأشعة المطلوبة": "Requested X-rays", "الأشعة المطلوبة أو نتائجها...": "Requested X-rays or their results...", "الأشعة المطلوبة...": "Requested X-rays...", "الأشعة والتحاليل": "X-rays & Labs", "الأمراض المزمنة": "Chronic diseases", "الإجمالي": "Total", "الإحصائيات محتاجة نت - جرب تاني وانت أونلاين": "Statistics need internet - try again when online", "الإحصائيات والتقارير": "Statistics & Reports", "الإيميل": "Email", "الإيميل أو كلمة المرور غلط": "Wrong email or password", "الاتصال بالإنترنت انقطع - بتشتغل على نسخة محفوظة": "Internet connection lost - working on a saved copy", "الاثنين": "Monday", "الاختصار": "Shortcut", "الاستعادة بتكتب فوق أي بيانات اتضافت بعد وقت آخر نسخة احتياطية - استخدمها بحذر.": "Restore overwrites any data added after the last backup - use with care.", "الاستعادة محتاجة نت": "Restore needs internet", "الاسم": "Name", "الاسم وتاريخ اليوم بيتحطوا تلقائي، أو دوس على تقرير قديم من القايمة جنبها عشان تفتحه هنا": "Name and today's date are filled in automatically, or click an old report in the list beside it to open it here", "الاسم وتاريخ اليوم بيتحطوا تلقائي، أو دوس على جلسة قديمة من القايمة جنبها عشان تفتحها هنا": "Name and today's date are filled in automatically, or click an old session in the list beside it to open it here", "الافتراضي)": "default)", "البيانات الأساسية": "Basic Data", "التاريخ": "Date", "التاريخ المرضي": "Medical history", "التاريخ في المستقبل": "Date is in the future", "التاريخ:": "Date:", "التحاليل": "Labs", "التحاليل المطلوبة": "Requested labs", "التحاليل المطلوبة أو نتائجها...": "Requested labs or their results...", "التحاليل المطلوبة...": "Requested labs...", "الترقيم محتاج نت": "Numbering needs internet", "التشخيص": "Diagnosis", "التشخيص المرتبط": "Linked diagnosis", "التشخيص...": "Diagnosis...", "التصدير محتاج نت": "Export needs internet", "التقارير الطبية": "Medical reports", "التقرير المالي": "Financial report", "التكلفة": "Cost", "التكلفة...": "Cost...", "التكلفة:": "Cost:", "التليفون": "Phone", "التوصيات": "Recommendations", "التوصيات العامة": "General recommendations", "الثلاثاء": "Tuesday", "الجمعة": "Friday", "الخدمات": "Services", "الخدمة": "Service", "الخميس": "Thursday", "الرابط مش شكل رابط جوجل دوك/شيت معروف - اتأكد إنه رابط صحيح": "This doesn't look like a known Google Doc/Sheet link - make sure it's valid", "الراحة التامة": "Complete rest", "الروابط جاهزة تحت - دوس على كل واحد يفتحلك واتساب بالرسالة جاهزة": "Links are ready below - click each to open WhatsApp with the message ready", "الروشتات": "Prescriptions", "الروشتة": "Prescription", "السبت": "Saturday", "السعر": "Price", "السكاشن": "Sections", "السكشن": "Section", "السن": "Age", "السن:": "Age:", "الشعار": "Logo", "الشعار مش متاح - هيتحمل من غير شعار": "Logo unavailable - will load without logo", "الشكوى والكشف": "Complaint & Exam", "الشكوى، الفحص، التشخيص، العلاج...": "Complaint, exam, diagnosis, treatment...", "الصور": "Images", "الصور بتتخزن في نفس نظام جوجل درايف القديم (منفصل عن باقي البيانات)": "Images are stored in the old Google Drive system (separate from other data)", "الصورة دي متعذر تحميلها": "This image could not be loaded", "الضبط": "Settings", "العلاج الطبيعي": "Physiotherapy", "العمليات": "Operations", "العيادة": "Clinic", "الغيار والمتابعة": "Dressing & Follow-up", "الغيارات": "Dressings", "الغيارات:": "Dressings:", "الفواتير": "Invoices", "القايمة فاضية": "The list is empty", "الكشف والزيارات": "Exam & Visits", "المتابعات": "Follow-ups", "المتابعات...": "Follow-ups...", "المتابعات:": "Follow-ups:", "المتبقي)": "remaining)", "المدة": "Duration", "المريض ده مش موجود أو اتحذف": "This patient doesn't exist or was deleted", "المريض عنده مشكلة (Red Flag)": "Patient has an issue (Red Flag)", "المريض له عملية / عمل عملية": "Patient has / had an operation", "المستخدمين": "Users", "المستلزم ده موجود بالفعل": "This supply already exists", "المطلوب": "Required", "المطلوب من العلاج الطبيعي": "Required physiotherapy", "المكان ده موجود بالفعل": "This place already exists", "المكان:": "Place:", "الملاحظات": "Notes", "الملف الطبي الكامل - اتصدّر بتاريخ": "Full medical file - exported on", "المهام المكتملة (تم)": "Completed tasks (done)", "المواعيد": "Appointments", "الموضوع": "Subject", "النت مقطوع - اتحفظ الموعد مؤقتًا وهيتزامن تلقائي": "Offline - appointment saved temporarily and will sync automatically", "النت مقطوع - اتحفظ الميعاد مؤقتًا وهيتزامن تلقائي": "Offline - appointment saved temporarily and will sync automatically", "النت مقطوع - اتحفظ مؤقتًا وهيتزامن تلقائي": "Offline - saved temporarily and will sync automatically", "النت مقطوع - اتحفظ مؤقتًا وهيتزامن تلقائي أول ما النت يرجع": "Offline - saved temporarily and will sync automatically once online", "النت مقطوع - اتحفظت الزيارة مؤقتًا وهتتزامن تلقائي": "Offline - visit saved temporarily and will sync automatically", "النت مقطوع - اتحفظت العملية مؤقتًا وهتتزامن تلقائي": "Offline - operation saved temporarily and will sync automatically", "النت مقطوع - اتحفظت الفاتورة مؤقتًا وهتتزامن تلقائي": "Offline - invoice saved temporarily and will sync automatically", "النت مقطوع - الحذف هيتم تلقائي أول ما النت يرجع": "Offline - deletion will happen automatically once online", "النسخة الاحتياطية محتاجة نت": "Backup needs internet", "النسخة السريعة": "Fast version", "النسخة السريعة - Firebase": "Fast version - Firebase", "النص الكامل": "Full text", "النوع ده موجود بالفعل": "This type already exists", "الوقت": "Time", "اليوم": "Today", "باراسيتامول": "Paracetamol", "بدون تاريخ": "No date", "برتقالي": "Orange", "بريفيو": "Preview", "بشعار": "With logo", "بعد": "after", "بيانات الدخول غلط - جرب تاني": "Wrong login details - try again", "بيانات المريض الأساسية بتتصدّر دايمًا": "The patient's basic data is always exported", "بيانات دخول نظام الصور والقوايم القديم (مرة واحدة بس على الجهاز ده)": "Login for the old images & lists system (one time only on this device)", "بيضيف زرار": "adds a button", "تأكيد أخير: هترجع كل البيانات لحالة آخر نسخة احتياطية محفوظة. مفيش رجوع بعد كده. تكمل؟": "Final confirmation: all data will be restored to the last saved backup. There is no undo. Continue?", "تاريخ + مدة (موعد متابعة / ما بعد العملية)": "Date + duration (follow-up / post-op)", "تاريخ الزيارة": "Visit date", "تاريخ العملية": "Operation date", "تاريخ الفاتورة": "Invoice date", "تجهيز روابط الإرسال": "Preparing send links", "تحاليل:": "Labs:", "تحديث القوايم": "Refresh Lists", "تحديث القوايم (لو الأدوية/الأمراض متأخرة)": "Refresh lists (if drugs/diseases are outdated)", "تحديد الكل": "Select all", "تحذير: الاستعادة هتكتب فوق أي بيانات اتضافت أو اتعدلت بعد وقت آخر نسخة احتياطية. متأكد إنك عايز تكمل؟": "Warning: restore will overwrite any data added or changed after the last backup. Are you sure you want to continue?", "تحميل PDF": "Download PDF", "تحميل التقرير PDF": "Download report PDF", "تحميل الروشتة PDF": "Download prescription PDF", "تحميل روشتة العلاج الطبيعي PDF": "Download physiotherapy prescription PDF", "تحويل لطبيب آخر": "Referral to another doctor", "ترقيم المرضى تلقائيًا (رقم العيادة)": "Auto-number patients (clinic number)", "تسجيل الخروج من الموقع؟": "Log out of the site?", "تسجيل خروج": "Log out", "تسجيل دخول نظام الصور": "Images system login", "تسجيل عملية جديدة": "Record new operation", "تسجيل فاتورة جديدة": "Record new invoice", "تسجيل كشف / زيارة جديدة": "Record new exam / visit", "تصدير": "Export", "تصدير الملف الطبي الكامل (PDF)": "Export full medical file (PDF)", "تعديل": "Edit", "تعديل بيانات الحالة": "Edit case data", "تعذر إنشاء PDF": "Could not create PDF", "تعذر التحميل": "Failed to load", "تعذر التحميل - جرب تاني": "Failed to load - try again", "تعذر تحميل الإحصائيات": "Failed to load statistics", "تعذر تحميل الزيارات": "Failed to load visits", "تعذر تحميل الصور - جرب تاني": "Failed to load images - try again", "تعذر تحميل العمليات": "Failed to load operations", "تعذر تحميل الفواتير": "Failed to load invoices", "تعذر تحميل القوايم (الأدوية/الأمراض/الروشتات) - دوس على": "Failed to load lists (drugs/diseases/prescriptions) - click", "تعذر تحميل المرضى": "Failed to load patients", "تعذر تحميل المرضى ومفيش نسخة محفوظة": "Failed to load patients and no saved copy", "تعذر فتح المريض من الرابط": "Could not open the patient from the link", "تقارير جاهزة": "Ready reports", "تقرير": "Report", "تقرير طبي": "Medical report", "تقرير طبي عام": "General medical report", "تقرير للتأمين": "Insurance report", "تقرير-طبي": "medical-report", "تقوية عضلية (Muscle Strengthening)": "Muscle Strengthening", "تقويم": "Calendar", "تليفون:": "Phone:", "تم الدمج ✓ (": "Merged ✓ (", "تم ترقيم": "Numbered", "تم تصدير الملف الكامل ✓": "Full file exported ✓", "تمارين إطالة (Stretching)": "Stretching exercises", "تمت الاستعادة ✓ - مرضى:": "Restore complete ✓ - patients:", "تمت النسخة الاحتياطية بنجاح ✓ (": "Backup completed successfully ✓ (", "تنزيل": "Download", "توصيات حسب التشخيص": "Recommendations by diagnosis", "توصيات عامة": "General recommendations", "توقيع الطبيب": "Doctor's signature", "ثلاثاء": "Tue", "جاري إنشاء الشيت على درايف...": "Creating the sheet on Drive...", "جاري إنشاء الـ PDF...": "Creating PDF...", "جاري الاستعادة...": "Restoring...", "جاري التجميع...": "Gathering...", "جاري التجهيز...": "Preparing...", "جاري التحديث...": "Refreshing...", "جاري التحميل...": "Loading...", "جاري الحفظ...": "Saving...", "جاري الدخول...": "Logging in...", "جاري تجميع البيانات...": "Gathering data...", "جاري تحميل الصور...": "Loading images...", "جاري رفع الصورة": "Uploading image", "جبس": "Cast", "جرب تاني": "Try again", "جمعة": "Fri", "جمل جاهزة للتقرير": "Ready report phrases", "جوجل دوك:": "Google Doc:", "حاسبة السن والمدة": "Age & Duration Calculator", "حالات Red Flag": "Red Flag cases", "حالات عمليات": "Operation cases", "حالات عمليات ليها صور": "Operation cases with images", "حالات مستقلة": "Standalone cases", "حالة عملية": "Operation case", "حالة عملية جديدة": "New operation case", "حجز ميعاد للمريض ده": "Book an appointment for this patient", "حجم الخط": "Font size", "حدد التاريخ": "Set date", "حدد تاريخ السكشن": "Set section date", "حدد تاريخ الميعاد الأول": "Set the first appointment date", "حدّد كلمة وعلّم عليها:": "Select a word and mark it:", "حذف": "Delete", "حذف التقرير ده": "Delete this report", "حذف الحالة": "Delete case", "حذف الروشتة دي": "Delete this prescription", "حذف الزيارة دي": "Delete this visit", "حذف السجل ده": "Delete this record", "حذف الصور محتاج نت - جرب تاني وانت أونلاين": "Deleting images needs internet - try again when online", "حذف العملية دي": "Delete this operation", "حذف الفاتورة دي": "Delete this invoice", "حذف المريض": "Delete patient", "حذف خدمة": "Delete service", "حذف دواء": "Delete drug", "حذف روشتة": "Delete prescription", "حذف مستخدم": "Delete user", "حذف نوع": "Delete type", "حذف هذا السجل نهائيًا؟": "Delete this record permanently?", "حذف هذا المريض نهائيًا؟": "Delete this patient permanently?", "حذف هذا الموعد نهائيًا؟": "Delete this appointment permanently?", "حذف هذه الحالة نهائيًا؟ (الصور المرفوعة ليها هتفضل على درايف بس مش هتظهر تاني هنا)": "Delete this case permanently? (Uploaded images will remain on Drive but won't appear here)", "حذف هذه الزيارة نهائيًا؟": "Delete this visit permanently?", "حذف هذه الصورة نهائيًا؟": "Delete this image permanently?", "حذف هذه العملية نهائيًا؟": "Delete this operation permanently?", "حذف هذه الفاتورة نهائيًا؟": "Delete this invoice permanently?", "حساسية": "Allergy", "حسب التشخيص": "By diagnosis", "حسب السن": "By age", "حصل خطأ أثناء الاستعادة": "An error occurred during restore", "حصل خطأ أثناء الترقيم": "An error occurred during numbering", "حصل خطأ أثناء التصدير - جرب تاني": "An error occurred during export - try again", "حصل خطأ أثناء الحذف": "An error occurred while deleting", "حصل خطأ أثناء الحفظ": "An error occurred while saving", "حصل خطأ أثناء الحفظ - جرب تاني": "An error occurred while saving - try again", "حصل خطأ أثناء الدمج": "An error occurred during merge", "حصل خطأ أثناء عمل النسخة الاحتياطية": "An error occurred during backup", "حصل خطأ في الاتصال - اتحفظ الموعد مؤقتًا": "Connection error - appointment saved temporarily", "حصل خطأ في الاتصال - اتحفظ مؤقتًا": "Connection error - saved temporarily", "حصل خطأ في الاتصال - اتحفظ مؤقتًا وهيتزامن تلقائي": "Connection error - saved temporarily and will sync automatically", "حصل خطأ في الاتصال - اتحفظت الزيارة مؤقتًا": "Connection error - visit saved temporarily", "حصل خطأ في الاتصال - اتحفظت العملية مؤقتًا": "Connection error - operation saved temporarily", "حصل خطأ في الاتصال - اتحفظت الفاتورة مؤقتًا": "Connection error - invoice saved temporarily", "حصل خطأ في الاتصال - الحذف هيتم تلقائي أول ما النت يرجع": "Connection error - deletion will happen automatically once online", "حصل خطأ في الاتصال - جرب تاني": "Connection error - try again", "حفظ": "Save", "حفظ التعديل": "Save changes", "حفظ الحالة": "Save case", "حفظ الرابط": "Save link", "حفظ الروشتة": "Save prescription", "حفظ الزيارة": "Save visit", "حفظ العملية": "Save operation", "حفظ الفاتورة": "Save invoice", "حفظ الموعد": "Save appointment", "حفظ الميعاد في الكالندر": "Save appointment to calendar", "حفظ بيانات المريض": "Save patient data", "حفظ في التقارير الجاهزة": "Save to ready reports", "حفظ كروشتة جاهزة": "Save as ready prescription", "خميس": "Thu", "دخل الأسبوع:": "This week's income:", "دخل الشهر:": "This month's income:", "دخول": "Login", "دعامة ركبة": "Knee brace", "دمج": "Merge", "دواء": "Drug", "دوس على أي مريض تحت عشان تفتح ملفه، أو دوس": "Click any patient below to open their file, or click", "دوس على يوم عشان تشوف مواعيده": "Click a day to see its appointments", "ديسمبر": "December", "رابط أرشيف الأشعة": "X-ray archive link", "رابط جوجل دوك": "Google Doc link", "رابط جوجل دوك للحالة (أشعة/صور مخزنة برة)": "Google Doc link for the case (X-rays/images stored externally)", "رباط ضاغط": "Compression bandage", "رجع الاتصال ✓ - بنحفظ أي تعديلات كانت متأخرة": "Back online ✓ - saving any pending changes", "رجوع للقايمة": "Back to list", "رسائل": "Messages", "رسم وقياس": "Draw & Measure", "رفع الصور محتاج نت - جرب تاني وانت أونلاين": "Uploading images needs internet - try again when online", "رفع صور": "Upload images", "رقم": "Number", "رقم العيادة": "Clinic number", "رقم العيادة:": "Clinic number:", "روابط الإرسال (": "Send links (", "روشتات جاهزة": "Ready prescriptions", "روشتة": "Prescription", "روشتة بدون اسم -": "Unnamed prescription -", "روشتة-": "prescription-", "روماتويد": "Rheumatoid", "زيارات:": "Visits:", "سبت": "Sat", "سبتمبر": "September", "سجل الزيارات": "Visits log", "سجل العمليات": "Operations log", "سكر": "Diabetes", "سكشن جديد": "New section", "سنة": "year", "سنتين": "2 years", "سنين": "years", "سونار": "Ultrasound", "شاش معقم": "Sterile gauze", "شرب سوائل بكثرة": "Drink plenty of fluids", "شهر": "month", "شهرين": "2 months", "شهور": "months", "صور": "Images", "صورة": "Image", "صورة دم كاملة (CBC)": "Complete blood count (CBC)", "صورة ✓": "image ✓", "صورة، وفشل": "images, failed", "ضغط": "Hypertension", "ضيف خدمة واحدة على الأقل": "Add at least one service", "طباعة": "Print", "طريقة الإعطاء": "Route of administration", "طريقة الإعطاء - اختار أو اكتب...": "Route of administration - choose or type...", "عدد الجلسات": "Number of sessions", "عدد المرضى الكلي": "Total number of patients", "عدّل البيانات ودوس حفظ عشان تحدّث السجل ده": "Edit the data and click Save to update this record", "عدّل القيمة:": "Edit value:", "عرض المزيد (باقي": "Show more (remaining", "عكاز": "Crutch", "علاج طبيعي": "Physiotherapy", "علاج-طبيعي": "physiotherapy", "على درايف": "on Drive", "عمليات:": "Operations:", "عند اللزوم": "As needed", "عنصر جديد...": "New item...", "عنوان التقرير الجاهز:": "Ready report title:", "غرفة عمليات 1": "Operating room 1", "غرفة عمليات 2": "Operating room 2", "غير محدد": "Unspecified", "غيّر إعدادات المشاركة في جوجل دوك/شيت": "change the sharing settings in the Google Doc/Sheet", "فاتورة": "Invoice", "فبراير": "February", "فتح الملف كامل في تاب جديد": "Open the full file in a new tab", "فواتير:": "Invoices:", "في الضبط": "in Settings", "قائمة": "List", "قلب": "Heart disease", "قياس": "Measure", "كبد": "Liver disease", "كشف": "Exam", "كشف -": "Exam -", "كلمة السر": "Password", "كلمة المرور": "Password", "كلى": "Kidney disease", "كملف أساسي، وأي ملف تاني بنفس الاسم هيتحول لزيارة جواه ويتمسح (فواتيره وصوره وهستوريه هتتفقد). متأكد": "as the main file, and any other file with the same name will become a visit inside it and be removed (its invoices, images and history will be lost). Are you sure", "لا يوجد": "None", "لا يوجد أدوية": "No drugs", "لا يوجد تشخيصات مسجلة": "No diagnoses recorded", "لا يوجد حالات عمليات ليها صور": "No operation cases with images", "لا يوجد حالات مستقلة مسجلة": "No standalone cases recorded", "لا يوجد خدمات مسجلة": "No services recorded", "لا يوجد مرضى": "No patients", "لا يوجد مرضى برقم تليفون": "No patients with a phone number", "لازم يتزامن ملف المريض مع الإنترنت الأول قبل تسجيل زيارات": "The patient's file must sync with the internet before recording visits", "لازم يتزامن ملف المريض مع الإنترنت الأول قبل تسجيل عمليات": "The patient's file must sync with the internet before recording operations", "لازم يتزامن ملف المريض مع الإنترنت الأول قبل تسجيل فواتير": "The patient's file must sync with the internet before recording invoices", "لازم يتزامن ملف المريض مع الإنترنت الأول قبل رفع صور": "The patient's file must sync with the internet before uploading images", "لازم يفضل مكان واحد على الأقل": "At least one place must remain", "لازم يفضل نوع واحد على الأقل": "At least one type must remain", "لسه معملتش فتح أي مريض": "You haven't opened any patient yet", "لسه مفيش اختصارات": "No shortcuts yet", "لسه مفيش تقارير جاهزة": "No ready reports yet", "لسه مفيش توصيات مربوطة بتشخيص": "No recommendations linked to a diagnosis yet", "لسه مفيش خدمات مضافة": "No services added yet", "لسه مفيش روشتات جاهزة": "No ready prescriptions yet", "لسه مفيش زيارات محفوظة أوفلاين": "No offline-saved visits yet", "لسه مفيش زيارات مسجلة": "No visits recorded yet", "لسه مفيش صور مرفوعة": "No images uploaded yet", "لسه مفيش عمليات محفوظة أوفلاين": "No offline-saved operations yet", "لسه مفيش عمليات مسجلة": "No operations recorded yet", "لسه مفيش فواتير محفوظة أوفلاين": "No offline-saved invoices yet", "لسه مفيش فواتير مسجلة": "No invoices recorded yet", "لسه مفيش مرضى مسجلين": "No patients registered yet", "لسه مفيش مهام خلصت": "No completed tasks yet", "لسه مفيش مواعيد مسجلة": "No appointments recorded yet", "لسه مفيش هستوري تقارير": "No report history yet", "لسه مفيش هستوري روشتات": "No prescription history yet", "لسه مفيش هستوري علاج طبيعي": "No physiotherapy history yet", "لو البريفيو مش شغال، يبقى الملف مش متاح لـ": "If the preview doesn't work, the file isn't shared with", "مارس": "March", "مايو": "May", "متابعة عملية": "Post-op follow-up", "مثال: 120": "e.g. 120", "مثال: 34": "e.g. 34", "محتاج نت": "Needs internet", "محتاج نت عشان تحفظ الحالة": "Needs internet to save the case", "محتاج نت عشان تحفظ في التقارير الجاهزة": "Needs internet to save to ready reports", "محتاج نت عشان تحفظ في الروشتات الجاهزة": "Needs internet to save to ready prescriptions", "محتاج نت عشان يحدّث القوايم": "Needs internet to refresh the lists", "محتاج نت عشان يعرض الصور": "Needs internet to show images", "محتاجين بيانات دخول نظام الصور": "Images system login required", "مرة يوميًا": "Once daily", "مرتين يوميًا": "Twice daily", "مرضى بزيارتين أو أكتر": "Patients with 2 or more visits", "مرضى جدد هذا الأسبوع": "New patients this week", "مرضى جدد هذا الشهر": "New patients this month", "مرضى جدد هذه السنة": "New patients this year", "مرضى ليهم تقرير طبي": "Patients with a medical report", "مرضى ليهم صور": "Patients with images", "مرضى ليهم علاج طبيعي": "Patients with physiotherapy", "مرضى ليهم عمليات": "Patients with operations", "مرضى ليهم عملية في ملفهم": "Patients with an operation in their file", "مريض": "patient", "مريض جديد": "New patient", "مريض ✓ - آخر رقم P": "patients ✓ - last number P", "مريض ✓ - وفشل": "patients ✓ - failed:", "مريض) - محفوظة في مجلد": "patients) - saved in folder", "مستشفى التعاون": "Cooperation Hospital", "مسح كل محتويات الروشتة؟": "Clear all prescription contents?", "مفيش أدوية للحفظ": "No drugs to save", "مفيش أسماء متكررة حاليًا": "No duplicate names currently", "مفيش تكرار لهذا الاسم": "No duplicates for this name", "مفيش حالات Red Flag حاليًا": "No Red Flag cases currently", "مفيش مهام": "No tasks", "مفيش مواعيد النهاردة": "No appointments today", "مفيش مواعيد في": "No appointments on", "مكان العملية": "Operation place", "مكان العملية:": "Operation place:", "ملاحظات": "Notes", "ملاحظات...": "Notes...", "ملاحظات:": "Notes:", "ملاحظة:": "Note:", "ملف اتنقل كزيارة)": "file moved as a visit)", "ملف جديد": "New file", "ملف مريض": "Patient file", "ملف-طبي-كامل-": "full-medical-file-", "ملفات المرضى": "Patient Files", "ملفات المرضى - العيادة (نسخة سريعة)": "Patient Files - Clinic (fast version)", "من": "from", "من 10 سنين": "over 10 years", "من القايمة؟": "from the list?", "من قايمة المستلزمات؟": "from the supplies list?", "مواعيد النهاردة": "Today's appointments", "مواعيد:": "Appointments:", "موضوع الموعد... (تقدر تعدل فيه بحرية)": "Appointment subject... (freely editable)", "نسخ احتياطية - عيادة": "Backups - Clinic", "نص الرسالة": "Message text", "نوع الحجز": "Booking type", "نوفمبر": "November", "هستوري:": "History:", "هيتعمل نسخة احتياطية كاملة من كل البيانات دلوقتي وتتحفظ في جوجل درايف. ممكن ياخد شوية وقت لو المرضى": "A full backup of all data will be made now and saved to Google Drive. It may take a while if patients", "هيتم إعطاء رقم عيادة تلقائي لكل مريض مالوش رقم حاليًا، بالترتيب الزمني، استكمالًا من P1191. تكمل؟": "A clinic number will be assigned automatically to each patient without one, in chronological order, continuing from P1191. Continue?", "هيتم اعتماد أقدم ملف باسم": "The oldest file named", "واتساب": "WhatsApp", "واحد": "one", "واحدة": "one", "يناير": "January", "يوليو": "July", "يوم": "day", "يومين": "2 days", "يونيو": "June", "هيتعمل نسخة احتياطية كاملة من كل البيانات دلوقتي وتتحفظ في جوجل درايف. ممكن ياخد شوية وقت لو المرضى كتير. تكمل؟": "A full backup of all data will be made now and saved to Google Drive. It may take a while if there are many patients. Continue?", "كملف أساسي، وأي ملف تاني بنفس الاسم هيتحول لزيارة جواه ويتمسح (فواتيره وصوره وهستوريه هتتفقد). متأكد؟": "as the main file, and any other file with the same name will become a visit inside it and be removed (its invoices, images and history will be lost). Are you sure?", "عشان تخلي الأقدم هو الملف الأساسي والأحدث يبقى زيارة جواه (بيانات الفواتير والصور والهستوري على الملف المكرر بتتفقد)": "to keep the oldest as the main file and the newest as a visit inside it (invoices, images and history on the duplicate file are lost)", "دول مستخدمين نظام الصور/القوايم القديم (Apps Script) - مش حسابات فايربيز بتاعة تسجيل الدخول للموقع الجديد.": "These are users of the old images/lists system (Apps Script) - not the Firebase accounts used to log in to the new site.", "عيادة د ريمون لطفي": "Dr. Remon Lotfy Clinic", "إنشاء وتطوير بواسطة د ريمون لطفي": "Created and developed by Dr. Remon Lotfy", "حول البرنامج": "About", "ℹ️": "ℹ️", "اللغة": "Language", "الألوان": "Colors", "اسم العيادة / الدكتور (بيظهر كعنوان)": "Clinic / doctor name (shown as the title)", "اتحفظ الاسم ✓": "Name saved ✓", "اتحفظ النص ✓": "Text saved ✓", "فاتح أخضر": "Light green", "فاتح أزرق": "Light blue", "فاتح وردي": "Light rose", "غامق رمادي": "Dark gray", "غامق أزرق": "Dark navy", "للأدمن فقط": "Admin only", "عربي": "Arabic", "النص مش محفوظ على السيرفر (صلاحيات) - اتحفظ على الجهاز بس": "Not saved to server (permissions) - saved on this device only", "مين يعدّل النص: الأدمن": "Editable by the admin", "دوس على أي روشتة تحت وهتتحمّل PDF فورًا باسم المريض وتاريخ اليوم": "Click any prescription below and it downloads as a PDF immediately with the patient's name and today's date", "الاسم وتاريخ اليوم بيتحطوا في الروشتة تلقائي - اختار من القوائم تحت، أو دوس على روشتة قديمة من القايمة جنبها عشان تفتحها هنا": "Name and today's date are added to the prescription automatically - choose from the lists below, or click an old prescription in the list beside it to open it here", "دوس على تشخيص وهتتكتب كل توصياته تلقائي تحت": "Click a diagnosis and all its recommendations are written below automatically", "مستلزمات": "Supplies", "🗑️ مسح الكل": "🗑️ Clear all", "هستوري الروشتات": "Prescription history", "هستوري Physiotherapy": "Physiotherapy history", "مثال: 10 جلسات": "e.g. 10 sessions", "دوس على عنوان وهيتضاف نصه في التقرير تحت": "Click a title and its text is added to the report below", "نوع التقرير": "Report type", "نص التقرير": "Report text", "هستوري التقارير": "Report history", "ملاحظات إضافية على الفاتورة...": "Extra notes on the invoice...", "سجل الفواتير": "Invoices log", "ملاحظة قصيرة": "Short note", "ملاحظة قصيرة عن الحالة...": "Short note about the case...", "اكتب \"DATE\" في خانة \"Full text\" عشان يتحول لتاريخ النهاردة تلقائي.": "Type \"DATE\" in the \"Full text\" field to turn it into today's date automatically.", "اكتب \"PICKDATE\" عشان يفتحلك تقويم تختار منه أي تاريخ تاني.": "Type \"PICKDATE\" to open a calendar and pick any other date.", "زي: imp": "e.g. imp", "زي: improving أو DATE": "e.g. improving or DATE", "عنوان السكشن": "Section title", "زي: قبل العملية / متابعة أسبوع": "e.g. before surgery / 1-week follow-up", "عمل نسخة احتياطية دلوقتي": "Back up now", "نوع الخط اللي بتكتب بيه": "Typing font", "Tajawal (الافتراضي)": "Tajawal (default)", "قائمة المهام": "To-do list", "مهمة جديدة...": "New task...", "⏱ كم مرّ من تاريخ معيّن (عمر / مدة)": "⏱ How much time has passed since a date (age / duration)", "كم مرّ من تاريخ معيّن (عمر / مدة)": "How much time has passed since a date (age / duration)", "من تاريخ": "From date", "مدة": "Duration", "قبل": "before", "ورقة جديدة": "New note", "عملية": "operation", "عملية جديدة": "new operation"};
+const DEFAULT_CLINIC_NAME = 'عيادة د ريمون لطفي';
+const DEFAULT_ABOUT = 'إنشاء وتطوير بواسطة د ريمون لطفي';
+const AR_RE = /[؀-ۿ]/;
+const _enKeys = Object.keys(I18N_EN).filter(k=>/\s/.test(k)).sort((a,b)=>b.length-a.length);
+const _enRe = _enKeys.length ? new RegExp('(?<![\\u0600-\\u06FF])(?:' + _enKeys.map(k=>k.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).join('|') + ')(?![\\u0600-\\u06FF])', 'g') : null;
+let _lang = (localStorage.getItem('clinicLang') === 'en') ? 'en' : 'ar';
+function trEn(str){
+  if(!str || !AR_RE.test(str)) return str;
+  const t = str.trim();
+  if(I18N_EN[t] !== undefined) return str.replace(t, I18N_EN[t]);
+  const core = str.replace(/[^؀-ۿ\s]/g,'').replace(/\s+/g,' ').trim();
+  if(core && I18N_EN[core] !== undefined && !/\s/.test(core)) return str.replace(core, I18N_EN[core]);
+  let out = _enRe ? str.replace(_enRe, m => I18N_EN[m]) : str;
+  return out;
+}
+window.__trEn = s => _lang === 'en' ? trEn(String(s)) : s;
+const _origConfirm = window.confirm.bind(window), _origAlert = window.alert.bind(window), _origPrompt = window.prompt.bind(window);
+window.confirm = m => _origConfirm(window.__trEn(m));
+window.alert = m => _origAlert(window.__trEn(m));
+window.prompt = (m,d) => _origPrompt(window.__trEn(m), d);
+
+const _txtOrig = new WeakMap();   // node -> {ar, en}
+const _attrOrig = new WeakMap();  // el -> {attr: {ar,en}}
+const I18N_ATTRS = ['placeholder','title','aria-label'];
+function i18nSkip(n){
+  const el = n.nodeType === 1 ? n : n.parentElement;
+  if(!el) return true;
+  if(el.closest('script,style,textarea,[contenteditable="true"],[contenteditable=""],[data-i18n-skip],#rxTemplate,#measureViewer,.autocomplete-item,.chronic-chip,option:not([value]),datalist')) return true;
+  return false;
+}
+function i18nText(node){
+  if(i18nSkip(node)) return;
+  const cur = node.nodeValue;
+  let rec = _txtOrig.get(node);
+  if(rec && cur === rec.en) { if(_lang === 'ar'){ node.nodeValue = rec.ar; _txtOrig.delete(node);} return; }
+  if(_lang !== 'en' || !AR_RE.test(cur)) { if(rec) _txtOrig.delete(node); return; }
+  const en = trEn(cur);
+  if(en !== cur){ _txtOrig.set(node, {ar:cur, en}); node.nodeValue = en; }
+}
+function i18nAttrs(el){
+  if(el.nodeType !== 1 || el.closest('script,style,[data-i18n-skip],#rxTemplate,#measureViewer')) return;
+  let rec = _attrOrig.get(el) || {};
+  for(const a of I18N_ATTRS){
+    const cur = el.getAttribute(a);
+    if(cur == null) continue;
+    const r = rec[a];
+    if(r && cur === r.en){ if(_lang === 'ar'){ el.setAttribute(a, r.ar); delete rec[a]; } continue; }
+    if(_lang !== 'en' || !AR_RE.test(cur)) continue;
+    const en = trEn(cur);
+    if(en !== cur){ rec[a] = {ar:cur, en}; el.setAttribute(a, en); }
+  }
+  _attrOrig.set(el, rec);
+}
+function i18nWalk(root){
+  if(root.nodeType === 3){ i18nText(root); return; }
+  if(root.nodeType !== 1) return;
+  i18nAttrs(root);
+  const w = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT);
+  let n; while((n = w.nextNode())){ if(n.nodeType === 3) i18nText(n); else i18nAttrs(n); }
+}
+let _i18nBusy = false;
+const _i18nObs = new MutationObserver(muts=>{
+  if(_i18nBusy) return;
+  _i18nBusy = true;
+  try{
+    for(const m of muts){
+      if(m.type === 'characterData') i18nText(m.target);
+      else if(m.type === 'attributes') i18nAttrs(m.target);
+      else m.addedNodes.forEach(n=> i18nWalk(n));
+    }
+  } finally { _i18nBusy = false; }
+});
+_i18nObs.observe(document.body, {childList:true, subtree:true, characterData:true, attributes:true, attributeFilter:I18N_ATTRS});
+
+function applyLang(lang){
+  _lang = lang === 'en' ? 'en' : 'ar';
+  localStorage.setItem('clinicLang', _lang);
+  const h = document.documentElement;
+  h.lang = _lang; h.dir = _lang === 'en' ? 'ltr' : 'rtl';
+  _i18nBusy = true;
+  try{ i18nWalk(document.body); } finally { _i18nBusy = false; }
+  $('langArBtn').classList.toggle('btn-primary', _lang === 'ar'); $('langArBtn').classList.toggle('btn-ghost', _lang !== 'ar');
+  $('langEnBtn').classList.toggle('btn-primary', _lang === 'en'); $('langEnBtn').classList.toggle('btn-ghost', _lang !== 'en');
+  applyClinicName();
+}
+$('langArBtn').onclick = ()=> applyLang('ar');
+$('langEnBtn').onclick = ()=> applyLang('en');
+
+/* الألوان */
+function applyTheme(t){
+  if(!['green','blue','rose','dark','navy'].includes(t)) t = 'green';
+  localStorage.setItem('clinicTheme', t);
+  if(t === 'green') document.documentElement.removeAttribute('data-theme'); else document.documentElement.setAttribute('data-theme', t);
+  document.querySelectorAll('#themeRow .theme-sw').forEach(b=> b.classList.toggle('sel', b.dataset.th === t));
+  const mc = document.querySelector('meta[name="theme-color"]');
+  if(mc) mc.setAttribute('content', getComputedStyle(document.documentElement).getPropertyValue('--teal').trim());
+}
+document.querySelectorAll('#themeRow .theme-sw').forEach(b=> b.onclick = ()=> applyTheme(b.dataset.th));
+
+/* اسم العيادة + حول البرنامج (محفوظين في Firestore: settings/app + نسخة محلية) */
+const appSettings = {
+  clinicName: localStorage.getItem('clinicName') || DEFAULT_CLINIC_NAME,
+  about: localStorage.getItem('clinicAbout') || DEFAULT_ABOUT,
+  adminEmail: localStorage.getItem('clinicAdminEmail') || ''
+};
+function isClinicAdmin(){
+  const em = (auth.currentUser && auth.currentUser.email || '').toLowerCase();
+  if(!em) return false;
+  return !appSettings.adminEmail || appSettings.adminEmail.toLowerCase() === em;
+}
+function applyClinicName(){
+  const name = (appSettings.clinicName || DEFAULT_CLINIC_NAME);
+  const shown = (_lang === 'en' && name === DEFAULT_CLINIC_NAME) ? I18N_EN[DEFAULT_CLINIC_NAME] : name;
+  $('brandName').textContent = shown; $('loginTitle').textContent = shown;
+  _txtOrig.delete($('brandName').firstChild); _txtOrig.delete($('loginTitle').firstChild);
+  document.title = shown;
+  if(document.activeElement !== $('clinicNameInput')) $('clinicNameInput').value = shown;
+  const ab = appSettings.about || DEFAULT_ABOUT;
+  $('aboutText').textContent = (_lang === 'en' && ab === DEFAULT_ABOUT) ? I18N_EN[DEFAULT_ABOUT] : ab;
+  $('aboutEditBtn').style.display = isClinicAdmin() ? '' : 'none';
+}
+async function loadClinicSettings(){
+  try{
+    const snap = await getDoc(doc(db, 'settings', 'app'));
+    if(snap.exists()){
+      const d = snap.data();
+      if(d.clinicName) appSettings.clinicName = d.clinicName;
+      if(d.about) appSettings.about = d.about;
+      appSettings.adminEmail = d.adminEmail || '';
+      localStorage.setItem('clinicName', appSettings.clinicName);
+      localStorage.setItem('clinicAbout', appSettings.about);
+      localStorage.setItem('clinicAdminEmail', appSettings.adminEmail);
+    }
+  }catch(e){ /* بنكمل بالنسخة المحلية */ }
+  applyClinicName();
+}
+async function saveClinicSettings(patch, okMsg){
+  Object.assign(appSettings, patch);
+  if(!appSettings.adminEmail && auth.currentUser) appSettings.adminEmail = auth.currentUser.email || '';
+  localStorage.setItem('clinicName', appSettings.clinicName);
+  localStorage.setItem('clinicAbout', appSettings.about);
+  localStorage.setItem('clinicAdminEmail', appSettings.adminEmail);
+  applyClinicName();
+  try{
+    await setDoc(doc(db, 'settings', 'app'), { clinicName: appSettings.clinicName, about: appSettings.about, adminEmail: appSettings.adminEmail }, { merge:true });
+    showToast(okMsg);
+  }catch(e){
+    showToast('النص مش محفوظ على السيرفر (صلاحيات) - اتحفظ على الجهاز بس', true);
+  }
+}
+$('clinicNameSaveBtn').onclick = ()=>{
+  const v = $('clinicNameInput').value.trim() || DEFAULT_CLINIC_NAME;
+  saveClinicSettings({clinicName: v}, 'اتحفظ الاسم ✓');
+};
+$('aboutEditBtn').onclick = ()=>{
+  $('aboutInput').value = appSettings.about || DEFAULT_ABOUT;
+  $('aboutEditBox').style.display = 'block'; $('aboutText').style.display = 'none'; $('aboutEditBtn').style.display = 'none';
+};
+$('aboutCancelBtn').onclick = ()=>{ $('aboutEditBox').style.display = 'none'; $('aboutText').style.display = ''; applyClinicName(); };
+$('aboutSaveBtn').onclick = async ()=>{
+  const v = $('aboutInput').value.trim() || DEFAULT_ABOUT;
+  $('aboutEditBox').style.display = 'none'; $('aboutText').style.display = '';
+  await saveClinicSettings({about: v}, 'اتحفظ النص ✓');
+};
+applyTheme(localStorage.getItem('clinicTheme') || 'green');
+applyLang(_lang);
 
 /* ---------- تسجيل الـ Service Worker (يخلي الموقع نفسه يفتح من غير نت) ---------- */
 if('serviceWorker' in navigator){
