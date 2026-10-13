@@ -1470,6 +1470,9 @@ var n=localStorage.getItem('clinicName');if(n)document.title=n;}catch(e){}})();
           <div class="mv-row"><span class="mv-lbl">السرعة</span>
             <select id="mvHSpeed"><option value="1800">بطيء</option><option value="900" selected>عادي</option><option value="400">سريع</option></select>
             <b class="mv-lbl" id="mvHCount" data-i18n-skip></b></div>
+          <div class="mv-row" style="margin-top:4px;">
+            <button id="mvHVideo" title="بيشغّل كل الخطوات بالسرعة المختارة ويسجّلها فيديو">🎬 حفظ فيديو</button><button id="mvHZip" title="كل خطوة صورة في ملف ZIP">💾 كل الخطوات صور</button>
+          </div>
           <div class="mv-lbl" style="opacity:.7;font-size:11px;">تسجيل الخطوات بيتم تلقائيًا — اضغط على أي خطوة للرجوع لها</div>
           <div id="mvHList" class="mv-hlist" data-i18n-skip></div>
         </details>
@@ -3371,6 +3374,8 @@ const mv = { img:null, shapes:[], pending:[], pendRefs:[], tool:'line', zoom:1, 
              baseUrl:null, baseBlank:false, adj:null, adjCanvas:null, viewStack:[], prevTool:'move', zoomRect:null, loupe:false, lastWheel:0, cropTarget:null, cropRect:null, cmp:{open:false, zoom:1, cur:null, stages:[]}, sel:null, multi:new Set(), drag:null, down:null, color:'#39ff88', w:3, bound:false,
              pivot:null, rot:{ phi:-Math.PI/2, from:null, total:0 } };
 const MV_EN = {
+  '🎬 حفظ فيديو':'🎬 Save video', '💾 كل الخطوات صور':'💾 All steps as images', 'بيشغّل كل الخطوات بالسرعة المختارة ويسجّلها فيديو':'Plays all steps at the chosen speed and records a video', 'كل خطوة صورة في ملف ZIP':'Each step as an image in a ZIP file',
+  'مفيش خطوات كفاية للحفظ':'Not enough steps to save', 'تم حفظ الفيديو':'Video saved', 'المتصفح ده مش بيدعم تسجيل الفيديو - استخدم "كل الخطوات صور"':'This browser does not support video recording - use "All steps as images"', 'تم حفظ كل الخطوات':'All steps saved', 'تعذر حفظ الخطوات':'Could not save steps',
 "السُمك / حجم الخط:": "Thickness / font size:",
 "ترقيم النقط تلقائيًا (1، 2، 3…)": "Auto-number points (1, 2, 3…)",
 "مساحة رسم فاضية — ابدأ بإدراج صورة (أشعة مثلًا) أو ارسم مباشرة": "Empty canvas — start by inserting an image (e.g. an X-ray) or draw directly",
@@ -5131,12 +5136,115 @@ function mvHRender(){
   $('mvRedo').style.opacity = mvH.i < mvH.snaps.length - 1 ? '1' : '.45';
   $('mvUndo').style.opacity = '1';
 }
+
+// ===== حفظ الخطوات: فيديو بالسرعة المختارة + كل الخطوات صور في ZIP =====
+let mvHExporting = false;
+function mvDl(blob, name){
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href), 4000);
+}
+function mvStepFrame(i, withCaption){
+  const cv = $('mvCanvas');
+  mvHGo(i); mvDraw(true);
+  const fr = document.createElement('canvas'); fr.width = cv.width; fr.height = cv.height;
+  const c = fr.getContext('2d'); c.fillStyle = '#fff'; c.fillRect(0, 0, fr.width, fr.height); c.drawImage(cv, 0, 0);
+  if(withCaption){
+    const n = mvH.snaps.length - 1, fs = Math.max(14, Math.round(fr.width / 42));
+    const txt = (i) + ' / ' + n + '  ' + mvT(mvH.snaps[i].label);
+    c.font = '700 ' + fs + 'px Tajawal, Arial'; c.textBaseline = 'middle';
+    const w = c.measureText(txt).width + fs * 1.2, h = fs * 1.9;
+    c.fillStyle = 'rgba(0,0,0,.6)'; c.fillRect(8, fr.height - h - 8, w, h);
+    c.fillStyle = '#fff'; c.fillText(txt, 8 + fs * .6, fr.height - h / 2 - 8);
+  }
+  return fr;
+}
+function mvHExportBegin(){
+  mvHStop(); mvHCheck();
+  if(mvH.snaps.length < 2){ showToast(mvT('مفيش خطوات كفاية للحفظ'), true); return null; }
+  if(mvHExporting) return null;
+  mvHExporting = true; return mvH.i;
+}
+function mvHExportEnd(back){ mvHGo(back); mvDraw(); mvHExporting = false; $('mvHVideo').disabled = false; $('mvHZip').disabled = false; $('mvHVideo').textContent = mvL('🎬 حفظ فيديو','🎬 Save video'); }
+async function mvHSaveVideo(){
+  const back = mvHExportBegin(); if(back === null) return;
+  $('mvHVideo').disabled = true; $('mvHZip').disabled = true;
+  try{
+    if(typeof MediaRecorder === 'undefined') throw new Error('nomr');
+    const delay = Number($('mvHSpeed').value) || 900, n = mvH.snaps.length;
+    const cv = $('mvCanvas');
+    const rc = document.createElement('canvas'); rc.width = cv.width; rc.height = cv.height;
+    const rx = rc.getContext('2d');
+    const stream = rc.captureStream(30);
+    const mime = ['video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm','video/mp4'].find(m=> MediaRecorder.isTypeSupported(m)) || '';
+    const rec = new MediaRecorder(stream, mime ? { mimeType:mime, videoBitsPerSecond: 4000000 } : undefined);
+    const chunks = []; rec.ondataavailable = e=>{ if(e.data && e.data.size) chunks.push(e.data); };
+    const done = new Promise(res=> rec.onstop = res);
+    rec.start();
+    for(let i = 0; i < n; i++){
+      const fr = mvStepFrame(i, true);
+      rx.clearRect(0,0,rc.width,rc.height); rx.drawImage(fr, 0, 0);
+      $('mvHVideo').textContent = '⏺ ' + (i + 1) + '/' + n;
+      await new Promise(r=> setTimeout(r, delay));
+    }
+    // نثبّت آخر فريم شوية قبل ما نقفل
+    await new Promise(r=> setTimeout(r, 300));
+    rec.stop(); await done;
+    const type = (rec.mimeType || mime || 'video/webm').split(';')[0];
+    mvDl(new Blob(chunks, { type }), mvL('خطوات-الرسم-','drawing-steps-') + new Date().toISOString().slice(0,10) + (type.includes('mp4') ? '.mp4' : '.webm'));
+    showToast(mvT('تم حفظ الفيديو'));
+  }catch(e){
+    showToast(mvT('المتصفح ده مش بيدعم تسجيل الفيديو - استخدم "كل الخطوات صور"'), true);
+  }finally{ mvHExportEnd(back); }
+}
+const _crcT = (()=>{ const t = new Uint32Array(256); for(let n = 0; n < 256; n++){ let c = n; for(let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+function mvCrc32(u8){ let c = 0xFFFFFFFF; for(let i = 0; i < u8.length; i++) c = _crcT[(c ^ u8[i]) & 255] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; }
+function mvZip(files){
+  const enc = new TextEncoder(), parts = [], cen = []; let off = 0;
+  files.forEach(f=>{
+    const nm = enc.encode(f.name), crc = mvCrc32(f.data), sz = f.data.length;
+    const lh = new DataView(new ArrayBuffer(30));
+    lh.setUint32(0, 0x04034b50, true); lh.setUint16(4, 20, true); lh.setUint16(6, 0x0800, true); lh.setUint16(8, 0, true);
+    lh.setUint16(10, 0, true); lh.setUint16(12, 0x21, true); lh.setUint32(14, crc, true); lh.setUint32(18, sz, true); lh.setUint32(22, sz, true);
+    lh.setUint16(26, nm.length, true); lh.setUint16(28, 0, true);
+    parts.push(lh.buffer, nm, f.data);
+    const ch = new DataView(new ArrayBuffer(46));
+    ch.setUint32(0, 0x02014b50, true); ch.setUint16(4, 20, true); ch.setUint16(6, 20, true); ch.setUint16(8, 0x0800, true); ch.setUint16(10, 0, true);
+    ch.setUint16(12, 0, true); ch.setUint16(14, 0x21, true); ch.setUint32(16, crc, true); ch.setUint32(20, sz, true); ch.setUint32(24, sz, true);
+    ch.setUint16(28, nm.length, true); ch.setUint32(42, off, true);
+    cen.push(ch.buffer, nm);
+    off += 30 + nm.length + sz;
+  });
+  const cenSize = cen.reduce((a, b)=> a + (b.byteLength !== undefined ? b.byteLength : b.length), 0);
+  const end = new DataView(new ArrayBuffer(22));
+  end.setUint32(0, 0x06054b50, true); end.setUint16(8, files.length, true); end.setUint16(10, files.length, true);
+  end.setUint32(12, cenSize, true); end.setUint32(16, off, true);
+  return new Blob([...parts, ...cen, end.buffer], { type:'application/zip' });
+}
+async function mvHSaveZip(){
+  const back = mvHExportBegin(); if(back === null) return;
+  $('mvHVideo').disabled = true; $('mvHZip').disabled = true;
+  try{
+    const n = mvH.snaps.length, files = [], pad = String(n - 1).length < 2 ? 2 : String(n - 1).length;
+    for(let i = 0; i < n; i++){
+      const fr = mvStepFrame(i, false);
+      const blob = await new Promise(r=> fr.toBlob(r, 'image/png'));
+      files.push({ name: 'step_' + String(i).padStart(pad, '0') + '.png', data: new Uint8Array(await blob.arrayBuffer()) });
+    }
+    const labels = mvH.snaps.map((sn, i)=> i + ': ' + mvT(sn.label)).join('\n');
+    files.push({ name: 'steps.txt', data: new TextEncoder().encode(labels) });
+    mvDl(mvZip(files), mvL('خطوات-الرسم-','drawing-steps-') + new Date().toISOString().slice(0,10) + '.zip');
+    showToast(mvT('تم حفظ كل الخطوات'));
+  }catch(e){ showToast(mvT('تعذر حفظ الخطوات'), true); }
+  finally{ mvHExportEnd(back); }
+}
+
 function mvHBind(){
   $('mvHFirst').onclick = ()=>{ mvHStop(); mvHGo(0); };
   $('mvHPrev').onclick = ()=>{ mvHStop(); mvHGo(mvH.i - 1); };
   $('mvHNext').onclick = ()=>{ mvHStop(); mvHGo(mvH.i + 1); };
   $('mvHLast').onclick = ()=>{ mvHStop(); mvHGo(mvH.snaps.length - 1); };
   $('mvHPlay').onclick = mvHPlay;
+  $('mvHVideo').onclick = mvHSaveVideo; $('mvHZip').onclick = mvHSaveZip;
   $('mvHSpeed').onchange = ()=>{ if(mvH.play){ mvHStop(); mvHPlay(); } };
   $('mvRedo').onclick = ()=>{ mvHStop(); mvHGo(mvH.i + 1); };
   const ov = $('measureViewer'), soon = ()=> setTimeout(mvHCheck, 40);
