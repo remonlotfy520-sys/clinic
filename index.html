@@ -246,6 +246,22 @@ var n=localStorage.getItem('clinicName');if(n)document.title=n;}catch(e){}})();
     .mv-overlay.ltr .mv-side{right:auto; left:0; transform:translateX(-100%); box-shadow:6px 0 20px rgba(0,0,0,.5);}
     .mv-overlay.ltr .mv-side.open{transform:none;}
   }
+  .mv-fp{position:absolute; z-index:7; background:var(--mv-panel); border:1px solid var(--mv-line); border-radius:10px; box-shadow:0 6px 18px rgba(0,0,0,.45); padding:4px 5px 6px; width:max-content; max-width:calc(100% - 8px); direction:ltr; opacity:.97;}
+  .mv-overlay:not(.ltr) .mv-fp{direction:rtl;}
+  .mv-fp-h{display:flex; align-items:center; gap:4px; cursor:grab; touch-action:none; user-select:none; padding:1px 1px 4px;}
+  .mv-fp-h:active{cursor:grabbing;}
+  .mv-fp-grip{color:var(--mv-text3); font-size:13px; line-height:1; letter-spacing:-2px;}
+  .mv-fp-h .mv-sh{margin:0; flex:1; white-space:nowrap; font-size:11.5px;}
+  .mv-fp-h button{padding:0 !important; width:22px; height:22px; font-size:11px !important; line-height:1; border-radius:6px !important; flex:none;}
+  .mv-fp .mv-tgrid{grid-template-columns:repeat(2,minmax(74px,auto));}
+  .mv-fp.ic .mv-sh{font-size:0;}
+  .mv-fp.ic .mv-sh::before{content:attr(data-ic); font-size:15px;}
+  .mv-fp.ic .mv-tgrid{grid-template-columns:repeat(3,34px);}
+  .mv-fp.ic .mv-tgrid button{font-size:0 !important; width:34px; height:34px; padding:0 !important;}
+  .mv-fp.ic .mv-tgrid button::before{content:attr(data-ic); font-size:15px; line-height:1; white-space:nowrap;}
+  .mv-fp.ic .mv-tgrid .wide{grid-column:auto;}
+  .mv-fp.min .mv-tgrid{display:none;}
+  .mv-fp.min .mv-fp-h{padding-bottom:1px;}
   .img-thumb{width:100%; height:110px; border-radius:10px; border:1px solid var(--line); background:var(--card2); overflow:hidden; cursor:pointer; display:flex; align-items:center; justify-content:center;}
   .img-thumb img{width:100%; height:100%; object-fit:cover;}
   .img-date{font-size:11px; color:var(--muted); text-align:center; margin-top:5px;}
@@ -3578,7 +3594,7 @@ function mvApplyLang(){
   $('mvLang').textContent = en ? '🌐 عربي' : '🌐 EN';
   $('mvLang').title = en ? 'التبديل للعربية' : 'Switch to English';
   $('mvTitle').textContent = mvT(mv.titleAr || '📐 الرسم والقياس');
-  mvUpdateHint(); mvRenderStages(); mvSyncAdjUI();
+  mvUpdateHint(); mvRenderStages(); mvSyncAdjUI(); mvFpTitles();
   if(mv.cmp.open){ mvCmpFillSelects($('mvCmpSelA').value, $('mvCmpSelB').value).then(mvCmpRender); }
 }
 const MV_NEED = { line:2, seg:2, calib:2, angle:3, angle2:4 };
@@ -3643,6 +3659,86 @@ function mvToggleSide(force){
   mvUiRefit(()=>{ if(mvIsMobile()) sd.classList.toggle('open', open); else sd.classList.toggle('mv-hide', !open); });
   mvUiSync(); if(!mvIsMobile()) mvUiSave();
 }
+
+// ===== القوائم العايمة (قياس / رسم / تعديل): تتحرك بالسحب، وتتحول لأيقونات فقط أو تتصغّر =====
+const MV_FP_IDS = ['mvFpMeasure','mvFpDraw','mvFpEdit'];
+function mvFpLoad(){ try{ return JSON.parse(localStorage.getItem('mvFloat') || '{}') || {}; }catch(_){ return {}; } }
+function mvFpSave(){
+  const o = {};
+  MV_FP_IDS.forEach(id=>{ const el = $(id); if(el) o[id] = { x:el.offsetLeft, y:el.offsetTop, ic:el.classList.contains('ic'), min:el.classList.contains('min'), placed:!!el.dataset.placed }; });
+  try{ localStorage.setItem('mvFloat', JSON.stringify(o)); }catch(_){}
+}
+function mvFpClamp(el){
+  const body = el.parentElement; if(!body) return;
+  const bw = body.clientWidth, bh = body.clientHeight; if(!bw || !bh) return;
+  el.style.left = Math.max(0, Math.min(bw - el.offsetWidth, el.offsetLeft)) + 'px';
+  el.style.top = Math.max(0, Math.min(bh - el.offsetHeight, el.offsetTop)) + 'px';
+}
+function mvFpLayout(){
+  const body = document.querySelector('#measureViewer .mv-body'); if(!body || !body.clientWidth) return;
+  const st = mvFpLoad();
+  let x = 8, y = 54, colW = 0;
+  MV_FP_IDS.forEach(id=>{
+    const el = $(id); if(!el) return;
+    const s = st[id];
+    if(s && s.placed){ el.style.left = s.x + 'px'; el.style.top = s.y + 'px'; el.dataset.placed = '1'; mvFpClamp(el); return; }
+    if(y + el.offsetHeight > body.clientHeight - 8 && y > 54){ x += colW + 8; y = 54; colW = 0; }
+    el.style.left = x + 'px'; el.style.top = y + 'px';
+    y += el.offsetHeight + 8; colW = Math.max(colW, el.offsetWidth);
+  });
+}
+function mvFpTitles(){
+  MV_FP_IDS.forEach(id=>{
+    const el = $(id); if(!el) return;
+    el.querySelectorAll('.mv-tgrid button').forEach(b=>{
+      const ar = b.dataset.ar; if(!ar) return;
+      b.title = mv.lang === 'en' ? (MV_EN[ar] || ar) : ar;
+    });
+    const ib = el.querySelector('[data-a="icons"]'), mb = el.querySelector('[data-a="min"]');
+    if(ib) ib.title = mvL('أيقونات فقط / أيقونات + كلام', 'Icons only / with text');
+    if(mb) mb.title = mvL('تصغير / تكبير', 'Collapse / expand');
+  });
+}
+function mvInitFloat(){
+  const side = $('mvSide'), body = side.parentElement;
+  const secs = [...side.querySelectorAll(':scope > .mv-sec')].slice(0, 3);
+  if(secs.length < 3 || $('mvFpMeasure')) return;
+  const st = mvFpLoad();
+  secs.forEach((sec, i)=>{
+    const id = MV_FP_IDS[i], sh = sec.querySelector('.mv-sh'), grid = sec.querySelector('.mv-tgrid');
+    const fp = document.createElement('div'); fp.className = 'mv-fp ic'; fp.id = id;
+    const s = st[id] || {};
+    if(s.ic === false) fp.classList.remove('ic');
+    if(s.min || (s.min === undefined && mvIsMobile())) fp.classList.add('min');
+    const h = document.createElement('div'); h.className = 'mv-fp-h';
+    const grip = document.createElement('span'); grip.className = 'mv-fp-grip'; grip.textContent = '⋮⋮';
+    sh.dataset.ic = sh.textContent.trim().split(/\s+/)[0];
+    const b1 = document.createElement('button'); b1.type = 'button'; b1.dataset.a = 'icons'; b1.textContent = '🔤';
+    const b2 = document.createElement('button'); b2.type = 'button'; b2.dataset.a = 'min'; b2.textContent = '▁';
+    h.append(grip, sh, b1, b2); fp.append(h, grid);
+    grid.querySelectorAll('button').forEach(b=>{
+      const t = b.textContent.trim(); b.dataset.ar = t;
+      const m = t.match(/^[^؀-ۿA-Za-z0-9]+/); b.dataset.ic = (m ? m[0].trim() : t.charAt(0)) || t.charAt(0);
+    });
+    body.appendChild(fp); sec.remove();
+    b1.onclick = e=>{ e.stopPropagation(); fp.classList.toggle('ic'); mvFpClamp(fp); mvFpSave(); };
+    b2.onclick = e=>{ e.stopPropagation(); fp.classList.toggle('min'); b2.textContent = fp.classList.contains('min') ? '▢' : '▁'; mvFpClamp(fp); mvFpSave(); };
+    b2.textContent = fp.classList.contains('min') ? '▢' : '▁';
+    h.addEventListener('pointerdown', e=>{
+      if(e.target.closest('button')) return;
+      e.preventDefault();
+      const r0 = { mx:e.clientX, my:e.clientY, x:fp.offsetLeft, y:fp.offsetTop };
+      h.setPointerCapture(e.pointerId);
+      const mvH = ev=>{ fp.style.left = (r0.x + ev.clientX - r0.mx) + 'px'; fp.style.top = (r0.y + ev.clientY - r0.my) + 'px'; mvFpClamp(fp); };
+      const up = ()=>{ h.removeEventListener('pointermove', mvH); h.removeEventListener('pointerup', up); h.removeEventListener('pointercancel', up); fp.dataset.placed = '1'; mvFpSave(); };
+      h.addEventListener('pointermove', mvH); h.addEventListener('pointerup', up); h.addEventListener('pointercancel', up);
+    });
+    h.addEventListener('dblclick', e=>{ if(e.target.closest('button')) return; delete fp.dataset.placed; try{ const o = mvFpLoad(); delete o[id]; localStorage.setItem('mvFloat', JSON.stringify(o)); }catch(_){} MV_FP_IDS.forEach(k=>{ const el = $(k); if(el) delete el.dataset.placed; }); mvFpLayout(); mvFpSave(); });
+  });
+  mvFpTitles();
+  window.addEventListener('resize', ()=> MV_FP_IDS.forEach(id=>{ const el = $(id); if(el) mvFpClamp(el); }));
+}
+
 function mvToggleTop(force){
   const open = force === undefined ? $('mvTop').classList.contains('mv-top-hide') : force;
   $('mvTop').classList.toggle('mv-top-hide', !open); mvUiSync();
@@ -3898,12 +3994,22 @@ function mvLinkInfo(sh){
   const ok = P && P.x > -0.2*W && P.x < 1.2*W && P.y > -0.2*H && P.y < 1.2*H;
   const m1 = {x:(s1[0].x+s1[1].x)/2, y:(s1[0].y+s1[1].y)/2}, m2 = {x:(s2[0].x+s2[1].x)/2, y:(s2[0].y+s2[1].y)/2};
   const pos = ok ? P : {x:(m1.x+m2.x)/2, y:(m1.y+m2.y)/2};
-  return { s1, s2, ang, P: ok ? P : null, pos };
+  let bis = null, a1 = 0, a2 = 0;
+  if(ok){
+    const n1 = Math.hypot(v1.x, v1.y) || 1, n2 = Math.hypot(v2.x, v2.y) || 1;
+    let u1 = {x:v1.x/n1, y:v1.y/n1}, u2 = {x:v2.x/n2, y:v2.y/n2};
+    if(u1.x*u2.x + u1.y*u2.y < 0) u2 = {x:-u2.x, y:-u2.y};
+    const bx = u1.x + u2.x, by = u1.y + u2.y, bn = Math.hypot(bx, by);
+    bis = bn > 1e-6 ? {x:bx/bn, y:by/bn} : {x:-u1.y, y:u1.x};
+    a1 = Math.atan2(u1.y, u1.x); a2 = Math.atan2(u2.y, u2.x);
+  }
+  return { s1, s2, ang, P: ok ? P : null, pos, bis, a1, a2 };
 }
 function mvLinkLabelPos(sh){
   const info = mvLinkInfo(sh); if(!info) return null;
   const u = 1 / mv.zoom;
-  return { x: info.pos.x, y: info.pos.y - (info.P ? 30*u : 0) };
+  if(info.P && info.bis){ const d = 70*u; return { x: info.P.x + info.bis.x*d, y: info.P.y + info.bis.y*d }; }
+  return { x: info.pos.x, y: info.pos.y };
 }
 function mvFmtAng(a){ return a.toFixed(1) + '°'; }
 
@@ -4047,6 +4153,11 @@ function mvDraw(forExport){
         });
         ctx.setLineDash([]);
         mvDot(ctx, info.P, u, col, 3.5);
+        if(info.bis){
+          let df = info.a2 - info.a1; while(df > Math.PI) df -= 2*Math.PI; while(df < -Math.PI) df += 2*Math.PI;
+          ctx.beginPath(); ctx.arc(info.P.x, info.P.y, 38*u, info.a1, info.a1 + df, df < 0);
+          ctx.lineWidth = lw*0.8; ctx.strokeStyle = col; ctx.stroke();
+        }
       } else {
         ctx.setLineDash([5*u, 5*u]);
         mvSeg(ctx, {x:(info.s1[0].x+info.s1[1].x)/2,y:(info.s1[0].y+info.s1[1].y)/2}, {x:(info.s2[0].x+info.s2[1].x)/2,y:(info.s2[0].y+info.s2[1].y)/2}, lw*0.5, col);
@@ -4535,6 +4646,7 @@ function mvBind(){
   $('mvSideHide').onclick = ()=> mvToggleSide(false);
   $('mvSideFab').onclick = ()=> mvToggleSide(true);
   $('mvTopFab').onclick = ()=> mvToggleTop();
+  mvInitFloat();
   $('mvQUndo').onclick = ()=> $('mvUndo').click();
   $('mvQRedo').onclick = ()=> $('mvRedo').click();
   document.querySelectorAll('.mv-th').forEach(b => b.onclick = ()=> mvApplyTheme(b.dataset.t, true));
@@ -5199,6 +5311,7 @@ async function mvOpen(dataUrl){
   mv.titleAr = dataUrl ? '📐 قياس على صورة المريض' : '📐 الرسم والقياس'; $('mvTitle').textContent = mvT(mv.titleAr);
   $('measureViewer').classList.add('open');
   mvApplyLang(); mvRefit(); mvSetTool('line'); mvRenderStages(); mvDraw(); mvHReset(); mvApplyUi();
+  requestAnimationFrame(mvFpLayout);
 }
 function openMeasureViewer(dataUrl){
   if(!dataUrl){ showToast(mvT('الصورة دي متعذر تحميلها'), true); return; }
