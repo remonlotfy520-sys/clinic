@@ -1526,6 +1526,13 @@ var n=localStorage.getItem('clinicName');if(n)document.title=n;}catch(e){}})();
         <div class="mv-sh">⊹ خيارات الخط</div>
         <label class="mv-lbl"><input type="checkbox" id="mvAutoMid"> علّم منتصف كل خط تلقائيًا</label>
       </div>
+      <div class="mv-sec" id="mvLenGrp">
+        <div class="mv-sh">📏 عرض المقاس على الخطوط</div>
+        <label class="mv-lbl"><input type="checkbox" id="mvLenNew" checked> اكتب المقاس على الخطوط الجديدة</label>
+        <div class="mv-row" style="margin-top:4px;">
+          <button id="mvLenShowAll" title="إظهار المقاس على كل الخطوط">👁 الكل</button><button id="mvLenHideAll" title="إخفاء المقاس من كل الخطوط">🙈 الكل</button><button id="mvLenSel" title="إظهار/إخفاء مقاس الخط المحدد">👁 المحدد</button>
+        </div>
+      </div>
       <div class="mv-sec" id="mvPointGrp" style="display:none;">
         <div class="mv-sh">● خيارات النقطة</div>
         <label class="mv-lbl"><input type="checkbox" id="mvPointNum" checked> ترقيم النقط تلقائيًا (1، 2، 3…)</label>
@@ -3374,6 +3381,8 @@ const mv = { img:null, shapes:[], pending:[], pendRefs:[], tool:'line', zoom:1, 
              baseUrl:null, baseBlank:false, adj:null, adjCanvas:null, viewStack:[], prevTool:'move', zoomRect:null, loupe:false, lastWheel:0, cropTarget:null, cropRect:null, cmp:{open:false, zoom:1, cur:null, stages:[]}, sel:null, multi:new Set(), drag:null, down:null, color:'#39ff88', w:3, bound:false,
              pivot:null, rot:{ phi:-Math.PI/2, from:null, total:0 } };
 const MV_EN = {
+  '📏 عرض المقاس على الخطوط':'📏 Show length on lines', 'اكتب المقاس على الخطوط الجديدة':'Write length on new lines', '👁 الكل':'👁 All', '🙈 الكل':'🙈 All', '👁 المحدد':'👁 Selected',
+  'إظهار المقاس على كل الخطوط':'Show length on all lines', 'إخفاء المقاس من كل الخطوط':'Hide length from all lines', 'إظهار/إخفاء مقاس الخط المحدد':'Show/hide length of the selected line', 'اختار خط الأول بأداة التحريك':'Select a line first with the Move tool',
   '🎬 حفظ فيديو':'🎬 Save video', '💾 كل الخطوات صور':'💾 All steps as images', 'بيشغّل كل الخطوات بالسرعة المختارة ويسجّلها فيديو':'Plays all steps at the chosen speed and records a video', 'كل خطوة صورة في ملف ZIP':'Each step as an image in a ZIP file',
   'مفيش خطوات كفاية للحفظ':'Not enough steps to save', 'تم حفظ الفيديو':'Video saved', 'المتصفح ده مش بيدعم تسجيل الفيديو - استخدم "كل الخطوات صور"':'This browser does not support video recording - use "All steps as images"', 'تم حفظ كل الخطوات':'All steps saved', 'تعذر حفظ الخطوات':'Could not save steps',
 "السُمك / حجم الخط:": "Thickness / font size:",
@@ -3742,6 +3751,28 @@ function mvInitFloat(){
   });
   mvFpTitles();
   window.addEventListener('resize', ()=> MV_FP_IDS.forEach(id=>{ const el = $(id); if(el) mvFpClamp(el); }));
+}
+
+
+// ===== إظهار/إخفاء المقاس على الخطوط =====
+function mvLenTargets(){ return [...(mv.multi && mv.multi.size ? mv.multi : (mv.sel ? [mv.sel] : []))].filter(sh=> sh.type === 'line' || sh.type === 'calib' || sh.type === 'curve'); }
+function mvLenSetAll(show){
+  mv.shapes.forEach(sh=>{ if(sh.type === 'line' || sh.type === 'calib' || sh.type === 'curve'){ if(show) delete sh.nolabel; else sh.nolabel = true; } });
+  mvDraw(); setTimeout(mvHCheck, 40);
+}
+function mvLenToggleSel(){
+  const t = mvLenTargets();
+  if(!t.length){ showToast(mvT('اختار خط الأول بأداة التحريك'), true); return; }
+  const hide = t.some(sh=> !sh.nolabel);
+  t.forEach(sh=>{ if(hide) sh.nolabel = true; else delete sh.nolabel; });
+  mvDraw(); setTimeout(mvHCheck, 40);
+}
+function mvLenInit(){
+  try{ $('mvLenNew').checked = localStorage.getItem('mvLenNew') !== '0'; }catch(_){}
+  $('mvLenNew').onchange = ()=>{ try{ localStorage.setItem('mvLenNew', $('mvLenNew').checked ? '1' : '0'); }catch(_){} };
+  $('mvLenShowAll').onclick = ()=> mvLenSetAll(true);
+  $('mvLenHideAll').onclick = ()=> mvLenSetAll(false);
+  $('mvLenSel').onclick = mvLenToggleSel;
 }
 
 function mvToggleTop(force){
@@ -4387,7 +4418,7 @@ function mvClickAt(p){
   if(mv.pending.length >= MV_NEED[tool]){
     const q = mv.pending; mv.pending = [];
     if(tool === 'line' || tool === 'seg'){
-      const ln = mvNewShape(tool === 'seg' ? {type:'line', a:q[0], b:q[1], nolabel:true} : {type:'line', a:q[0], b:q[1]});
+      const ln = mvNewShape((tool === 'seg' || !$('mvLenNew').checked) ? {type:'line', a:q[0], b:q[1], nolabel:true} : {type:'line', a:q[0], b:q[1]});
       if($('mvAutoMid').checked) mvNewShape({ type:'mid', ref:{ s:ln, i:0 } });
     }
     else if(tool === 'angle') mvNewShape({type:'angle', a:q[0], v:q[1], b:q[2]});
@@ -4651,7 +4682,7 @@ function mvBind(){
   $('mvSideHide').onclick = ()=> mvToggleSide(false);
   $('mvSideFab').onclick = ()=> mvToggleSide(true);
   $('mvTopFab').onclick = ()=> mvToggleTop();
-  mvInitFloat();
+  mvInitFloat(); mvLenInit();
   $('mvQUndo').onclick = ()=> $('mvUndo').click();
   $('mvQRedo').onclick = ()=> $('mvRedo').click();
   document.querySelectorAll('.mv-th').forEach(b => b.onclick = ()=> mvApplyTheme(b.dataset.t, true));
