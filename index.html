@@ -116,7 +116,12 @@ var n=localStorage.getItem('clinicName');if(n)document.title=n;}catch(e){}})();
   .collapsible-header.open .collapse-arrow{transform:rotate(180deg);}
   .collapsible-content{display:none; margin-top:12px;}
   .collapsible-content.open{display:block;}
-  .gdoc-preview-frame{width:100%; height:420px; border:1px solid var(--line); border-radius:10px;}
+  .gdoc-preview-frame{border:0; display:block; transform-origin:0 0; background:#fff;}
+  .gdoc-bar{display:flex; align-items:center; gap:6px; margin-bottom:6px; flex-wrap:wrap;}
+  .gdoc-bar .btn{padding:5px 12px; font-size:13px;}
+  .gdoc-pct{min-width:44px; text-align:center; font-weight:800; font-size:13px;}
+  .gdoc-view{width:100%; overflow:auto; border:1px solid var(--line); border-radius:10px; background:var(--card2); direction:ltr;}
+  .gdoc-sizer{position:relative; overflow:hidden; margin:0 auto;}
   .vnotes-editable{min-height:180px; max-height:420px; overflow-y:auto; direction:ltr; text-align:left; border:1px solid var(--line); border-radius:10px; padding:10px 12px; font-family:'Tajawal'; font-size:14px; background:var(--card); white-space:pre-wrap; line-height:1.6;}
   .vnotes-editable:empty::before{content:attr(data-placeholder); color:var(--muted);}
   .vnotes-editable .template-text{color:#9a9488; font-style:italic;}
@@ -7668,13 +7673,36 @@ function renderGoogleDocPreview(url, boxId){
     box.innerHTML = url ? '<div class="hint">الرابط مش شكل رابط جوجل دوك/شيت معروف - اتأكد إنه رابط صحيح</div>' : '';
     return;
   }
+  const dims = { document:[920,1250], spreadsheets:[1200,820], presentation:[1000,640] }[info.type] || [920,1250];
   box.innerHTML = `
-    <iframe class="gdoc-preview-frame" src="https://docs.google.com/${info.type}/d/${info.id}/preview"></iframe>
-    <div style="margin-top:8px;">
-      <a href="${url}" target="_blank" rel="noopener" class="btn btn-ghost" style="display:inline-block; text-decoration:none;">فتح الملف كامل في تاب جديد ↗</a>
+    <div class="gdoc-bar">
+      <button type="button" class="btn btn-ghost" data-z="out" title="تصغير">➖</button>
+      <span class="gdoc-pct" data-i18n-skip>100%</span>
+      <button type="button" class="btn btn-ghost" data-z="in" title="تكبير">➕</button>
+      <button type="button" class="btn btn-ghost" data-z="fit" title="ملائمة الصفحة كاملة">⤢ ملائمة</button>
+      <a href="${url}" target="_blank" rel="noopener" class="btn btn-ghost" style="text-decoration:none; margin-inline-start:auto;">فتح الملف كامل في تاب جديد ↗</a>
     </div>
+    <div class="gdoc-view"><div class="gdoc-sizer"><iframe class="gdoc-preview-frame" style="width:${dims[0]}px; height:${dims[1]}px;" src="https://docs.google.com/${info.type}/d/${info.id}/preview"></iframe></div></div>
     <div class="hint" style="margin-top:6px;">لو البريفيو مش شغال، يبقى الملف مش متاح لـ"أي حد معاه الرابط" - غيّر إعدادات المشاركة في جوجل دوك/شيت</div>
   `;
+  const view = box.querySelector('.gdoc-view'), sizer = box.querySelector('.gdoc-sizer'), fr = box.querySelector('iframe'), pct = box.querySelector('.gdoc-pct');
+  let zoom = 1;
+  const fitScale = ()=> Math.max(0.1, Math.min((view.clientWidth - 2) / dims[0], (window.innerHeight * 0.82) / dims[1]));
+  const apply = ()=>{
+    const sc = fitScale() * zoom;
+    fr.style.transform = 'scale(' + sc + ')';
+    sizer.style.width = Math.round(dims[0] * sc) + 'px'; sizer.style.height = Math.round(dims[1] * sc) + 'px';
+    view.style.height = Math.round(dims[1] * fitScale() + 2) + 'px';
+    pct.textContent = Math.round(zoom * 100) + '%';
+  };
+  box.querySelectorAll('[data-z]').forEach(b=> b.onclick = ()=>{
+    const a = b.dataset.z;
+    if(a === 'fit') zoom = 1; else zoom = Math.min(4, Math.max(0.3, zoom * (a === 'in' ? 1.25 : 0.8)));
+    apply();
+  });
+  apply();
+  if(window.ResizeObserver){ new ResizeObserver(()=>{ if(view.isConnected) apply(); }).observe(view); }
+  window.addEventListener('resize', ()=>{ if(view.isConnected) apply(); });
 }
 /* بيضيف زرار "بريفيو" جنب أي خانة رابط جوجل دوك/شيت - البريفيو مبيتفتحش غير لما يدوس عليه، عشان مياخدش وقت/مساحة من غير داعي */
 function attachGoogleDocPreviewButton(inputId, boxId){
