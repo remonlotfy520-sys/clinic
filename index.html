@@ -307,7 +307,8 @@ var n=localStorage.getItem('clinicName');if(n)document.title=n;}catch(e){}})();
   .ip-top{display:flex; align-items:center; gap:10px; padding:10px 14px; font-weight:700;}
   .ip-top .ip-t{flex:1; font-family:'Cairo'; font-size:14px;}
   .ip-stage{flex:1; min-height:0; position:relative; display:flex; align-items:center; justify-content:center; padding:0 54px;}
-  .ip-stage img{max-width:100%; max-height:100%; object-fit:contain; border-radius:6px; user-select:none;}
+  .ip-stage{touch-action:none; overflow:hidden;}
+  .ip-stage img{max-width:100%; max-height:100%; object-fit:contain; border-radius:6px; user-select:none; -webkit-user-drag:none; transform-origin:center center; will-change:transform;}
   .ip-film{display:flex; gap:6px; overflow-x:auto; padding:6px 14px; justify-content:safe center;}
   .ip-film img{flex:none; width:56px; height:56px; object-fit:cover; border-radius:6px; border:2px solid transparent; opacity:.55; cursor:pointer;}
   .ip-film img.on{opacity:1; border-color:var(--teal, #2f8f6b);}
@@ -1809,6 +1810,7 @@ const DRESSING_TYPES = ['غيار عادي', 'غيار معقم', 'إزالة غ
 /* ---------- جسر الصور مع نظام Apps Script القديم (جوجل درايف) ---------- */
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz6wP76o7ERkCtXtJZXNlYGjXTaJ9dn9H8wr0vGYaLxgStVdqHgJZzrCXCPUt1_32AYPw/exec';
 
+try{ if(navigator.storage && navigator.storage.persist) navigator.storage.persist(); }catch(_){}
 function getAppsScriptCreds(){
   try{ return JSON.parse(localStorage.getItem('appsScriptCreds') || 'null'); }catch(e){ return null; }
 }
@@ -1819,12 +1821,22 @@ function getAppsScriptToken(){ return localStorage.getItem('appsScriptToken') ||
 function setAppsScriptToken(t){ localStorage.setItem('appsScriptToken', t); }
 
 let appsScriptLoginPromise = null;
+async function appsScriptFetchJson(url, tries){
+  let lastErr = null;
+  for(let i = 0; i < (tries || 2); i++){
+    try{
+      const r = await fetch(url); const t = await r.text();
+      try{ return JSON.parse(t); }catch(_){ lastErr = new Error('bad-json'); }
+    }catch(e){ lastErr = e; }
+    await new Promise(res => setTimeout(res, 700));
+  }
+  throw lastErr || new Error('network');
+}
 async function ensureAppsScriptLogin(){
   const existing = getAppsScriptToken();
   if(existing){
     try{
-      const r = await fetch(`${APPS_SCRIPT_URL}?action=validateToken&token=${encodeURIComponent(existing)}`);
-      const d = await r.json();
+      const d = await appsScriptFetchJson(`${APPS_SCRIPT_URL}?action=validateToken&token=${encodeURIComponent(existing)}`, 2);
       if(d && d.valid) return existing;
     }catch(e){ /* هنحاول نعمل لوجين تاني تحت */ }
   }
@@ -1836,11 +1848,13 @@ async function ensureAppsScriptLogin(){
     try{
       const creds = getAppsScriptCreds();
       if(creds){
-        try{
-          const r = await fetch(`${APPS_SCRIPT_URL}?action=login&username=${encodeURIComponent(creds.username)}&password=${encodeURIComponent(creds.password)}`);
-          const d = await r.json();
-          if(d && d.success){ setAppsScriptToken(d.token); return d.token; }
-        }catch(e){ /* هنعرض المودال تحت */ }
+        let d = null, netErr = null;
+        try{ d = await appsScriptFetchJson(`${APPS_SCRIPT_URL}?action=login&username=${encodeURIComponent(creds.username)}&password=${encodeURIComponent(creds.password)}`, 3); }
+        catch(e){ netErr = e; }
+        if(d && d.success){ setAppsScriptToken(d.token); return d.token; }
+        /* مشكلة اتصال مؤقتة (نت ضعيف / سكريبت بطيء): منمسحش الباسورد المحفوظ ومنطلبوش تاني - بس نفشل المحاولة دي */
+        if(netErr || !d) throw new Error('تعذر الاتصال بنظام الصور - جرب تاني');
+        /* السيرفر رفض البيانات صراحة (الباسورد اتغير) - ساعتها بس نطلبه تاني */
         localStorage.removeItem('appsScriptCreds');
       }
       const token = await showAppsScriptLoginModal();
@@ -5572,7 +5586,7 @@ let _ipItems = [], _ipIdx = 0;
 function ensureImgPreview(){
   let o = $('ipOv'); if(o) return o;
   o = document.createElement('div'); o.id = 'ipOv'; o.className = 'ip-ov';
-  o.innerHTML = `<div class="ip-top"><span class="ip-t" id="ipTitle"></span><button type="button" id="ipClose">✕ إغلاق</button></div>
+  o.innerHTML = `<div class="ip-top"><span class="ip-t" id="ipTitle"></span><button type="button" id="ipZOut" title="تصغير (-)">➖</button><span id="ipPct" data-i18n-skip style="min-width:46px; text-align:center; font-size:13px;">100%</span><button type="button" id="ipZIn" title="تكبير (+)">➕</button><button type="button" id="ipZFit" title="ملائمة الشاشة (0)">⤢</button><button type="button" id="ipClose">✕ إغلاق</button></div>
     <div class="ip-stage"><button type="button" class="ip-nav ip-prev" id="ipPrev">›</button><img id="ipImg" alt=""><button type="button" class="ip-nav ip-next" id="ipNext">‹</button></div>
     <div class="ip-film" id="ipFilm"></div>
     <div class="ip-bar">
@@ -5593,18 +5607,55 @@ function ensureImgPreview(){
     document.body.appendChild(a); a.click(); a.remove();
   };
   $('ipDel').onclick = async ()=>{ const im = _ipItems[_ipIdx]; if(!im) return; ipClose(); await deleteImageEntry(im.ImageID); };
-  let sx = null;
-  const st = o.querySelector('.ip-stage');
-  st.addEventListener('touchstart', e=>{ sx = e.touches.length === 1 ? e.touches[0].clientX : null; }, { passive:true });
-  st.addEventListener('touchend', e=>{ if(sx == null) return; const dx = e.changedTouches[0].clientX - sx; sx = null; if(Math.abs(dx) > 50) ipGo(dx < 0 ? 1 : -1); });
+  const st = o.querySelector('.ip-stage'), pts = new Map();
+  let pan = null, pinch = null, sw = null, lastTap = 0;
+  st.addEventListener('wheel', e=>{ e.preventDefault(); ipZoomAt(Math.exp(-e.deltaY * 0.0018), e.clientX, e.clientY); }, { passive:false });
+  st.addEventListener('pointerdown', e=>{
+    if(e.target.closest('.ip-nav')) return;
+    st.setPointerCapture(e.pointerId); pts.set(e.pointerId, { x:e.clientX, y:e.clientY });
+    if(pts.size === 2){ const [a,b] = [...pts.values()]; pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), z: IPZ.z }; pan = null; sw = null; }
+    else { pan = { x:e.clientX, y:e.clientY, ox:IPZ.x, oy:IPZ.y }; sw = { x:e.clientX, y:e.clientY, t:Date.now() }; }
+  });
+  st.addEventListener('pointermove', e=>{
+    if(!pts.has(e.pointerId)) return; pts.set(e.pointerId, { x:e.clientX, y:e.clientY });
+    if(pinch && pts.size >= 2){ const [a,b] = [...pts.values()], d = Math.hypot(a.x - b.x, a.y - b.y); ipZoomTo(pinch.z * d / (pinch.d || 1), (a.x + b.x) / 2, (a.y + b.y) / 2); }
+    else if(pan && IPZ.z > 1){ IPZ.x = pan.ox + e.clientX - pan.x; IPZ.y = pan.oy + e.clientY - pan.y; ipApplyZ(); }
+  });
+  const up = e=>{
+    if(!pts.has(e.pointerId)) return; pts.delete(e.pointerId);
+    if(pts.size < 2) pinch = null;
+    if(sw && IPZ.z <= 1.02 && pts.size === 0){
+      const dx = e.clientX - sw.x, dy = e.clientY - sw.y;
+      if(Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) ipGo(dx < 0 ? 1 : -1);
+      else if(Math.abs(dx) < 8 && Math.abs(dy) < 8){ const n = Date.now(); if(n - lastTap < 320){ ipZoomTo(2.5, e.clientX, e.clientY); lastTap = 0; } else lastTap = n; }
+    } else if(sw && IPZ.z > 1.02 && Math.abs(e.clientX - sw.x) < 8 && Math.abs(e.clientY - sw.y) < 8){ const n = Date.now(); if(n - lastTap < 320){ ipZoomTo(1, e.clientX, e.clientY); lastTap = 0; } else lastTap = n; }
+    if(!pts.size){ pan = null; sw = null; }
+  };
+  st.addEventListener('pointerup', up); st.addEventListener('pointercancel', up);
+  $('ipZIn').onclick = ()=> ipZoomAt(1.3); $('ipZOut').onclick = ()=> ipZoomAt(1 / 1.3); $('ipZFit').onclick = ()=> ipZoomTo(1);
   document.addEventListener('keydown', e=>{
     if(!o.classList.contains('open') || $('ieOv') && $('ieOv').classList.contains('open')) return;
-    if(e.key === 'Escape') ipClose(); else if(e.key === 'ArrowLeft') ipGo(1); else if(e.key === 'ArrowRight') ipGo(-1);
+    if(e.key === 'Escape') ipClose(); else if(e.key === 'ArrowLeft') ipGo(1); else if(e.key === 'ArrowRight') ipGo(-1); else if(e.key === '+' || e.key === '=') ipZoomAt(1.3); else if(e.key === '-') ipZoomAt(1 / 1.3); else if(e.key === '0') ipZoomTo(1);
   });
   return o;
 }
+const IPZ = { z:1, x:0, y:0 };
+function ipApplyZ(){
+  const img = $('ipImg'); if(!img) return;
+  if(IPZ.z <= 1.001){ IPZ.z = 1; IPZ.x = 0; IPZ.y = 0; }
+  img.style.transform = `translate(${IPZ.x}px, ${IPZ.y}px) scale(${IPZ.z})`;
+  img.parentNode.style.cursor = IPZ.z > 1 ? 'grab' : '';
+  $('ipPct').textContent = Math.round(IPZ.z * 100) + '%';
+}
+function ipZoomTo(z, cx, cy){
+  const st = $('ipImg').parentNode, r = st.getBoundingClientRect(), nz = Math.max(1, Math.min(8, z));
+  const px = (cx == null ? r.left + r.width / 2 : cx) - (r.left + r.width / 2), py = (cy == null ? r.top + r.height / 2 : cy) - (r.top + r.height / 2);
+  const k = nz / IPZ.z; IPZ.x = px - (px - IPZ.x) * k; IPZ.y = py - (py - IPZ.y) * k; IPZ.z = nz; ipApplyZ();
+}
+function ipZoomAt(f, cx, cy){ ipZoomTo(IPZ.z * f, cx, cy); }
 function ipShow(){
   const im = _ipItems[_ipIdx]; if(!im) return;
+  IPZ.z = 1; IPZ.x = 0; IPZ.y = 0; ipApplyZ();
   $('ipImg').src = im.dataUrl || '';
   $('ipTitle').textContent = `${(im.SessionNote ? im.SessionNote + ' - ' : '')}${String(im.ImageDate || '').slice(0,10)}  (${_ipIdx + 1}/${_ipItems.length})`;
   $('ipFilm').style.display = _ipItems.length > 1 ? '' : 'none';
