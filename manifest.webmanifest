@@ -1,0 +1,27 @@
+{
+  "name": "عيادة د ريمون لطفي",
+  "short_name": "العيادة",
+  "description": "برنامج تسجيل المرضى وملفاتهم وصورهم",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "dir": "rtl",
+  "lang": "ar",
+  "background_color": "#F7F4EC",
+  "theme_color": "#2C6E63",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    {
+      "name": "📷 تصوير حالة",
+      "short_name": "تصوير",
+      "description": "افتح الكاميرا مباشرة وصوّر صور المريض",
+      "url": "./?camera=1",
+      "icons": [{ "src": "icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    }
+  ]
+}
