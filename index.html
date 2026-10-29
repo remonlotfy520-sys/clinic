@@ -7860,16 +7860,22 @@ function getComparableDate(v){
 
 function renderDashboard(){
   const box = $('dashboardCards');
+  let recentN = 5;
+  try{ const v = parseInt(localStorage.getItem('recentCasesCount'),10); if([5,10,20].includes(v)) recentN = v; }catch(_){}
   const recent = allPatients.filter(p => p.LastOpenedAt)
     .sort((a,b) => getComparableDate(b.LastOpenedAt) - getComparableDate(a.LastOpenedAt))
-    .slice(0, 5);
+    .slice(0, recentN);
   const todayStr = new Date().toISOString().slice(0,10);
   const todayAppts = appointmentsData.filter(a => String(a.AppointmentDate || '').slice(0,10) === todayStr);
   const redFlagCount = allPatients.filter(p => p.RedFlag).length;
 
   box.innerHTML = `
     <div class="dashboard-card">
-      <h3>🕒 آخر الحالات فتحتها</h3>
+      <h3>🕒 آخر الحالات فتحتها
+        <select id="recentCasesCount" title="عدد الحالات" style="font-size:12px;padding:2px 6px;margin-inline-start:8px;border-radius:6px;">
+          ${[5,10,20].map(n=>`<option value="${n}"${n===recentN?' selected':''}>${n}</option>`).join('')}
+        </select>
+      </h3>
       ${recent.length ? recent.map(p => `<div class="dash-row" data-id="${p.id}">${escapeHtml(p.Name || '—')}</div>`).join('') : '<div class="dash-empty">لسه معملتش فتح أي مريض</div>'}
     </div>
     <div class="dashboard-card">
@@ -7881,6 +7887,10 @@ function renderDashboard(){
       ${redFlagCount > 0 ? `<div class="dash-count">${redFlagCount}</div>` : '<div class="dash-empty">مفيش حالات Red Flag حاليًا</div>'}
     </div>
   `;
+  $('recentCasesCount').addEventListener('change', e=>{
+    try{ localStorage.setItem('recentCasesCount', e.target.value); }catch(_){}
+    renderDashboard();
+  });
   box.querySelectorAll('.dash-row[data-id]').forEach(row=>{
     row.addEventListener('click', ()=> openPatient(row.dataset.id));
   });
