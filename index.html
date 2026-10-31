@@ -1508,6 +1508,7 @@ var n=localStorage.getItem('clinicName');if(n)document.title=n;}catch(e){}})();
     <span class="mv-title" id="mvTitle" data-i18n-skip>📐 الرسم والقياس</span>
     <button id="mvLang" data-i18n-skip title="Switch to English">🌐 EN</button>
     <button id="mvInsert">🖼 إدراج صورة</button>
+    <button id="mvTplBtn">🧩 قوالب Templates</button>
     <button id="mvCompareBtn">⚖ مقارنة</button>
     <input type="file" id="mvFile" accept="image/*" multiple style="display:none;">
     <input type="file" id="mvJsonFile" accept=".json,application/json" style="display:none;">
@@ -1723,6 +1724,7 @@ var n=localStorage.getItem('clinicName');if(n)document.title=n;}catch(e){}})();
         <div style="font-size:42px;">🖼️</div>
         <div>مساحة رسم فاضية — ابدأ بإدراج صورة (أشعة مثلًا) أو ارسم مباشرة</div>
         <button id="mvInsert2">🖼 إدراج صورة</button>
+        <button id="mvTpl2">🧩 قوالب Templates</button>
       </div>
     </div>
   </div>
@@ -3524,6 +3526,20 @@ const mv = { img:null, shapes:[], pending:[], pendRefs:[], tool:'line', zoom:1, 
              baseUrl:null, baseBlank:false, adj:null, adjCanvas:null, viewStack:[], prevTool:'move', zoomRect:null, loupe:false, lastWheel:0, cropTarget:null, cropRect:null, cmp:{open:false, zoom:1, cur:null, stages:[]}, sel:null, multi:new Set(), drag:null, down:null, color:'#39ff88', w:3, bound:false,
              pivot:null, rot:{ phi:-Math.PI/2, from:null, total:0 } };
 const MV_EN = {
+"🧩 قوالب Templates": "🧩 Templates",
+"🧩 القوالب الجاهزة": "🧩 Ready templates",
+"➕ إضافة قالب": "➕ Add template",
+"تمت إضافة القوالب": "Templates added",
+"تعذر إضافة القالب": "Could not add template",
+"بعض الصور تعذر إضافتها": "Some images could not be added",
+"جاري التحميل...": "Loading...",
+"تعذر تحميل القوالب": "Could not load templates",
+"لسه مفيش قوالب - اضغط \"إضافة قالب\" عشان تضيف أول واحد": "No templates yet - press \"Add template\" to add the first one",
+"مفيش قوالب متاحة حاليًا": "No templates available yet",
+"حذف القالب": "Delete template",
+"حذف القالب؟": "Delete this template?",
+"تعذر حذف القالب": "Could not delete template",
+"القوالب غير متاحة": "Templates are not available",
   '📏 عرض المقاس على الخطوط':'📏 Show length on lines', 'اكتب المقاس على الخطوط الجديدة':'Write length on new lines', '👁 الكل':'👁 All', '🙈 الكل':'🙈 All', '👁 المحدد':'👁 Selected',
   'إظهار المقاس على كل الخطوط':'Show length on all lines', 'إخفاء المقاس من كل الخطوط':'Hide length from all lines', 'إظهار/إخفاء مقاس الخط المحدد':'Show/hide length of the selected line', 'اختار خط الأول بأداة التحريك':'Select a line first with the Move tool',
   '🎬 حفظ فيديو':'🎬 Save video', '💾 كل الخطوات صور':'💾 All steps as images', 'بيشغّل كل الخطوات بالسرعة المختارة ويسجّلها فيديو':'Plays all steps at the chosen speed and records a video', 'كل خطوة صورة في ملف ZIP':'Each step as an image in a ZIP file',
@@ -4829,6 +4845,7 @@ function mvBind(){
   $('mvScaleDown').onclick = ()=> mvScaleSel(1/1.1);
   $('mvInsert').onclick = ()=> $('mvFile').click();
   $('mvInsert2').onclick = ()=> $('mvFile').click();
+  $('mvTplBtn').onclick = mvTplOpen; $('mvTpl2').onclick = mvTplOpen;
   $('mvFile').onchange = async e=>{ const fs = [...e.target.files]; e.target.value = ''; await mvInsertFiles(fs); };
   $('mvSaveStage').onclick = mvSaveStage;
   $('mvExportJson').onclick = mvDownloadJson;
@@ -4910,25 +4927,108 @@ async function mvInsertFiles(files){
     let url;
     try{ url = await new Promise((res, rej)=>{ const r = new FileReader(); r.onload = ()=>res(r.result); r.onerror = rej; r.readAsDataURL(f); }); }
     catch(_){ showToast(mvT('تعذر قراءة الصورة'), true); continue; }
-    let im; try{ im = await mvLoadImg(url); } catch(_){ showToast(mvT('ملف الصورة غير صالح'), true); continue; }
-    if(mv.baseBlank && !mv.shapes.some(s=>s.type === 'piece')){
-      mv.img = im; mv.baseUrl = url; mv.baseBlank = false; mv.adj = mvAdjDefault(); mv.adjCanvas = null;
-      const cv = $('mvCanvas'); cv.width = im.naturalWidth; cv.height = im.naturalHeight;
-      mvRefit(); mvSyncAdjUI();
-    } else {
-      const W = mv.img.naturalWidth, H = mv.img.naturalHeight;
-      const k = Math.min(1, 0.55*W/im.naturalWidth, 0.55*H/im.naturalHeight);
-      const cw = Math.max(2, Math.round(im.naturalWidth*k)), ch = Math.max(2, Math.round(im.naturalHeight*k));
-      const c = document.createElement('canvas'); c.width = cw; c.height = ch;
-      c.getContext('2d').drawImage(im, 0, 0, cw, ch);
-      const n = mv.shapes.filter(s=>s.type === 'piece').length * 30;
-      const sc0 = document.createElement('canvas'); sc0.width = cw; sc0.height = ch; sc0.getContext('2d').drawImage(c, 0, 0);
-      const sh = mvNewShape({ type:'piece', cvs:c, src:sc0, cw, ch, lpoly:[{x:-cw/2,y:-ch/2},{x:cw/2,y:-ch/2},{x:cw/2,y:ch/2},{x:-cw/2,y:ch/2}],
-                              C:{x:W/2 + n, y:H/2 + n}, theta:0, sx:1, sy:1, op:1, noOutline:true, hole:null });
-      mvSetTool('move'); mvSetSel(sh);
-    }
-    mvSyncControls(); mvUpdateHint(); mvDraw();
+    await mvInsertImageUrl(url, false);
   }
+}
+async function mvInsertImageUrl(url, forcePiece){
+  let im; try{ im = await mvLoadImg(url); } catch(_){ showToast(mvT('ملف الصورة غير صالح'), true); return; }
+  if(!forcePiece && mv.baseBlank && !mv.shapes.some(s=>s.type === 'piece')){
+    mv.img = im; mv.baseUrl = url; mv.baseBlank = false; mv.adj = mvAdjDefault(); mv.adjCanvas = null;
+    const cv = $('mvCanvas'); cv.width = im.naturalWidth; cv.height = im.naturalHeight;
+    mvRefit(); mvSyncAdjUI();
+  } else {
+    const W = mv.img.naturalWidth, H = mv.img.naturalHeight;
+    const k = Math.min(1, 0.55*W/im.naturalWidth, 0.55*H/im.naturalHeight);
+    const cw = Math.max(2, Math.round(im.naturalWidth*k)), ch = Math.max(2, Math.round(im.naturalHeight*k));
+    const c = document.createElement('canvas'); c.width = cw; c.height = ch;
+    c.getContext('2d').drawImage(im, 0, 0, cw, ch);
+    const n = mv.shapes.filter(s=>s.type === 'piece').length * 30;
+    const sc0 = document.createElement('canvas'); sc0.width = cw; sc0.height = ch; sc0.getContext('2d').drawImage(c, 0, 0);
+    const sh = mvNewShape({ type:'piece', cvs:c, src:sc0, cw, ch, lpoly:[{x:-cw/2,y:-ch/2},{x:cw/2,y:-ch/2},{x:cw/2,y:ch/2},{x:-cw/2,y:ch/2}],
+                            C:{x:W/2 + n, y:H/2 + n}, theta:0, sx:1, sy:1, op:1, noOutline:true, hole:null });
+    mvSetTool('move'); mvSetSel(sh);
+  }
+  mvSyncControls(); mvUpdateHint(); mvDraw();
+}
+
+/* ----- قوالب جاهزة (صور PNG بيضيفها الأدمن ويستخدمها كل المستخدمين) ----- */
+function mvTplHost(){ return window.__mvTpl || null; }
+async function mvTplShrink(file){
+  const url = await new Promise((res, rej)=>{ const r = new FileReader(); r.onload = ()=>res(r.result); r.onerror = rej; r.readAsDataURL(file); });
+  const im = await mvLoadImg(url);
+  let dim = 900, out = '';
+  for(let i = 0; i < 8; i++){
+    const k = Math.min(1, dim / Math.max(im.naturalWidth, im.naturalHeight));
+    const c = document.createElement('canvas'); c.width = Math.max(2, Math.round(im.naturalWidth*k)); c.height = Math.max(2, Math.round(im.naturalHeight*k));
+    c.getContext('2d').drawImage(im, 0, 0, c.width, c.height);
+    out = c.toDataURL('image/png');
+    if(out.length <= 850000) return out;
+    dim = Math.round(dim * 0.75);
+  }
+  throw new Error('big');
+}
+function mvTplEnsureModal(){
+  let m = $('mvTplModal'); if(m) return m;
+  const st = document.createElement('style');
+  st.textContent = `#mvTplModal{display:none; position:fixed; inset:0; z-index:1000020; background:rgba(0,0,0,.6); align-items:center; justify-content:center; direction:rtl;}
+  #mvTplModal.open{display:flex;}
+  #mvTplModal .tpl-box{background:var(--mv-panel, #1b2226); color:var(--mv-text, #eee); border:1px solid var(--mv-line, #333); border-radius:14px; width:min(94vw,640px); max-height:84vh; display:flex; flex-direction:column; overflow:hidden;}
+  #mvTplModal .tpl-head{display:flex; align-items:center; gap:8px; padding:12px 14px; border-bottom:1px solid var(--mv-line, #333); font-weight:700;}
+  #mvTplModal .tpl-head .sp{flex:1;}
+  #mvTplModal button{background:var(--mv-btn, #2a343a); color:var(--mv-text, #eee); border:1px solid var(--mv-line, #444); border-radius:8px; padding:6px 12px; cursor:pointer; font:inherit;}
+  #mvTplModal .tpl-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(120px,1fr)); gap:10px; padding:14px; overflow:auto;}
+  #mvTplModal .tpl-card{position:relative; border:1px solid var(--mv-line, #444); border-radius:10px; padding:6px; cursor:pointer; text-align:center; background:rgba(255,255,255,.04);}
+  #mvTplModal .tpl-card:hover{border-color:#4fd1b5;}
+  #mvTplModal .tpl-th{height:90px; border-radius:6px; background:repeating-conic-gradient(#778 0 25%, #556 0 50%) 50% / 14px 14px; display:flex; align-items:center; justify-content:center; overflow:hidden;}
+  #mvTplModal .tpl-th img{max-width:100%; max-height:100%; object-fit:contain;}
+  #mvTplModal .tpl-nm{font-size:12px; margin-top:5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  #mvTplModal .tpl-del{position:absolute; top:3px; left:3px; padding:1px 7px !important; background:#b23b3b !important; border-color:#b23b3b !important; font-size:12px;}
+  #mvTplModal .tpl-msg{padding:24px; text-align:center; opacity:.75; grid-column:1/-1;}`;
+  document.head.appendChild(st);
+  m = document.createElement('div'); m.id = 'mvTplModal';
+  m.innerHTML = '<div class="tpl-box"><div class="tpl-head"><span data-i18n-skip id="mvTplTtl"></span><span class="sp"></span><button id="mvTplAdd" style="display:none;"></button><button id="mvTplClose">✖</button></div><div class="tpl-grid" id="mvTplGrid"></div><input type="file" id="mvTplFile" accept="image/png,image/*" multiple style="display:none;"></div>';
+  document.body.appendChild(m);
+  m.addEventListener('click', e=>{ if(e.target === m) m.classList.remove('open'); });
+  $('mvTplClose').onclick = ()=> m.classList.remove('open');
+  $('mvTplAdd').onclick = ()=> $('mvTplFile').click();
+  $('mvTplFile').onchange = async e=>{
+    const fs = [...e.target.files]; e.target.value = ''; const H = mvTplHost(); if(!H || !fs.length) return;
+    let ok = 0, bad = 0;
+    for(const f of fs){
+      try{ const data = await mvTplShrink(f); await H.add(f.name.replace(/\.[^.]+$/, ''), data); ok++; }catch(_){ bad++; }
+    }
+    showToast(ok ? (mvT('تمت إضافة القوالب') + ' (' + ok + ')') : mvT('تعذر إضافة القالب'), !ok);
+    if(bad && ok) showToast(mvT('بعض الصور تعذر إضافتها'), true);
+    mvTplRender();
+  };
+  return m;
+}
+async function mvTplRender(){
+  const H = mvTplHost(), g = $('mvTplGrid'); if(!g) return;
+  g.innerHTML = '<div class="tpl-msg">' + mvT('جاري التحميل...') + '</div>';
+  let list = [];
+  try{ list = await H.list(); }catch(_){ g.innerHTML = '<div class="tpl-msg">' + mvT('تعذر تحميل القوالب') + '</div>'; return; }
+  const admin = !!(H.canManage && H.canManage());
+  if(!list.length){ g.innerHTML = '<div class="tpl-msg">' + mvT(admin ? 'لسه مفيش قوالب - اضغط "إضافة قالب" عشان تضيف أول واحد' : 'مفيش قوالب متاحة حاليًا') + '</div>'; return; }
+  g.innerHTML = '';
+  list.forEach(t=>{
+    const c = document.createElement('div'); c.className = 'tpl-card';
+    c.innerHTML = '<div class="tpl-th"><img alt=""></div><div class="tpl-nm" data-i18n-skip></div>' + (admin ? '<button class="tpl-del" title="' + mvT('حذف القالب') + '">✕</button>' : '');
+    c.querySelector('img').src = t.data; c.querySelector('.tpl-nm').textContent = t.name || '';
+    c.onclick = async ()=>{ $('mvTplModal').classList.remove('open'); await mvInsertImageUrl(t.data, true); };
+    const d = c.querySelector('.tpl-del');
+    if(d) d.onclick = async ev=>{ ev.stopPropagation(); if(!confirm(mvT('حذف القالب؟'))) return; try{ await H.remove(t.id); }catch(_){ showToast(mvT('تعذر حذف القالب'), true); } mvTplRender(); };
+    g.appendChild(c);
+  });
+}
+function mvTplOpen(){
+  const H = mvTplHost();
+  if(!H){ showToast(mvT('القوالب غير متاحة'), true); return; }
+  const m = mvTplEnsureModal();
+  $('mvTplTtl').textContent = mvT('🧩 القوالب الجاهزة');
+  const add = $('mvTplAdd'); add.textContent = mvT('➕ إضافة قالب'); add.style.display = (H.canManage && H.canManage()) ? '' : 'none';
+  m.classList.add('open');
+  mvTplRender();
 }
 function mvScaleSel(f){
   let n = 0;
@@ -10051,6 +10151,17 @@ function applyTheme(t){
   if(mc) mc.setAttribute('content', getComputedStyle(document.documentElement).getPropertyValue('--teal').trim());
 }
 document.querySelectorAll('#themeRow .theme-sw').forEach(b=> b.onclick = ()=> applyTheme(b.dataset.th));
+
+/* قوالب الاستوديو (صور PNG بيضيفها الأدمن) - محفوظة في Firestore: studioTemplates */
+window.__mvTpl = {
+  async list(){
+    const snap = await getDocs(query(collection(db, 'studioTemplates'), orderBy('createdAt')));
+    return snap.docs.map(d => ({ id:d.id, ...d.data() }));
+  },
+  async add(name, data){ await addDoc(collection(db, 'studioTemplates'), { name, data, createdAt: serverTimestamp() }); },
+  async remove(id){ await deleteDoc(doc(db, 'studioTemplates', id)); },
+  canManage(){ return isClinicAdmin(); }
+};
 
 /* لون الكتابة - بيتظبط مرة واحدة من الضبط وبيتطبق على كل خانات الكتابة */
 function getUserInk(){
