@@ -8219,7 +8219,24 @@ function getShortcuts(){
     return (saved && Object.keys(saved).length) ? saved : { ...DEFAULT_SHORTCUTS };
   }catch(e){ return { ...DEFAULT_SHORTCUTS }; }
 }
-function setShortcuts(obj){ localStorage.setItem('textShortcuts', JSON.stringify(obj)); }
+function setShortcuts(obj){
+  localStorage.setItem('textShortcuts', JSON.stringify(obj));
+  /* نسخة سحابية مشتركة بين كل الأجهزة (settings/shortcuts) */
+  try{ if(auth.currentUser) setDoc(doc(db, 'settings', 'shortcuts'), { json: JSON.stringify(obj), updatedAt: serverTimestamp() }).catch(()=>{ showToast('الاختصارات اتحفظت على الجهاز بس - تعذر حفظها أونلاين', true); }); }catch(_){}
+}
+async function syncShortcutsFromCloud(){
+  try{
+    const snap = await getDoc(doc(db, 'settings', 'shortcuts'));
+    if(snap.exists()){
+      const m = JSON.parse(snap.data().json || '{}');
+      if(m && Object.keys(m).length) localStorage.setItem('textShortcuts', JSON.stringify(m));
+    } else {
+      const local = JSON.parse(localStorage.getItem('textShortcuts') || 'null');
+      if(local && Object.keys(local).length) setShortcuts(local); /* أول مرة: ارفع اللي على الجهاز */
+    }
+    if($('shortcutsManagerModal') && $('shortcutsManagerModal').style.display === 'flex') renderShortcutsList();
+  }catch(_){ /* بنكمل بالنسخة المحلية */ }
+}
 function resolveShortcutExpansion(value){
   if(String(value).trim().toUpperCase() === 'DATE'){
     return new Date().toLocaleDateString('ar-EG', {year:'numeric', month:'long', day:'numeric'});
@@ -10217,6 +10234,7 @@ function applyClinicName(){
   $('aboutEditBtn').style.display = isClinicAdmin() ? '' : 'none';
 }
 async function loadClinicSettings(){
+  syncShortcutsFromCloud();
   try{
     const snap = await getDoc(doc(db, 'settings', 'app'));
     if(snap.exists()){
