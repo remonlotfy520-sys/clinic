@@ -1509,6 +1509,7 @@ var n=localStorage.getItem('clinicName');if(n)document.title=n;}catch(e){}})();
   <div class="mv-top mv-top-hide" id="mvTop">
     <span class="mv-title" id="mvTitle" data-i18n-skip>📐 الرسم والقياس</span>
     <button id="mvLang" data-i18n-skip title="Switch to English">🌐 EN</button>
+    <button id="mvNewProject" title="مسح كل حاجة وبدء رسمة جديدة">🆕 مشروع جديد</button>
     <button id="mvInsert">🖼 إدراج صورة</button>
     <button id="mvTplBtn">🧩 قوالب Templates</button>
     <button id="mvCompareBtn">⚖ مقارنة</button>
@@ -3530,6 +3531,12 @@ const mv = { img:null, shapes:[], pending:[], pendRefs:[], tool:'line', zoom:1, 
              baseUrl:null, baseBlank:false, adj:null, adjCanvas:null, viewStack:[], prevTool:'move', zoomRect:null, loupe:false, lastWheel:0, cropTarget:null, cropRect:null, cmp:{open:false, zoom:1, cur:null, stages:[]}, sel:null, multi:new Set(), drag:null, down:null, color:'#39ff88', w:3, bound:false,
              pivot:null, rot:{ phi:-Math.PI/2, from:null, total:0 } };
 const MV_EN = {
+"🆕 مشروع جديد": "🆕 New project",
+"مسح كل حاجة وبدء رسمة جديدة": "Clear everything and start a new drawing",
+"مشروع جديد": "New project",
+"هتتمسح كل الرسمة الحالية (الصورة والقطع والقياسات) وتبدأ مشروع جديد. المراحل المحفوظة مش هتتأثر. تكمّل؟": "The current drawing (image, pieces and measurements) will be cleared and a new project will start. Saved stages are not affected. Continue?",
+"منطقة القص صغيرة جدًا": "Cut area too small",
+"تم القص من القطعة — تقدر تحركها وتلفها وتقص منها تاني": "Cut from the piece — you can move, rotate and cut from it again",
 "🧩 قوالب Templates": "🧩 Templates",
 "🧩 القوالب الجاهزة": "🧩 Ready templates",
 "➕ إضافة قالب": "➕ Add template",
@@ -4507,10 +4514,53 @@ function mvNewShape(sh){
   mv.shapes.push(sh);
   return sh;
 }
+/* لو القص واقع على قطعة (مقصوصة أو صورة مدرجة، حتى لو متدوّرة أو متحركة) بنقص منها هي، مش من الصورة الأصلية */
+function mvCutSourcePiece(q){
+  const cx = q.reduce((a,p)=>a+p.x,0)/q.length, cy = q.reduce((a,p)=>a+p.y,0)/q.length, c = { x:cx, y:cy };
+  const pieces = mv.shapes.filter(s => s.type === 'piece');
+  if(mv.sel && mv.sel.type === 'piece' && pieces.includes(mv.sel) && (mvPieceHitTest(mv.sel, c) || q.filter(p => mvPieceHitTest(mv.sel, p)).length >= Math.ceil(q.length/2))) return mv.sel;
+  for(let i = pieces.length - 1; i >= 0; i--){
+    const sh = pieces[i];
+    if(mvPieceHitTest(sh, c) || q.filter(p => mvPieceHitTest(sh, p)).length >= Math.ceil(q.length/2)) return sh;
+  }
+  return null;
+}
+function mvCutFromPiece(sh, q){
+  const cs = Math.cos(-sh.theta), sn = Math.sin(-sh.theta), sx = sh.sx || 1, sy = sh.sy || 1;
+  const toLocal = p => { const dx = p.x - sh.C.x, dy = p.y - sh.C.y; let lx = (dx*cs - dy*sn) / sx, ly = (dx*sn + dy*cs) / sy; if(sh.fx) lx = -lx; if(sh.fy) ly = -ly; return { x: lx + sh.cw/2, y: ly + sh.ch/2 }; };
+  const ql = q.map(toLocal);
+  const bx0 = Math.max(0, Math.floor(Math.min(...ql.map(p=>p.x)))), by0 = Math.max(0, Math.floor(Math.min(...ql.map(p=>p.y))));
+  const bx1 = Math.min(sh.cw, Math.ceil(Math.max(...ql.map(p=>p.x)))), by1 = Math.min(sh.ch, Math.ceil(Math.max(...ql.map(p=>p.y))));
+  const w = bx1 - bx0, h = by1 - by0;
+  if(w < 4 || h < 4){ showToast(mvT('منطقة القص صغيرة جدًا'), true); return; }
+  const base = sh.src || sh.cvs, c = document.createElement('canvas'); c.width = w; c.height = h;
+  const x = c.getContext('2d'); x.save(); x.beginPath(); ql.forEach((p,i)=> i ? x.lineTo(p.x - bx0, p.y - by0) : x.moveTo(p.x - bx0, p.y - by0)); x.closePath(); x.clip();
+  x.drawImage(base, -bx0, -by0); x.restore();
+  const fxs = sh.fx ? -1 : 1, fys = sh.fy ? -1 : 1, lcx = (bx0 + bx1)/2 - sh.cw/2, lcy = (by0 + by1)/2 - sh.ch/2;
+  const X = lcx * sx * fxs, Y = lcy * sy * fys, ct = Math.cos(sh.theta), st = Math.sin(sh.theta);
+  const mid = { x:(bx0 + bx1)/2, y:(by0 + by1)/2 };
+  const np = mvNewShape({ type:'piece', cvs:c, src:c, cw:w, ch:h, lpoly: ql.map(p=>({ x:p.x - mid.x, y:p.y - mid.y })),
+    C:{ x: sh.C.x + X*ct - Y*st, y: sh.C.y + X*st + Y*ct }, theta:sh.theta, sx:sh.sx || 1, sy:sh.sy || 1, fx:!!sh.fx, fy:!!sh.fy, op:sh.op == null ? 1 : sh.op,
+    noOutline:!!sh.noOutline, hole:null,
+    adj: sh.adj ? { ...sh.adj } : undefined, key: sh.key ? { ...sh.key } : undefined, tint: sh.tint ? { ...sh.tint } : undefined });
+  if(!np.adj) delete np.adj; if(!np.key) delete np.key; if(!np.tint) delete np.tint;
+  mvRebuildPiece(np);
+  /* مسح الجزء المقصوص من القطعة الأصلية (إلا لو "احتفظ بالأصل" متعلّم) - بنبدّل الكانفس بنسخة جديدة عشان التراجع يشتغل */
+  if(!$('mvKeepOrig').checked){
+    const e = document.createElement('canvas'); e.width = sh.cw; e.height = sh.ch;
+    const ex = e.getContext('2d'); ex.drawImage(base, 0, 0, sh.cw, sh.ch);
+    ex.globalCompositeOperation = 'destination-out'; ex.beginPath(); ql.forEach((p,i)=> i ? ex.lineTo(p.x, p.y) : ex.moveTo(p.x, p.y)); ex.closePath(); ex.fill();
+    sh.src = e; mvRebuildPiece(sh);
+  }
+  mvSetTool('move'); mvSetSel(np); mvSyncControls(); mvUpdateHint(); mvDraw();
+  showToast(mvT('تم القص من القطعة — تقدر تحركها وتلفها وتقص منها تاني'));
+}
 function mvFinishCut(){
   const q = mv.pending;
   if(q.length < 3){ showToast(mvT('حدد 3 نقاط على الأقل حوالين الجزء'), true); return; }
   mv.pending = [];
+  const srcPc = mvCutSourcePiece(q);
+  if(srcPc){ mvCutFromPiece(srcPc, q); return; }
   let minx=1e9, miny=1e9, maxx=-1e9, maxy=-1e9;
   q.forEach(p=>{ minx=Math.min(minx,p.x); miny=Math.min(miny,p.y); maxx=Math.max(maxx,p.x); maxy=Math.max(maxy,p.y); });
   const bx = Math.floor(minx), by = Math.floor(miny), bw = Math.max(2, Math.ceil(maxx - bx)), bh = Math.max(2, Math.ceil(maxy - by));
@@ -4850,6 +4900,11 @@ function mvBind(){
   $('mvInsert').onclick = ()=> $('mvFile').click();
   $('mvInsert2').onclick = ()=> $('mvFile').click();
   $('mvTplBtn').onclick = mvTplOpen; $('mvTpl2').onclick = mvTplOpen;
+  $('mvNewProject').onclick = async ()=>{
+    if(!confirm(mvT('هتتمسح كل الرسمة الحالية (الصورة والقطع والقياسات) وتبدأ مشروع جديد. المراحل المحفوظة مش هتتأثر. تكمّل؟'))) return;
+    if(mv.cmp.open) mvCloseCompare();
+    await mvOpen(null); showToast(mvT('مشروع جديد'));
+  };
   $('mvFile').onchange = async e=>{ const fs = [...e.target.files]; e.target.value = ''; await mvInsertFiles(fs); };
   $('mvSaveStage').onclick = mvSaveStage;
   $('mvExportJson').onclick = mvDownloadJson;
