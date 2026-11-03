@@ -1584,7 +1584,7 @@ var n=localStorage.getItem('clinicName');if(n)document.title=n;}catch(e){}})();
             <select id="mvHSpeed"><option value="1800">بطيء</option><option value="900" selected>عادي</option><option value="400">سريع</option></select>
             <b class="mv-lbl" id="mvHCount" data-i18n-skip></b></div>
           <div class="mv-row" style="margin-top:4px;">
-            <button id="mvHVideo" title="بيشغّل كل الخطوات بالسرعة المختارة ويسجّلها فيديو">🎬 حفظ فيديو</button><button id="mvHZip" title="كل خطوة صورة في ملف ZIP">💾 كل الخطوات صور</button>
+            <button id="mvHVideo" title="بيشغّل كل الخطوات بالسرعة المختارة ويسجّلها فيديو">🎬 حفظ فيديو</button><button id="mvHZip" title="كل خطوة صورة في ملف ZIP">💾 كل الخطوات صور</button><button id="mvHPdf" title="كل خطوة صفحة في ملف PDF">📄 كل الخطوات PDF</button>
           </div>
           <div class="mv-lbl" style="opacity:.7;font-size:11px;">تسجيل الخطوات بيتم تلقائيًا — اضغط على أي خطوة للرجوع لها</div>
           <div id="mvHList" class="mv-hlist" data-i18n-skip></div>
@@ -1698,6 +1698,7 @@ var n=localStorage.getItem('clinicName');if(n)document.title=n;}catch(e){}})();
         <div class="mv-sh">⬇ تصدير</div>
         <div class="mv-tgrid">
           <button id="mvSave" class="wide">⬇ حفظ صورة بالقياسات</button>
+          <button id="mvSavePdf" class="wide">📄 حفظ PDF</button>
           <button id="mvSavePng" class="wide" title="بدون خلفية - المناطق الشفافة تفضل شفافة">⬇ حفظ PNG (شفاف)</button>
           <button id="mvExportJson">📦 ملف مشروع</button>
           <button id="mvImportBtn">📂 فتح ملف</button>
@@ -3531,6 +3532,13 @@ const mv = { img:null, shapes:[], pending:[], pendRefs:[], tool:'line', zoom:1, 
              baseUrl:null, baseBlank:false, adj:null, adjCanvas:null, viewStack:[], prevTool:'move', zoomRect:null, loupe:false, lastWheel:0, cropTarget:null, cropRect:null, cmp:{open:false, zoom:1, cur:null, stages:[]}, sel:null, multi:new Set(), drag:null, down:null, color:'#39ff88', w:3, bound:false,
              pivot:null, rot:{ phi:-Math.PI/2, from:null, total:0 } };
 const MV_EN = {
+"📄 كل الخطوات PDF": "📄 All steps PDF",
+"كل خطوة صفحة في ملف PDF": "Each step as a page in a PDF file",
+"📄 حفظ PDF": "📄 Save PDF",
+"تم حفظ ملف PDF": "PDF saved",
+"تعذر إنشاء ملف PDF": "Could not create PDF",
+"تم حفظ الفيديو (MP4)": "Video saved (MP4)",
+"تم حفظ الفيديو بصيغة WebM (المتصفح ده مش بيدعم MP4)": "Video saved as WebM (this browser doesn't support MP4)",
 "🆕 مشروع جديد": "🆕 New project",
 "مسح كل حاجة وبدء رسمة جديدة": "Clear everything and start a new drawing",
 "مشروع جديد": "New project",
@@ -4854,6 +4862,8 @@ function mvBind(){
       setTimeout(()=>URL.revokeObjectURL(a.href), 2000);
     }, 'image/jpeg', 0.92);
   };
+  $('mvSavePdf').onclick = mvSaveCurrentPdf;
+  $('mvHPdf').onclick = mvHSavePdf;
   $('mvSavePng').onclick = ()=>{
     mvDraw(true);
     $('mvCanvas').toBlob(blob=>{
@@ -5509,7 +5519,7 @@ function mvHExportBegin(){
   if(mvHExporting) return null;
   mvHExporting = true; return mvH.i;
 }
-function mvHExportEnd(back){ mvHGo(back); mvDraw(); mvHExporting = false; $('mvHVideo').disabled = false; $('mvHZip').disabled = false; $('mvHVideo').textContent = mvL('🎬 حفظ فيديو','🎬 Save video'); }
+function mvHExportEnd(back){ mvHGo(back); mvDraw(); mvHExporting = false; $('mvHVideo').disabled = false; $('mvHZip').disabled = false; $('mvHPdf').disabled = false; $('mvHVideo').textContent = mvL('🎬 حفظ فيديو','🎬 Save video'); }
 async function mvHSaveVideo(){
   const back = mvHExportBegin(); if(back === null) return;
   $('mvHVideo').disabled = true; $('mvHZip').disabled = true;
@@ -5520,7 +5530,7 @@ async function mvHSaveVideo(){
     const rc = document.createElement('canvas'); rc.width = cv.width; rc.height = cv.height;
     const rx = rc.getContext('2d');
     const stream = rc.captureStream(30);
-    const mime = ['video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm','video/mp4'].find(m=> MediaRecorder.isTypeSupported(m)) || '';
+    const mime = ['video/mp4;codecs=avc1.42E01E','video/mp4;codecs=avc1','video/mp4','video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm'].find(m=> MediaRecorder.isTypeSupported(m)) || '';
     const rec = new MediaRecorder(stream, mime ? { mimeType:mime, videoBitsPerSecond: 4000000 } : undefined);
     const chunks = []; rec.ondataavailable = e=>{ if(e.data && e.data.size) chunks.push(e.data); };
     const done = new Promise(res=> rec.onstop = res);
@@ -5536,7 +5546,7 @@ async function mvHSaveVideo(){
     rec.stop(); await done;
     const type = (rec.mimeType || mime || 'video/webm').split(';')[0];
     mvDl(new Blob(chunks, { type }), mvL('خطوات-الرسم-','drawing-steps-') + new Date().toISOString().slice(0,10) + (type.includes('mp4') ? '.mp4' : '.webm'));
-    showToast(mvT('تم حفظ الفيديو'));
+    showToast(type.includes('mp4') ? mvT('تم حفظ الفيديو (MP4)') : mvT('تم حفظ الفيديو بصيغة WebM (المتصفح ده مش بيدعم MP4)'));
   }catch(e){
     showToast(mvT('المتصفح ده مش بيدعم تسجيل الفيديو - استخدم "كل الخطوات صور"'), true);
   }finally{ mvHExportEnd(back); }
@@ -5564,6 +5574,57 @@ function mvZip(files){
   end.setUint32(0, 0x06054b50, true); end.setUint16(8, files.length, true); end.setUint16(10, files.length, true);
   end.setUint32(12, cenSize, true); end.setUint32(16, off, true);
   return new Blob([...parts, ...cen, end.buffer], { type:'application/zip' });
+}
+/* ===== PDF: كل صفحة صورة JPEG (من غير مكتبات خارجية) ===== */
+function mvMakePdf(pages){
+  const enc = new TextEncoder(), chunks = [], offs = []; let len = 0;
+  const push = d=>{ const u = typeof d === 'string' ? enc.encode(d) : d; chunks.push(u); len += u.length; };
+  const obj = (id, fn)=>{ offs[id] = len; push(id + ' 0 obj\n'); fn(); push('\nendobj\n'); };
+  const n = pages.length;
+  push('%PDF-1.4\n');
+  obj(1, ()=> push('<< /Type /Catalog /Pages 2 0 R >>'));
+  obj(2, ()=> push('<< /Type /Pages /Count ' + n + ' /Kids [' + pages.map((_, i)=> (3 + 3*i) + ' 0 R').join(' ') + '] >>'));
+  pages.forEach((p, i)=>{
+    const k = Math.min(1, 842 / Math.max(p.w, p.h)), W = (p.w * k).toFixed(2), H = (p.h * k).toFixed(2), pid = 3 + 3*i, cid = 4 + 3*i, iid = 5 + 3*i;
+    obj(pid, ()=> push('<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ' + W + ' ' + H + '] /Contents ' + cid + ' 0 R /Resources << /XObject << /Im0 ' + iid + ' 0 R >> >> >>'));
+    const cs = 'q ' + W + ' 0 0 ' + H + ' 0 0 cm /Im0 Do Q';
+    obj(cid, ()=> push('<< /Length ' + cs.length + ' >>\nstream\n' + cs + '\nendstream'));
+    obj(iid, ()=>{ push('<< /Type /XObject /Subtype /Image /Width ' + p.w + ' /Height ' + p.h + ' /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ' + p.jpg.length + ' >>\nstream\n'); push(p.jpg); push('\nendstream'); });
+  });
+  const xr = len, total = 3 + 3*n;
+  push('xref\n0 ' + total + '\n0000000000 65535 f \n');
+  for(let id = 1; id < total; id++) push(String(offs[id]).padStart(10, '0') + ' 00000 n \n');
+  push('trailer\n<< /Size ' + total + ' /Root 1 0 R >>\nstartxref\n' + xr + '\n%%EOF');
+  return new Blob(chunks, { type:'application/pdf' });
+}
+async function mvCanvasToPdfPage(fr){
+  const blob = await new Promise(r=> fr.toBlob(r, 'image/jpeg', 0.92));
+  return { jpg: new Uint8Array(await blob.arrayBuffer()), w: fr.width, h: fr.height };
+}
+async function mvHSavePdf(){
+  const back = mvHExportBegin(); if(back === null) return;
+  $('mvHVideo').disabled = true; $('mvHZip').disabled = true; $('mvHPdf').disabled = true;
+  try{
+    const n = mvH.snaps.length, pages = [];
+    for(let i = 0; i < n; i++){
+      $('mvHPdf').textContent = '⏺ ' + (i + 1) + '/' + n;
+      pages.push(await mvCanvasToPdfPage(mvStepFrame(i, true)));
+    }
+    mvDl(mvMakePdf(pages), mvL('خطوات-الرسم-','drawing-steps-') + new Date().toISOString().slice(0,10) + '.pdf');
+    showToast(mvT('تم حفظ ملف PDF'));
+  }catch(e){ showToast(mvT('تعذر إنشاء ملف PDF'), true); }
+  finally{ $('mvHPdf').textContent = mvL('📄 كل الخطوات PDF','📄 All steps PDF'); mvHExportEnd(back); }
+}
+async function mvSaveCurrentPdf(){
+  try{
+    mvDraw(true);
+    const cv = $('mvCanvas'), fr = document.createElement('canvas'); fr.width = cv.width; fr.height = cv.height;
+    const c = fr.getContext('2d'); c.fillStyle = '#fff'; c.fillRect(0, 0, fr.width, fr.height); c.drawImage(cv, 0, 0);
+    mvDraw();
+    const pg = await mvCanvasToPdfPage(fr);
+    mvDl(mvMakePdf([pg]), mvL('قياس-','measure-') + new Date().toISOString().slice(0,10) + '.pdf');
+    showToast(mvT('تم حفظ ملف PDF'));
+  }catch(e){ mvDraw(); showToast(mvT('تعذر إنشاء ملف PDF'), true); }
 }
 async function mvHSaveZip(){
   const back = mvHExportBegin(); if(back === null) return;
