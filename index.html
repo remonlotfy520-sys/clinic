@@ -8514,7 +8514,7 @@ function extractGoogleDocId(url){
   const m = String(url || '').match(/\/(document|spreadsheets|presentation|file)\/d\/([a-zA-Z0-9_-]+)/);
   return m ? { type: m[1], id: m[2] } : null;
 }
-function renderGoogleDocPreview(url, boxId){
+async function renderGoogleDocPreview(url, boxId){
   const box = $(boxId);
   if(!box) return;
   const info = extractGoogleDocId(url);
@@ -8522,7 +8522,7 @@ function renderGoogleDocPreview(url, boxId){
     box.innerHTML = url ? '<div class="hint">الرابط مش شكل رابط جوجل دوك/شيت معروف - اتأكد إنه رابط صحيح</div>' : '';
     return;
   }
-  const dims = { document:[920,1250], file:[920,1250], spreadsheets:[1200,820], presentation:[1000,640] }[info.type] || [920,1250];
+  // البريفيو بيتجاب كصور عن طريق Apps Script (بدل iframe جوجل اللي Safari على الآيفون بيمنعه)
   box.innerHTML = `
     <div class="gdoc-bar">
       <button type="button" class="btn btn-ghost" data-z="out" title="تصغير">➖</button>
@@ -8531,17 +8531,12 @@ function renderGoogleDocPreview(url, boxId){
       <button type="button" class="btn btn-ghost" data-z="fit" title="ملائمة الصفحة كاملة">⤢ ملائمة</button>
       <a href="${url}" target="_blank" rel="noopener" class="btn btn-ghost" style="text-decoration:none; margin-inline-start:auto;">فتح الملف كامل في تاب جديد ↗</a>
     </div>
-    <div class="gdoc-view"><div class="gdoc-sizer"><iframe class="gdoc-preview-frame" style="width:${dims[0]}px; height:${dims[1]}px;" src="${info.type === 'file' ? 'https://drive.google.com/file/d/' + info.id + '/preview' : 'https://docs.google.com/' + info.type + '/d/' + info.id + '/preview'}"></iframe></div></div>
-    <div class="hint" style="margin-top:6px;">لو البريفيو مش شغال، يبقى الملف مش متاح لـ"أي حد معاه الرابط" - غيّر إعدادات المشاركة في جوجل دوك/شيت</div>
+    <div class="gdoc-view" style="max-height:82vh; padding:6px;"><div class="hint" style="padding:14px; direction:rtl;">جاري تحميل المعاينة...</div></div>
   `;
-  const view = box.querySelector('.gdoc-view'), sizer = box.querySelector('.gdoc-sizer'), fr = box.querySelector('iframe'), pct = box.querySelector('.gdoc-pct');
+  const view = box.querySelector('.gdoc-view'), pct = box.querySelector('.gdoc-pct');
   let zoom = 1;
-  const fitScale = ()=> Math.max(0.1, Math.min((view.clientWidth - 2) / dims[0], (window.innerHeight * 0.82) / dims[1]));
   const apply = ()=>{
-    const sc = fitScale() * zoom;
-    fr.style.transform = 'scale(' + sc + ')';
-    sizer.style.width = Math.round(dims[0] * sc) + 'px'; sizer.style.height = Math.round(dims[1] * sc) + 'px';
-    view.style.height = Math.round(dims[1] * fitScale() + 2) + 'px';
+    view.querySelectorAll('img').forEach(im=> im.style.width = Math.round(zoom * 100) + '%');
     pct.textContent = Math.round(zoom * 100) + '%';
   };
   box.querySelectorAll('[data-z]').forEach(b=> b.onclick = ()=>{
@@ -8549,9 +8544,22 @@ function renderGoogleDocPreview(url, boxId){
     if(a === 'fit') zoom = 1; else zoom = Math.min(4, Math.max(0.3, zoom * (a === 'in' ? 1.25 : 0.8)));
     apply();
   });
-  apply();
-  if(window.ResizeObserver){ new ResizeObserver(()=>{ if(view.isConnected) apply(); }).observe(view); }
-  window.addEventListener('resize', ()=>{ if(view.isConnected) apply(); });
+  try{
+    const ask = async ()=>{
+      const token = await ensureAppsScriptLogin();
+      return appsScriptFetchJson(`${APPS_SCRIPT_URL}?action=getDocPreview&token=${encodeURIComponent(token)}&url=${encodeURIComponent(url)}`, 2);
+    };
+    let d = await ask();
+    if(d && d.needLogin){ setAppsScriptToken(''); d = await ask(); }
+    if(!d || d.error || !Array.isArray(d.images) || !d.images.length) throw new Error((d && d.error) || 'مفيش صور في الملف');
+    if(!view.isConnected) return;
+    view.innerHTML = d.images.map(src=> `<img src="${src}" alt="" style="display:block; width:100%; max-width:none; margin:0 auto 8px; background:#fff; border-radius:6px;">`).join('');
+    apply();
+  }catch(e){
+    if(!view.isConnected) return;
+    view.innerHTML = '<div class="hint" style="padding:14px; direction:rtl;"></div>';
+    view.firstChild.textContent = 'تعذر عرض المعاينة (' + (e && e.message ? e.message : 'خطأ') + ') - استخدم "فتح الملف كامل في تاب جديد"';
+  }
 }
 
 /* ---------- اختيار ملف جوجل دوك من فولدرات جوجل درايف ---------- */
