@@ -288,6 +288,37 @@ var n=localStorage.getItem('clinicName');if(n)document.title=n;}catch(e){}})();
   .mv-fp.ic .mv-tgrid .wide{grid-column:auto;}
   .mv-fp.min .mv-tgrid{display:none;}
   .mv-fp.min .mv-fp-h{padding-bottom:1px;}
+  /* ===== أشكال قوائم الأدوات: عايمة / لوحة ثابتة / شريط أيقونات ===== */
+  .mv-dock{display:none; flex:none; flex-direction:column; gap:8px; padding:6px; background:var(--mv-panel); border-inline-end:1px solid var(--mv-line2); overflow-y:auto; width:max-content; min-width:120px; max-width:260px;}
+  .mvmode-panel .mv-dock.open{display:flex;}
+  .mv-dock .mv-fp{position:static; box-shadow:none; max-width:100%; opacity:1;}
+  .mv-dock-head{display:flex; align-items:center; justify-content:space-between; font-weight:800; font-size:12px; color:var(--mv-text);}
+  .mv-dock-head button{padding:2px 7px !important;}
+  #mvDockFab{position:absolute; top:4px; left:110px; z-index:7; width:30px; height:30px; font-size:13px !important; display:none;}
+  .mv-overlay.ltr #mvDockFab{left:auto; right:110px;}
+  .mvmode-panel #mvDockFab{display:block;}
+  .mv-strip{display:none; flex:none; width:42px; flex-direction:column; align-items:center; gap:3px; padding:6px 4px; background:var(--mv-panel); border-inline-end:1px solid var(--mv-line2); overflow-y:auto; overflow-x:hidden;}
+  .mvmode-strip .mv-strip{display:flex;}
+  .mvmode-strip .mv-fp{display:none;}
+  .mv-overlay .mv-strip button{width:32px; height:32px; padding:0; font-size:16px; line-height:1; border-radius:8px; flex:none;}
+  .mv-strip .sp{flex:none; width:26px; height:1px; background:var(--mv-line); margin:7px 0;}
+  .mv-strip .add{margin-top:auto; border-style:dashed !important; font-weight:800;}
+  .mv-dlg-bg{position:absolute; inset:0; z-index:30; background:rgba(0,0,0,.55); display:flex; align-items:center; justify-content:center; padding:12px;}
+  .mv-dlg{background:var(--mv-panel); color:var(--mv-text); border:1px solid var(--mv-line); border-radius:12px; width:min(460px,100%); max-height:90%; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 10px 30px rgba(0,0,0,.5);}
+  .mv-dlg h3{margin:0; padding:10px 12px; font-size:14px; border-bottom:1px solid var(--mv-line2); display:flex; justify-content:space-between; align-items:center;}
+  .mv-dlg .bd{overflow:auto; padding:10px 12px; display:flex; flex-direction:column; gap:6px;}
+  .mv-dlg .row{display:flex; align-items:center; gap:6px; padding:4px 6px; border:1px solid var(--mv-line2); border-radius:8px;}
+  .mv-dlg .row .ic{width:26px; text-align:center; font-size:16px; flex:none;}
+  .mv-dlg .row .lb{flex:1; font-size:12px;}
+  .mv-dlg .row button{padding:2px 8px !important;}
+  .mv-dlg .opt{display:block; text-align:start; padding:10px !important; font-size:13px !important;}
+  .mv-dlg .opt small{display:block; opacity:.7; font-size:11px; margin-top:2px;}
+  .mv-dlg input[type=text]{width:100%; box-sizing:border-box; padding:6px 8px; border-radius:7px; border:1px solid var(--mv-line); background:var(--mv-btn); color:var(--mv-text);}
+  @media (max-width:760px){
+    .mv-dock{position:absolute; top:0; bottom:0; right:0; z-index:6; box-shadow:-6px 0 20px rgba(0,0,0,.5);}
+    .mv-overlay.ltr .mv-dock{right:auto; left:0; box-shadow:6px 0 20px rgba(0,0,0,.5);}
+  }
+
   .img-thumb{width:100%; height:110px; border-radius:10px; border:1px solid var(--line); background:var(--card2); overflow:hidden; cursor:pointer; display:flex; align-items:center; justify-content:center;}
   .img-thumb img{width:100%; height:100%; object-fit:cover;}
   .img-date{font-size:11px; color:var(--muted); text-align:center; margin-top:5px;}
@@ -1507,7 +1538,7 @@ var n=localStorage.getItem('clinicName');if(n)document.title=n;}catch(e){}})();
 
 <div id="measureViewer" class="mv-overlay">
   <button id="mvTopFab" class="mv-fab" title="القائمة">☰</button>
-  <button id="mvQUndo" class="mv-qbtn" title="↩">↩</button><button id="mvQRedo" class="mv-qbtn" title="↪">↪</button>
+  <button id="mvQUndo" class="mv-qbtn" title="↩">↩</button><button id="mvQRedo" class="mv-qbtn" title="↪">↪</button><button id="mvDockFab" class="mv-fab" title="الأدوات">🧰</button>
   <div class="mv-top mv-top-hide" id="mvTop">
     <span class="mv-title" id="mvTitle" data-i18n-skip>📐 الرسم والقياس</span>
     <button id="mvLang" data-i18n-skip title="Switch to English">🌐 EN</button>
@@ -1528,6 +1559,7 @@ var n=localStorage.getItem('clinicName');if(n)document.title=n;}catch(e){}})();
     <button id="mvToolZoom">🔍 زووم</button>
     <button id="mvViewBack">↩ العرض السابق</button>
     <button id="mvLoupeBtn">🔎 عدسة</button>
+    <button id="mvLayoutBtn" title="شكل قوائم الأدوات">🧰 شكل القوائم</button>
     <button id="mvClose" style="margin-inline-start:auto;">✖ إغلاق</button>
       <div class="mv-theme-row"><span class="mv-lbl">🎨 لون البرنامج</span>
       <button class="mv-th" data-t="green" title="أخضر" style="background:#2f8f6b"></button><button class="mv-th" data-t="blue" title="أزرق" style="background:#3b82f6"></button><button class="mv-th" data-t="purple" title="بنفسجي" style="background:#8b5cf6"></button><button class="mv-th" data-t="graphite" title="رمادي/برتقالي" style="background:#d97706"></button><button class="mv-th" data-t="light" title="فاتح" style="background:#f4f7f5"></button>
@@ -4008,6 +4040,7 @@ function mvInitFloat(){
     b2.textContent = fp.classList.contains('min') ? '▢' : '▁';
     h.addEventListener('pointerdown', e=>{
       if(e.target.closest('button')) return;
+      if(fp.parentElement && fp.parentElement.id === 'mvDock') return;
       e.preventDefault();
       const r0 = { mx:e.clientX, my:e.clientY, x:fp.offsetLeft, y:fp.offsetTop };
       h.setPointerCapture(e.pointerId);
@@ -4021,6 +4054,163 @@ function mvInitFloat(){
   window.addEventListener('resize', ()=> MV_FP_IDS.forEach(id=>{ const el = $(id); if(el) mvFpClamp(el); }));
 }
 
+
+
+// ===== شكل قوائم الأدوات: (1) عايمة (2) لوحة جنب ثابتة (3) شريط أيقونات تخصصه بنفسك =====
+const MV_LAYOUTS = ['float','panel','strip'];
+const MV_STRIP_DEFAULT = ['mvToolLine','mvToolCalib','mvToolAngle','mvToolAngle2','|','mvToolPoint','mvToolSeg','mvToolCurve','mvToolPen','mvToolText','|','mvToolMove','mvToolPan','mvToolCrop','mvToolCut','mvToolRotate','|','mvUndo','mvRedo','mvZoomFit'];
+const MV_STRIP_EXCL = /^(mvTopFab|mvQUndo|mvQRedo|mvSideHide|mvSideFab|mvDockFab|mvCmp\w*|mvInsert2|mvTpl2|calcFabBtn|stickyFabBtn|todoFabBtn|mvLayoutBtn)$/;
+const MV_ICON_FIX = { mvZoomFit:'⛶' };
+let mvStripItems = null, mvStripObs = null, mvDockOpen = true;
+function mvLayoutGet(){ try{ const v = localStorage.getItem('mvLayout'); return MV_LAYOUTS.indexOf(v) >= 0 ? v : 'float'; }catch(_){ return 'float'; } }
+function mvStripGet(){
+  if(mvStripItems) return mvStripItems;
+  try{ const v = JSON.parse(localStorage.getItem('mvStrip') || 'null'); if(Array.isArray(v)) mvStripItems = v; }catch(_){}
+  if(!mvStripItems) mvStripItems = MV_STRIP_DEFAULT.slice();
+  return mvStripItems;
+}
+function mvStripSave(){ try{ localStorage.setItem('mvStrip', JSON.stringify(mvStripItems)); }catch(_){} }
+function mvBtnLabel(b){ const t = ((b.dataset && b.dataset.ar) || b.textContent || '').trim(); return mvT(t); }
+function mvBtnIcon(b){
+  if(MV_ICON_FIX[b.id]) return MV_ICON_FIX[b.id];
+  const t = ((b.dataset && b.dataset.ar) || b.textContent || '').trim();
+  const m = t.match(/^[^؀-ۿA-Za-z0-9]+/);
+  return ((m ? m[0].trim() : '') || t.charAt(0)).trim() || '•';
+}
+function mvStripRender(){
+  const el = $('mvStrip'); if(!el) return;
+  el.innerHTML = '';
+  if(mvStripObs){ mvStripObs.disconnect(); mvStripObs = null; }
+  const pairs = [];
+  mvStripGet().forEach(id=>{
+    if(id === '|'){ const sp = document.createElement('div'); sp.className = 'sp'; el.appendChild(sp); return; }
+    const t = $(id); if(!t) return;
+    const b = document.createElement('button'); b.type = 'button'; b.textContent = mvBtnIcon(t); b.title = mvBtnLabel(t);
+    b.classList.toggle('active', t.classList.contains('active'));
+    b.onclick = ()=> t.click();
+    el.appendChild(b); pairs.push([t, b]);
+  });
+  const add = document.createElement('button'); add.type = 'button'; add.className = 'add'; add.textContent = '+'; add.title = mvL('إضافة / ترتيب أيقونات الشريط', 'Add / arrange strip icons');
+  add.onclick = mvStripManage; el.appendChild(add);
+  if(pairs.length){
+    mvStripObs = new MutationObserver(()=> pairs.forEach(([t, b]) => b.classList.toggle('active', t.classList.contains('active'))));
+    pairs.forEach(([t]) => mvStripObs.observe(t, { attributes:true, attributeFilter:['class'] }));
+  }
+}
+function mvDlg(title, build){
+  const root = $('measureViewer');
+  const bg = document.createElement('div'); bg.className = 'mv-dlg-bg';
+  const d = document.createElement('div'); d.className = 'mv-dlg';
+  const h = document.createElement('h3'); const ht = document.createElement('span'); ht.textContent = title;
+  const x = document.createElement('button'); x.type = 'button'; x.textContent = '✕';
+  h.append(ht, x);
+  const bd = document.createElement('div'); bd.className = 'bd';
+  d.append(h, bd); bg.appendChild(d); root.appendChild(bg);
+  const close = ()=>{ bg.remove(); };
+  x.onclick = close; bg.addEventListener('mousedown', e=>{ if(e.target === bg) close(); });
+  build(bd, close);
+  return close;
+}
+function mvStripManage(){
+  mvDlg(mvL('🧰 أيقونات الشريط', '🧰 Strip icons'), (bd, close)=>{
+    const draw = ()=>{
+      bd.innerHTML = '';
+      const items = mvStripGet();
+      const cur = document.createElement('div'); cur.style.cssText = 'display:flex;flex-direction:column;gap:4px;';
+      items.forEach((id, i)=>{
+        const row = document.createElement('div'); row.className = 'row';
+        const t = id === '|' ? null : $(id);
+        if(id !== '|' && !t) return;
+        const ic = document.createElement('span'); ic.className = 'ic'; ic.textContent = t ? mvBtnIcon(t) : '┄';
+        const lb = document.createElement('span'); lb.className = 'lb'; lb.textContent = t ? mvBtnLabel(t).replace(/^[^؀-ۿA-Za-z0-9]+/, '').trim() || mvBtnLabel(t) : mvL('مسافة بين مجموعتين', 'Gap between groups');
+        const up = document.createElement('button'); up.type = 'button'; up.textContent = '▲'; up.disabled = i === 0;
+        const dn = document.createElement('button'); dn.type = 'button'; dn.textContent = '▼'; dn.disabled = i === items.length - 1;
+        const rm = document.createElement('button'); rm.type = 'button'; rm.textContent = '✕';
+        up.onclick = ()=>{ [items[i-1], items[i]] = [items[i], items[i-1]]; mvStripSave(); mvStripRender(); draw(); };
+        dn.onclick = ()=>{ [items[i+1], items[i]] = [items[i], items[i+1]]; mvStripSave(); mvStripRender(); draw(); };
+        rm.onclick = ()=>{ items.splice(i, 1); mvStripSave(); mvStripRender(); draw(); };
+        row.append(ic, lb, up, dn, rm); cur.appendChild(row);
+      });
+      if(!cur.children.length){ const e = document.createElement('div'); e.className = 'mv-lbl'; e.textContent = mvL('الشريط فاضي — ضيف وظايف من تحت', 'Strip is empty — add functions below'); cur.appendChild(e); }
+      const addSp = document.createElement('button'); addSp.type = 'button'; addSp.textContent = mvL('➕ إضافة مسافة بين مجموعتين', '➕ Add a gap between groups');
+      addSp.onclick = ()=>{ items.push('|'); mvStripSave(); mvStripRender(); draw(); };
+      const rs = document.createElement('button'); rs.type = 'button'; rs.textContent = mvL('↺ رجوع للشريط الافتراضي', '↺ Reset to default strip');
+      rs.onclick = ()=>{ mvStripItems = MV_STRIP_DEFAULT.slice(); mvStripSave(); mvStripRender(); draw(); };
+      const sh = document.createElement('div'); sh.style.cssText = 'font-weight:800;font-size:12px;margin-top:6px;'; sh.textContent = mvL('➕ ضيف وظيفة من البرنامج', '➕ Add a function from the app');
+      const q = document.createElement('input'); q.type = 'text'; q.placeholder = mvL('ابحث...', 'Search...');
+      const list = document.createElement('div'); list.style.cssText = 'display:flex;flex-direction:column;gap:4px;';
+      const fill = ()=>{
+        list.innerHTML = '';
+        const f = q.value.trim().toLowerCase(), seen = {};
+        [...$('measureViewer').querySelectorAll('button[id]')].forEach(b=>{
+          if(MV_STRIP_EXCL.test(b.id) || seen[b.id] || items.indexOf(b.id) >= 0) return;
+          seen[b.id] = 1;
+          const lab = mvBtnLabel(b); if(!lab) return;
+          if(f && lab.toLowerCase().indexOf(f) < 0) return;
+          const row = document.createElement('div'); row.className = 'row'; row.style.cursor = 'pointer';
+          const ic = document.createElement('span'); ic.className = 'ic'; ic.textContent = mvBtnIcon(b);
+          const lb = document.createElement('span'); lb.className = 'lb'; lb.textContent = lab.replace(/^[^؀-ۿA-Za-z0-9]+/, '').trim() || lab;
+          const pl = document.createElement('span'); pl.textContent = '＋'; pl.style.fontWeight = '800';
+          row.append(ic, lb, pl);
+          row.onclick = ()=>{ items.push(b.id); mvStripSave(); mvStripRender(); draw(); };
+          list.appendChild(row);
+        });
+        if(!list.children.length){ const e = document.createElement('div'); e.className = 'mv-lbl'; e.textContent = mvL('مفيش نتايج', 'No results'); list.appendChild(e); }
+      };
+      q.oninput = fill; fill();
+      const done = document.createElement('button'); done.type = 'button'; done.className = 'active'; done.textContent = mvL('✔ تم', '✔ Done'); done.onclick = close;
+      bd.append(cur, addSp, rs, sh, q, list, done);
+    };
+    draw();
+  });
+}
+function mvLayoutSet(mode, save){
+  if(MV_LAYOUTS.indexOf(mode) < 0) mode = 'float';
+  const root = $('measureViewer'), body = root.querySelector('.mv-body'), dock = $('mvDock');
+  mvUiRefit(()=>{
+    MV_LAYOUTS.forEach(m => root.classList.toggle('mvmode-' + m, m === mode));
+    MV_FP_IDS.forEach(id=>{ const el = $(id); if(el) (mode === 'panel' ? dock : body).appendChild(el); });
+    dock.classList.toggle('open', mode === 'panel' && mvDockOpen);
+    if(mode === 'float') mvFpLayout();
+    if(mode === 'strip') mvStripRender();
+  });
+  if(save){ try{ localStorage.setItem('mvLayout', mode); }catch(_){} }
+}
+function mvDockToggle(force){
+  mvDockOpen = force === undefined ? !mvDockOpen : force;
+  try{ localStorage.setItem('mvDockOpen', mvDockOpen ? '1' : '0'); }catch(_){}
+  mvUiRefit(()=> $('mvDock').classList.toggle('open', mvLayoutGet() === 'panel' && mvDockOpen));
+}
+function mvLayoutChoose(){
+  mvDlg(mvL('🧰 شكل قوائم الأدوات', '🧰 Tool menus layout'), (bd, close)=>{
+    const cur = mvLayoutGet();
+    [
+      ['float', mvL('🪟 عايمة', '🪟 Floating'), mvL('القوائم بتتحرك بالسحب فوق الرسمة (الشكل الحالي)', 'Draggable panels over the canvas')],
+      ['panel', mvL('📌 لوحة جنب ثابتة', '📌 Fixed side panel'), mvL('قايمة ثابتة جنب الشاشة، بتظهر وتختفي بأيقونة 🧰 فوق', 'Docked panel, shown/hidden with the 🧰 icon on top')],
+      ['strip', mvL('🧰 شريط أيقونات', '🧰 Icon strip'), mvL('شريط أيقونات جنب الشاشة، بتضيف فيه أي وظيفة بزرار + وتحط مسافات بين المجموعات', 'Icon strip on the side; add any function with + and gaps between groups')]
+    ].forEach(([m, t, d])=>{
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'opt' + (m === cur ? ' active' : '');
+      b.innerHTML = ''; const s = document.createElement('span'); s.textContent = t; const sm = document.createElement('small'); sm.textContent = d; b.append(s, sm);
+      b.onclick = ()=>{ mvLayoutSet(m, true); close(); };
+      bd.appendChild(b);
+    });
+  });
+}
+function mvLayoutInit(){
+  if($('mvDock')) return;
+  const body = document.querySelector('#measureViewer .mv-body');
+  try{ const v = localStorage.getItem('mvDockOpen'); mvDockOpen = v === null ? !mvIsMobile() : v === '1'; }catch(_){}
+  const dock = document.createElement('div'); dock.className = 'mv-dock'; dock.id = 'mvDock';
+  const head = document.createElement('div'); head.className = 'mv-dock-head';
+  const ht = document.createElement('span'); ht.textContent = '🧰'; const hx = document.createElement('button'); hx.type = 'button'; hx.textContent = '✕';
+  hx.onclick = ()=> mvDockToggle(false); head.append(ht, hx); dock.appendChild(head);
+  const strip = document.createElement('div'); strip.className = 'mv-strip'; strip.id = 'mvStrip';
+  body.prepend(dock); body.prepend(strip);
+  $('mvDockFab').onclick = ()=> mvDockToggle();
+  $('mvLayoutBtn').onclick = mvLayoutChoose;
+  $('mvLang').addEventListener('click', ()=> setTimeout(()=>{ mvStripRender(); }, 80));
+  mvLayoutSet(mvLayoutGet(), false);
+}
 
 // ===== إظهار/إخفاء المقاس على الخطوط =====
 function mvLenTargets(){ return [...(mv.multi && mv.multi.size ? mv.multi : (mv.sel ? [mv.sel] : []))].filter(sh=> sh.type === 'line' || sh.type === 'calib' || sh.type === 'curve'); }
@@ -5013,7 +5203,7 @@ function mvBind(){
   $('mvSideHide').onclick = ()=> mvToggleSide(false);
   $('mvSideFab').onclick = ()=> mvToggleSide(true);
   $('mvTopFab').onclick = ()=> mvToggleTop();
-  mvInitFloat(); mvLenInit();
+  mvInitFloat(); mvLenInit(); mvLayoutInit();
   $('mvQUndo').onclick = ()=> $('mvUndo').click();
   $('mvQRedo').onclick = ()=> $('mvRedo').click();
   document.querySelectorAll('.mv-th').forEach(b => b.onclick = ()=> mvApplyTheme(b.dataset.t, true));
