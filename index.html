@@ -120,8 +120,9 @@ var n=localStorage.getItem('clinicName');if(n)document.title=n;}catch(e){}})();
   .tab-panel.active{display:block;}
   .exam-card{margin-bottom:18px;}
   .collapsible-header{cursor:pointer; display:flex; align-items:center; justify-content:space-between; user-select:none;}
-  .collapsible-header .collapse-arrow{transition:transform .15s ease; font-size:12px; color:var(--muted); flex-shrink:0; margin-right:8px;}
-  .collapsible-header.open .collapse-arrow{transform:rotate(180deg);}
+  .collapsible-header .collapse-arrow{font-size:0; flex-shrink:0; margin-right:8px;}
+  .collapsible-header .collapse-arrow::before{content:'🔺'; font-size:13px;}
+  .collapsible-header.open .collapse-arrow::before{content:'🔻';}
   .collapsible-content{display:none; margin-top:12px;}
   .collapsible-content.open{display:block;}
   .drv-modal{display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:300; align-items:center; justify-content:center; padding:16px;}
@@ -1010,7 +1011,7 @@ var n=localStorage.getItem('clinicName');if(n)document.title=n;}catch(e){}})();
 
               <div class="field">
                 <label>توصيات حسب التشخيص</label>
-                <div class="hint" style="margin-bottom:8px;">دوس على تشخيص وهتتكتب كل توصياته تلقائي تحت</div>
+                <div class="hint" style="margin-bottom:8px;">اختار التشخيص من القايمة وهتتكتب كل توصياته تلقائي تحت</div>
                 <div class="chips" id="diagnosisRecsList"></div>
               </div>
 
@@ -2086,6 +2087,87 @@ async function tryFetchListsRemote(silent){
   }
 }
 
+/* ---------- بحث فوري أثناء الكتابة في الأشعة والتحاليل ---------- */
+function attachLiveSuggest(elId, getList){
+  const el = $(elId); if(!el || el._liveSuggest) return; el._liveSuggest = true;
+  const editable = el.isContentEditable;
+  const norm = t => String(t||'').toLowerCase().replace(/[ً-ْـ]/g,'').replace(/[أإآٱ]/g,'ا').replace(/ى/g,'ي').replace(/ة/g,'ه').trim();
+  let box = null, items = [], active = -1;
+  const hide = ()=>{ if(box){ box.remove(); box = null; } items = []; active = -1; };
+  function currentLine(){
+    if(!editable){
+      const v = el.value, pos = el.selectionStart || 0;
+      const a = v.lastIndexOf('\n', pos - 1) + 1; let b = v.indexOf('\n', pos); if(b < 0) b = v.length;
+      return { text: v.slice(a, b), a, b };
+    }
+    const sel = window.getSelection();
+    if(!sel || !sel.rangeCount || !el.contains(sel.anchorNode)) return null;
+    const n = sel.anchorNode;
+    if(n.nodeType !== 3) return { text:'', node:null };
+    return { text: n.data, node: n };
+  }
+  function choose(val){
+    const L = currentLine(); if(!L) return;
+    if(!editable){
+      el.value = el.value.slice(0, L.a) + val + el.value.slice(L.b);
+      const pos = L.a + val.length; el.setSelectionRange(pos, pos);
+      el.dispatchEvent(new Event('input', { bubbles:true }));
+    } else if(L.node){
+      L.node.data = val;
+      const r = document.createRange(); r.setStart(L.node, val.length); r.collapse(true);
+      const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(r);
+      el.dispatchEvent(new Event('input', { bubbles:true }));
+    }
+    hide(); el.focus();
+  }
+  function paint(){
+    if(!box) return;
+    box.innerHTML = '';
+    items.forEach((it, i)=>{
+      const d = document.createElement('div');
+      d.textContent = it;
+      d.style.cssText = 'padding:9px 12px;cursor:pointer;border-bottom:1px solid var(--line);font-size:14px;' + (i === active ? 'background:var(--teal);color:#fff;' : '');
+      d.addEventListener('mousedown', e=>{ e.preventDefault(); choose(it); });
+      box.appendChild(d);
+    });
+  }
+  function update(){
+    const L = currentLine();
+    const q = L ? norm(L.text) : '';
+    if(q.length < 1){ hide(); return; }
+    const toks = q.split(/\s+/).filter(Boolean);
+    const list = (getList() || []).filter(x => { const n = norm(x); return n !== q && toks.every(t => n.includes(t)); });
+    if(!list.length){ hide(); return; }
+    items = list.slice(0, 30); active = -1;
+    if(!box){
+      box = document.createElement('div');
+      box.style.cssText = 'position:fixed;z-index:700;background:var(--card);border:1px solid var(--teal);border-radius:10px;box-shadow:0 6px 20px rgba(0,0,0,.18);max-height:230px;overflow:auto;direction:rtl;text-align:right;';
+      document.body.appendChild(box);
+    }
+    const r = el.getBoundingClientRect();
+    box.style.left = r.left + 'px'; box.style.width = r.width + 'px';
+    const below = window.innerHeight - r.bottom;
+    if(below < 180 && r.top > below){ box.style.top = ''; box.style.bottom = (window.innerHeight - r.top + 4) + 'px'; }
+    else { box.style.bottom = ''; box.style.top = (r.bottom + 4) + 'px'; }
+    paint();
+  }
+  el.addEventListener('input', update);
+  el.addEventListener('keyup', e=>{ if(['ArrowLeft','ArrowRight','Home','End'].includes(e.key)) update(); });
+  el.addEventListener('keydown', e=>{
+    if(!box) return;
+    if(e.key === 'ArrowDown'){ e.preventDefault(); active = (active + 1) % items.length; paint(); }
+    else if(e.key === 'ArrowUp'){ e.preventDefault(); active = (active - 1 + items.length) % items.length; paint(); }
+    else if(e.key === 'Enter' && active >= 0){ e.preventDefault(); choose(items[active]); }
+    else if(e.key === 'Escape'){ hide(); }
+  });
+  el.addEventListener('blur', ()=> setTimeout(hide, 150));
+  window.addEventListener('scroll', hide, true);
+}
+attachLiveSuggest('rxRadiologyReq', ()=> RADIOLOGY_LIST);
+attachLiveSuggest('rxLabsReq', ()=> LABS_LIST);
+attachLiveSuggest('vRadiology', ()=> RADIOLOGY_LIST);
+attachLiveSuggest('vLabTests', ()=> LABS_LIST);
+
 function refreshAllListUi(){
   populateOperationDropdowns();
   buildMedicineRows();
@@ -2094,7 +2176,10 @@ function refreshAllListUi(){
   renderDropdownAppendToTextarea('rxLabsReqSelect', 'rxLabsReq', LABS_LIST);
   renderDropdownAppendToTextarea('vRadiologySelect', 'vRadiology', RADIOLOGY_LIST);
   renderDropdownAppendToTextarea('vLabTestsSelect', 'vLabTests', LABS_LIST);
-  renderChips('ptInterventions', PT_LIST);
+  
+
+
+renderChips('ptInterventions', PT_LIST);
   renderPresetRxList();
   renderDiagnosisRecsList();
   renderPresetReportsList();
@@ -2323,14 +2408,17 @@ function renderPresetRxList(){
 function renderDiagnosisRecsList(){
   const box = $('diagnosisRecsList');
   if(!DIAGNOSIS_RECS.length){ box.innerHTML = '<div style="color:#aaa; font-size:13px;">لسه مفيش توصيات مربوطة بتشخيص</div>'; return; }
-  box.innerHTML = DIAGNOSIS_RECS.map((d,i) => `<div class="chip" data-idx="${i}">${escapeHtml(d.diagnosis)}</div>`).join('');
-  box.querySelectorAll('.chip').forEach(chip=>{
-    chip.addEventListener('click', ()=>{
-      const entry = DIAGNOSIS_RECS[chip.dataset.idx];
-      entry.recommendations.forEach(r => addChipTag('rxRecommendations', r));
-      if(!$('rxDiagnosis').value.trim()) $('rxDiagnosis').value = entry.diagnosis;
-    });
-  });
+  box.className = '';
+  box.innerHTML = `<select id="diagnosisRecsSelect" class="dropdown-add-select"><option value="">— اختار التشخيص —</option>` +
+    DIAGNOSIS_RECS.map((d,i) => `<option value="${i}">${escapeHtml(d.diagnosis)}</option>`).join('') + `</select>`;
+  const sel = $('diagnosisRecsSelect');
+  sel.onchange = ()=>{
+    if(sel.value === '') return;
+    const entry = DIAGNOSIS_RECS[sel.value];
+    (entry.recommendations || []).forEach(r => addChipTag('rxRecommendations', r));
+    if(!$('rxDiagnosis').value.trim()) $('rxDiagnosis').value = entry.diagnosis;
+    sel.value = '';
+  };
 }
 function renderPresetReportsList(){
   const box = $('presetReportsList');
@@ -10543,7 +10631,7 @@ function startBookingsWatch(){
 function stopBookingsWatch(){ if(_bkUnsub){ _bkUnsub(); _bkUnsub = null; } TODAY_BOOKINGS = []; }
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && auth.currentUser && _bkDay && _bkDay !== localDateStr()) startBookingsWatch(); });
 
-let BK = { date: '', tab: 'day', list: [], upcoming: [], unsub: null };
+let BK = { date: '', tab: 'day', list: [], upcoming: [], unsub: null, calMonth: '', calCounts: {} };
 async function openBookedPatient(pid){
   let p = allPatients.find(x => x.id === pid);
   if(!p){ showToast('جاري تحميل الملف...'); await loadPatientsList(); p = allPatients.find(x => x.id === pid); }
@@ -10562,6 +10650,7 @@ function bookingsEnsure(){
     </div>
     <div style="display:flex;gap:6px;padding:10px 16px 0;">
       <button class="btn btn-primary" id="bkTabDay" style="flex:1;">📋 حجز يوم</button>
+      <button class="btn btn-ghost" id="bkTabCal" style="flex:1;">🗓 تقويم</button>
       <button class="btn btn-ghost" id="bkTabUp" style="flex:1;">⏳ كل المنتظرين</button>
       <button class="btn btn-ghost" id="bkTabHist" style="flex:1;">📚 السجل</button>
     </div>
@@ -10574,6 +10663,12 @@ function bookingsEnsure(){
       </div>
       <button class="btn btn-primary" id="bkHGo" style="width:100%;">🔍 عرض السجل</button>
     </div>
+    <div id="bkCalBar" style="display:none;align-items:center;gap:6px;padding:10px 16px;">
+      <button class="btn btn-ghost" id="bkCalPrev" style="padding:6px 12px;">▶</button>
+      <div id="bkCalTitle" style="flex:1;text-align:center;font-weight:800;font-size:16px;"></div>
+      <button class="btn btn-ghost" id="bkCalNext" style="padding:6px 12px;">◀</button>
+      <button class="btn btn-ghost" id="bkCalToday" style="padding:6px 12px;">الشهر ده</button>
+    </div>
     <div id="bkDayBar" style="display:flex;align-items:center;gap:6px;padding:10px 16px;">
       <button class="btn btn-ghost" id="bkPrev" style="padding:6px 12px;">▶</button>
       <input type="date" id="bkDateIn" style="flex:1;">
@@ -10585,7 +10680,12 @@ function bookingsEnsure(){
   document.body.appendChild(m);
   m.addEventListener('click', e=>{ if(e.target === m) bookingsClose(); });
   $('bkClose').onclick = bookingsClose;
-  const setTab = t=>{ BK.tab = t; $('bkTabDay').className = 'btn ' + (t === 'day' ? 'btn-primary' : 'btn-ghost'); $('bkTabUp').className = 'btn ' + (t === 'up' ? 'btn-primary' : 'btn-ghost'); $('bkTabHist').className = 'btn ' + (t === 'hist' ? 'btn-primary' : 'btn-ghost'); $('bkDayBar').style.display = t === 'day' ? 'flex' : 'none'; $('bkHistBar').style.display = t === 'hist' ? 'flex' : 'none'; bookingsLoad(); };
+  const setTab = t=>{ BK.tab = t; ['Day','Cal','Up','Hist'].forEach(k=> $('bkTab'+k).className = 'btn ' + (t === k.toLowerCase() ? 'btn-primary' : 'btn-ghost')); $('bkDayBar').style.display = t === 'day' ? 'flex' : 'none'; $('bkHistBar').style.display = t === 'hist' ? 'flex' : 'none'; $('bkCalBar').style.display = t === 'cal' ? 'flex' : 'none'; if(t === 'day') $('bkDateIn').value = BK.date; bookingsLoad(); };
+  BK.setTab = setTab;
+  $('bkTabCal').onclick = ()=>{ BK.calMonth = (BK.date || localDateStr()).slice(0,7); setTab('cal'); };
+  const calShift = n=>{ const [y,mo] = BK.calMonth.split('-').map(Number); const d = new Date(y, mo - 1 + n, 1); BK.calMonth = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0'); bookingsLoad(); };
+  $('bkCalPrev').onclick = ()=> calShift(-1); $('bkCalNext').onclick = ()=> calShift(1);
+  $('bkCalToday').onclick = ()=>{ BK.calMonth = localDateStr().slice(0,7); bookingsLoad(); };
   $('bkTabDay').onclick = ()=> setTab('day'); $('bkTabUp').onclick = ()=> setTab('up'); $('bkTabHist').onclick = ()=> setTab('hist');
   $('bkHGo').onclick = bookingsHistLoad;
   $('bkHName').addEventListener('keydown', e=>{ if(e.key === 'Enter') bookingsHistLoad(); });
@@ -10600,7 +10700,7 @@ function bookingsClose(){ const m = $('bookingsModal'); if(m) m.style.display = 
 function bookingsOpen(){
   $('mainMenuDropdown').classList.remove('open');
   const m = bookingsEnsure(); BK.date = localDateStr(); BK.tab = 'day';
-  $('bkDateIn').value = BK.date; $('bkTabDay').className = 'btn btn-primary'; $('bkTabUp').className = 'btn btn-ghost'; $('bkTabHist').className = 'btn btn-ghost'; $('bkDayBar').style.display = 'flex'; $('bkHistBar').style.display = 'none';
+  $('bkDateIn').value = BK.date; $('bkTabDay').className = 'btn btn-primary'; $('bkTabUp').className = 'btn btn-ghost'; $('bkTabHist').className = 'btn btn-ghost'; $('bkTabCal').className = 'btn btn-ghost'; $('bkCalBar').style.display = 'none'; $('bkDayBar').style.display = 'flex'; $('bkHistBar').style.display = 'none';
   if(!$('bkHFrom').value){ const d = new Date(); $('bkHFrom').value = localDateStr(new Date(d.getFullYear(), d.getMonth(), 1)); $('bkHTo').value = localDateStr(d); }
   m.style.display = 'flex'; bookingsLoad();
 }
@@ -10634,6 +10734,17 @@ function bookingsLoad(){
   if(BK.unsub){ BK.unsub(); BK.unsub = null; }
   if(BK.tab === 'hist'){ $('bkBody').innerHTML = '<div class="hint" style="padding:16px;">اختار الفترة واضغط "عرض السجل".</div>'; return; }
   $('bkBody').innerHTML = '<div class="hint" style="padding:16px;">جاري التحميل...</div>';
+  if(BK.tab === 'cal'){
+    if(!BK.calMonth) BK.calMonth = localDateStr().slice(0,7);
+    const [cy, cm] = BK.calMonth.split('-').map(Number), last = new Date(cy, cm, 0).getDate();
+    try{
+      BK.unsub = onSnapshot(query(collection(db, 'bookings'), where('date', '>=', BK.calMonth + '-01'), where('date', '<=', BK.calMonth + '-' + String(last).padStart(2,'0'))), snap=>{
+        BK.calCounts = {}; snap.docs.forEach(d=>{ const b = d.data(); if(!b.date) return; const c = BK.calCounts[b.date] || (BK.calCounts[b.date] = { n:0, w:0 }); c.n++; if(b.status !== 'done') c.w++; });
+        bookingsRender();
+      }, e=>{ $('bkBody').innerHTML = '<div class="empty-msg">تعذر تحميل التقويم: ' + escapeHtml(e.code || '') + '</div>'; });
+    }catch(e){ $('bkBody').innerHTML = '<div class="empty-msg">تعذر تحميل التقويم</div>'; }
+    return;
+  }
   const q = BK.tab === 'day' ? query(collection(db, 'bookings'), where('date', '==', BK.date)) : query(collection(db, 'bookings'), where('date', '>=', localDateStr()));
   try{
     BK.unsub = onSnapshot(q, snap=>{
@@ -10657,6 +10768,26 @@ function bookingsRender(){
       <button class="btn btn-ghost bk-st" data-id="${escapeHtml(b.id)}" data-st="${escapeHtml(b.status || 'waiting')}" style="padding:5px 9px;font-size:12px;white-space:nowrap;">${BK_STATUS[b.status] || BK_STATUS.waiting}</button>
       <button class="btn btn-outline-red bk-del" data-id="${escapeHtml(b.id)}" style="padding:5px 9px;font-size:12px;">✕</button>
     </div>`;
+  if(BK.tab === 'cal'){
+    const [cy, cm] = BK.calMonth.split('-').map(Number), days = new Date(cy, cm, 0).getDate();
+    const MN = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+    $('bkCalTitle').textContent = MN[cm - 1] + ' ' + cy;
+    const first = (new Date(cy, cm - 1, 1).getDay() + 1) % 7, today = localDateStr(); /* السبت أول الأسبوع */
+    const WD = ['سبت','أحد','اثنين','ثلاثاء','أربعاء','خميس','جمعة'];
+    let total = 0; Object.values(BK.calCounts).forEach(c => total += c.n);
+    let h = `<div class="hint" style="padding:2px 0 8px;">إجمالي حجوزات الشهر: <b>${total}</b> · دوس على يوم يفتحلك حجوزاته</div><div style="display:grid;grid-template-columns:repeat(7,1fr);gap:5px;direction:rtl;">` + WD.map(w => `<div style="text-align:center;font-size:12px;font-weight:800;color:var(--muted);">${w}</div>`).join('');
+    for(let i = 0; i < first; i++) h += '<div></div>';
+    for(let d = 1; d <= days; d++){
+      const ds = BK.calMonth + '-' + String(d).padStart(2,'0'), c = BK.calCounts[ds], isT = ds === today;
+      h += `<div class="bk-cal-day" data-d="${ds}" style="cursor:pointer;min-height:58px;border:${isT ? '2px solid var(--teal)' : '1px solid var(--line)'};border-radius:10px;padding:4px;display:flex;flex-direction:column;align-items:center;justify-content:space-between;background:${c ? 'var(--card2)' : 'transparent'};">
+        <span style="font-weight:${isT ? 800 : 600};font-size:13px;">${d}</span>
+        ${c ? `<span title="${c.w} منتظر" style="background:var(--teal);color:#fff;border-radius:999px;font-size:12px;font-weight:800;padding:1px 8px;min-width:22px;text-align:center;">${c.n}</span>` : '<span style="height:19px;"></span>'}
+      </div>`;
+    }
+    body.innerHTML = h + '</div>';
+    body.querySelectorAll('.bk-cal-day').forEach(el => el.onclick = ()=>{ BK.date = el.dataset.d; BK.setTab('day'); });
+    return;
+  }
   if(BK.tab === 'day'){
     const w = BK.list.filter(b => b.status !== 'done').length;
     body.innerHTML = `<div class="hint" style="padding:4px 0 8px;">${BK.list.length} حجز · ${w} منتظر</div>` + (BK.list.length ? BK.list.map((b,i) => row(b, i, false)).join('') : '<div class="empty-msg">مفيش حجوزات في اليوم ده</div>');
