@@ -4077,8 +4077,25 @@ function mvBtnIcon(b){
   const m = t.match(/^[^؀-ۿA-Za-z0-9]+/);
   return ((m ? m[0].trim() : '') || t.charAt(0)).trim() || '•';
 }
+function mvStripTip(btn){
+  let tip = $('mvStripTip');
+  if(!btn){ if(tip) tip.style.display = 'none'; return; }
+  const root = $('measureViewer');
+  if(!tip){
+    tip = document.createElement('div'); tip.id = 'mvStripTip';
+    tip.style.cssText = 'position:fixed;z-index:60;pointer-events:none;background:#000d;color:#fff;border:1px solid var(--mv-line);border-radius:7px;padding:5px 10px;font-size:12px;white-space:nowrap;box-shadow:0 4px 12px rgba(0,0,0,.4);';
+    root.appendChild(tip);
+  }
+  tip.textContent = btn.dataset.tip || ''; tip.style.display = 'block';
+  const r = btn.getBoundingClientRect(), w = tip.offsetWidth, h = tip.offsetHeight;
+  const sr = $('mvStrip').getBoundingClientRect(), fromRight = sr.left > window.innerWidth / 2;
+  let x = fromRight ? r.left - w - 8 : r.right + 8;
+  x = Math.max(4, Math.min(window.innerWidth - w - 4, x));
+  tip.style.left = x + 'px'; tip.style.top = Math.max(4, r.top + (r.height - h) / 2) + 'px';
+}
 function mvStripRender(){
   const el = $('mvStrip'); if(!el) return;
+  mvStripTip(null);
   el.innerHTML = '';
   if(mvStripObs){ mvStripObs.disconnect(); mvStripObs = null; }
   const pairs = [];
@@ -4088,6 +4105,10 @@ function mvStripRender(){
     const b = document.createElement('button'); b.type = 'button'; b.textContent = mvBtnIcon(t); b.title = mvBtnLabel(t);
     b.classList.toggle('active', t.classList.contains('active'));
     b.onclick = ()=> t.click();
+    b.removeAttribute('title'); b.dataset.tip = mvBtnLabel(t);
+    b.addEventListener('mouseenter', ()=> mvStripTip(b)); b.addEventListener('mouseleave', ()=> mvStripTip(null));
+    b.addEventListener('focus', ()=> mvStripTip(b)); b.addEventListener('blur', ()=> mvStripTip(null));
+    b.addEventListener('touchstart', ()=>{ mvStripTip(b); setTimeout(()=> mvStripTip(null), 1400); }, { passive:true });
     el.appendChild(b); pairs.push([t, b]);
   });
   const add = document.createElement('button'); add.type = 'button'; add.className = 'add'; add.textContent = '+'; add.title = mvL('إضافة / ترتيب أيقونات الشريط', 'Add / arrange strip icons');
