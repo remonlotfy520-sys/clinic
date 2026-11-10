@@ -290,8 +290,20 @@ var n=localStorage.getItem('clinicName');if(n)document.title=n;}catch(e){}})();
   .mv-fp.min .mv-fp-h{padding-bottom:1px;}
   /* ===== أشكال قوائم الأدوات: عايمة / لوحة ثابتة / شريط أيقونات ===== */
   .mv-dock{display:none; flex:none; flex-direction:column; gap:8px; padding:6px; background:var(--mv-panel); border-inline-end:1px solid var(--mv-line2); overflow-y:auto; width:max-content; min-width:120px; max-width:260px;}
-  .mvmode-panel .mv-dock.open{display:flex;}
+  .mvmode-panel .mv-dock.open, .mvmode-strip .mv-dock.open{display:flex;}
+  .mvmode-strip .mv-dock .mv-fp{display:block;}
+  .mv-strip, .mv-dock{position:relative; z-index:8;}
+  .mv-stage{position:relative; z-index:0;}
   .mv-dock .mv-fp{position:static; box-shadow:none; max-width:100%; opacity:1;}
+  #mvDock{width:212px; min-width:212px; max-width:212px; box-sizing:border-box;}
+  #mvDock .mv-fp{width:100%; max-width:100%; box-sizing:border-box; margin:0;}
+  #mvDock .mv-fp .mv-tgrid{grid-template-columns:repeat(2,minmax(0,1fr));}
+  #mvDock .mv-fp .mv-tgrid button{width:100%; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  #mvDock .mv-fp .mv-tgrid .wide{grid-column:1/-1;}
+  #mvDock .mv-fp.ic .mv-tgrid{grid-template-columns:repeat(4,minmax(0,1fr));}
+  #mvDock .mv-fp.ic .mv-tgrid button{width:100%; height:34px;}
+  #mvDock .mv-fp.ic .mv-tgrid .wide{grid-column:auto;}
+
   .mv-dock-head{display:flex; align-items:center; justify-content:space-between; font-weight:800; font-size:12px; color:var(--mv-text);}
   .mv-dock-head button{padding:2px 7px !important;}
   #mvDockFab{position:absolute; top:4px; left:110px; z-index:7; width:30px; height:30px; font-size:13px !important; display:none;}
@@ -4061,7 +4073,7 @@ const MV_LAYOUTS = ['float','panel','strip'];
 const MV_STRIP_DEFAULT = ['mvToolLine','mvToolCalib','mvToolAngle','mvToolAngle2','|','mvToolPoint','mvToolSeg','mvToolCurve','mvToolPen','mvToolText','|','mvToolMove','mvToolPan','mvToolCrop','mvToolCut','mvToolRotate','|','mvUndo','mvRedo','mvZoomFit'];
 const MV_STRIP_EXCL = /^(mvTopFab|mvQUndo|mvQRedo|mvSideHide|mvSideFab|mvDockFab|mvCmp\w*|mvInsert2|mvTpl2|calcFabBtn|stickyFabBtn|todoFabBtn|mvLayoutBtn)$/;
 const MV_ICON_FIX = { mvZoomFit:'⛶' };
-let mvStripItems = null, mvStripObs = null, mvDockOpen = true;
+let mvStripItems = null, mvStripObs = null, mvDockOpen = true, mvStripFull = false;
 function mvLayoutGet(){ try{ const v = localStorage.getItem('mvLayout'); return MV_LAYOUTS.indexOf(v) >= 0 ? v : 'float'; }catch(_){ return 'float'; } }
 function mvStripGet(){
   if(mvStripItems) return mvStripItems;
@@ -4099,6 +4111,13 @@ function mvStripRender(){
   el.innerHTML = '';
   if(mvStripObs){ mvStripObs.disconnect(); mvStripObs = null; }
   const pairs = [];
+  const full = document.createElement('button'); full.type = 'button'; full.textContent = '🛠'; full.className = mvStripFull ? 'active' : '';
+  full.dataset.tip = mvL('القايمة الكاملة للأدوات (دوس تاني لإخفائها)', 'Full tools menu (click again to hide)');
+  full.onclick = ()=> mvStripFullToggle();
+  full.addEventListener('mouseenter', ()=> mvStripTip(full)); full.addEventListener('mouseleave', ()=> mvStripTip(null));
+  full.addEventListener('touchstart', ()=>{ mvStripTip(full); setTimeout(()=> mvStripTip(null), 1400); }, { passive:true });
+  el.appendChild(full);
+  const fsp = document.createElement('div'); fsp.className = 'sp'; el.appendChild(fsp);
   mvStripGet().forEach(id=>{
     if(id === '|'){ const sp = document.createElement('div'); sp.className = 'sp'; el.appendChild(sp); return; }
     const t = $(id); if(!t) return;
@@ -4190,12 +4209,18 @@ function mvLayoutSet(mode, save){
   const root = $('measureViewer'), body = root.querySelector('.mv-body'), dock = $('mvDock');
   mvUiRefit(()=>{
     MV_LAYOUTS.forEach(m => root.classList.toggle('mvmode-' + m, m === mode));
-    MV_FP_IDS.forEach(id=>{ const el = $(id); if(el) (mode === 'panel' ? dock : body).appendChild(el); });
-    dock.classList.toggle('open', mode === 'panel' && mvDockOpen);
+    const inDock = mode === 'panel' || (mode === 'strip' && mvStripFull);
+    MV_FP_IDS.forEach(id=>{ const el = $(id); if(el) (inDock ? dock : body).appendChild(el); });
+    dock.classList.toggle('open', (mode === 'panel' && mvDockOpen) || (mode === 'strip' && mvStripFull));
     if(mode === 'float') mvFpLayout();
     if(mode === 'strip') mvStripRender();
   });
   if(save){ try{ localStorage.setItem('mvLayout', mode); }catch(_){} }
+}
+function mvStripFullToggle(force){
+  mvStripFull = force === undefined ? !mvStripFull : force;
+  try{ localStorage.setItem('mvStripFull', mvStripFull ? '1' : '0'); }catch(_){}
+  mvLayoutSet(mvLayoutGet(), false);
 }
 function mvDockToggle(force){
   mvDockOpen = force === undefined ? !mvDockOpen : force;
@@ -4221,10 +4246,11 @@ function mvLayoutInit(){
   if($('mvDock')) return;
   const body = document.querySelector('#measureViewer .mv-body');
   try{ const v = localStorage.getItem('mvDockOpen'); mvDockOpen = v === null ? !mvIsMobile() : v === '1'; }catch(_){}
+  try{ mvStripFull = localStorage.getItem('mvStripFull') === '1'; }catch(_){}
   const dock = document.createElement('div'); dock.className = 'mv-dock'; dock.id = 'mvDock';
   const head = document.createElement('div'); head.className = 'mv-dock-head';
   const ht = document.createElement('span'); ht.textContent = '🧰'; const hx = document.createElement('button'); hx.type = 'button'; hx.textContent = '✕';
-  hx.onclick = ()=> mvDockToggle(false); head.append(ht, hx); dock.appendChild(head);
+  hx.onclick = ()=>{ if(mvLayoutGet() === 'strip') mvStripFullToggle(false); else mvDockToggle(false); }; head.append(ht, hx); dock.appendChild(head);
   const strip = document.createElement('div'); strip.className = 'mv-strip'; strip.id = 'mvStrip';
   body.prepend(dock); body.prepend(strip);
   $('mvDockFab').onclick = ()=> mvDockToggle();
@@ -4966,6 +4992,11 @@ function mvBind(){
   const cv = $('mvCanvas'), st = $('mvStage');
   cv.style.touchAction = 'none';
   cv.addEventListener('pointerdown', e=>{
+    if(e.button === 1 || (e.button === 0 && mv.space)){
+      e.preventDefault(); mv.down = { x:e.clientX, y:e.clientY, moved:false };
+      try{ cv.setPointerCapture(e.pointerId); }catch(_){}
+      mv.drag = { mode:'pan', sx:e.clientX, sy:e.clientY, sl:st.scrollLeft, st:st.scrollTop, restore:true }; cv.style.cursor = 'grabbing'; return;
+    }
     if(e.button > 0) return;
     const p = mvToImg(e);
     mv.down = { x:e.clientX, y:e.clientY, moved:false };
@@ -5064,7 +5095,7 @@ function mvBind(){
   });
   const endPtr = e=>{
     const d = mv.drag; mv.drag = null;
-    if(d && d.mode === 'pan'){ cv.style.cursor = 'grab'; return; }
+    if(d && d.mode === 'pan'){ cv.style.cursor = d.restore && !mv.space ? (mv.tool === 'move' ? 'move' : mv.tool === 'text' ? 'text' : mv.tool === 'zoom' ? 'zoom-in' : mv.tool === 'pan' ? 'grab' : 'crosshair') : 'grab'; return; }
     if(d && d.mode === 'presize'){ mvDraw(); return; }
     if(d && d.mode === 'zoomrect'){
       const zr = mv.zoomRect; mv.zoomRect = null;
@@ -5258,6 +5289,12 @@ function mvBind(){
     else if((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && !typing){ if(e.shiftKey) $('mvRedo').click(); else $('mvUndo').click(); }
     else if((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y' && !typing){ $('mvRedo').click(); }
   });
+  document.addEventListener('keydown', e=>{
+    if(e.code !== 'Space' || !$('measureViewer').classList.contains('open') || ['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName) || (document.activeElement && document.activeElement.isContentEditable)) return;
+    if(!mv.space){ mv.space = true; $('mvCanvas').style.cursor = 'grab'; }
+    e.preventDefault();
+  });
+  document.addEventListener('keyup', e=>{ if(e.code === 'Space' && mv.space){ mv.space = false; if(!mv.drag){ const t = mv.tool; $('mvCanvas').style.cursor = t === 'move' ? 'move' : t === 'pan' ? 'grab' : t === 'text' ? 'text' : t === 'zoom' ? 'zoom-in' : 'crosshair'; } } });
   st.addEventListener('wheel', e=>{
     if(!e.ctrlKey) return;
     e.preventDefault();
