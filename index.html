@@ -232,6 +232,8 @@ var n=localStorage.getItem('clinicName');if(n)document.title=n;}catch(e){}})();
   .mv-overlay button.mv-sw{width:24px; height:24px; padding:0; border-radius:50%; border:2px solid var(--mv-line);}
   .mv-main{flex:1; min-width:0; position:relative; display:flex;}
   .mv-stage{flex:1; min-width:0; overflow:auto; padding:10px; text-align:center; direction:ltr; background-color:var(--mv-bg); background-image:linear-gradient(var(--mv-gl) 1px,transparent 1px),linear-gradient(90deg,var(--mv-gl) 1px,transparent 1px),linear-gradient(var(--mv-gm) 1px,transparent 1px),linear-gradient(90deg,var(--mv-gm) 1px,transparent 1px); background-size:20px 20px,20px 20px,100px 100px,100px 100px; background-attachment:local;}
+  .mv-overlay{overscroll-behavior:none;}
+  .mv-stage{overscroll-behavior:contain; touch-action:pan-x pan-y;}
   .mv-stage canvas{cursor:crosshair; background:#000; display:inline-block; max-width:none;}
   .mv-empty{position:absolute; inset:0; display:none; align-items:center; justify-content:center; flex-direction:column; gap:10px; pointer-events:none; text-align:center; color:var(--mv-text2);}
   .mv-empty button{pointer-events:auto; font-size:15px; padding:12px 20px; background:var(--mv-acc); border-color:var(--mv-acc);}
@@ -5289,6 +5291,48 @@ function mvBind(){
     else if((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && !typing){ if(e.shiftKey) $('mvRedo').click(); else $('mvUndo').click(); }
     else if((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y' && !typing){ $('mvRedo').click(); }
   });
+
+  /* ===== تحريك الصورة فقط: صباعين (تحريك + قرص للتكبير) وأسهم الكيبورد، بدون ما الصفحة تتحرك ===== */
+  { const tp = new Map(); let multi = false, prevD = 0, prevMx = 0, prevMy = 0;
+    const mid = ()=>{ const a = [...tp.values()]; return { x:(a[0].x + a[1].x) / 2, y:(a[0].y + a[1].y) / 2, d:Math.hypot(a[0].x - a[1].x, a[0].y - a[1].y) || 1 }; };
+    st.addEventListener('pointerdown', e=>{
+      if(e.pointerType !== 'touch') return;
+      tp.set(e.pointerId, { x:e.clientX, y:e.clientY });
+      if(tp.size >= 2){
+        if(!multi && mv.drag && mv.drag.mode === 'pen' && mv.drag.shape){ const sh = mv.drag.shape; mv.shapes = mv.shapes.filter(x => x !== sh); }
+        multi = true; mv.drag = null; mv.zoomRect = null; mv.down = null;
+        const m = mid(); prevD = m.d; prevMx = m.x; prevMy = m.y; mvDraw();
+        e.stopPropagation(); e.preventDefault();
+      }
+    }, true);
+    st.addEventListener('pointermove', e=>{
+      if(!tp.has(e.pointerId)) return;
+      tp.set(e.pointerId, { x:e.clientX, y:e.clientY });
+      if(!multi) return;
+      e.stopPropagation(); e.preventDefault();
+      if(tp.size < 2) return;
+      const m = mid();
+      if(Math.abs(m.d - prevD) > 1) mvZoomAt(mv.zoom * (m.d / prevD), m.x, m.y, false);
+      st.scrollLeft -= (m.x - prevMx); st.scrollTop -= (m.y - prevMy);
+      prevD = m.d; prevMx = m.x; prevMy = m.y;
+    }, true);
+    const up = e=>{
+      if(!tp.has(e.pointerId)) return;
+      tp.delete(e.pointerId);
+      if(multi){ e.stopPropagation(); mv.drag = null; mv.down = null; if(tp.size === 0) multi = false; }
+    };
+    st.addEventListener('pointerup', up, true); st.addEventListener('pointercancel', up, true);
+    document.addEventListener('keydown', e=>{
+      if(!$('measureViewer').classList.contains('open') || !mv.img) return;
+      if(!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)) return;
+      if(['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName) || (document.activeElement && document.activeElement.isContentEditable)) return;
+      if(mv.multi && mv.multi.size) return;
+      const k = e.shiftKey ? 240 : 80;
+      if(e.key === 'ArrowLeft') st.scrollLeft -= k; else if(e.key === 'ArrowRight') st.scrollLeft += k;
+      else if(e.key === 'ArrowUp') st.scrollTop -= k; else st.scrollTop += k;
+      e.preventDefault();
+    });
+  }
   document.addEventListener('keydown', e=>{
     if(e.code !== 'Space' || !$('measureViewer').classList.contains('open') || ['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName) || (document.activeElement && document.activeElement.isContentEditable)) return;
     if(!mv.space){ mv.space = true; $('mvCanvas').style.cursor = 'grab'; }
