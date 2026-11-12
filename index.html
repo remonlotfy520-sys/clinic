@@ -1696,6 +1696,7 @@ var n=localStorage.getItem('clinicName');if(n)document.title=n;}catch(e){}})();
       <div class="mv-sec" id="mvCutGrp" style="display:none;">
         <div class="mv-sh">✂️ خيارات القص</div>
         <label class="mv-lbl"><input type="checkbox" id="mvKeepOrig"> نسخ بدل القص (اترك الأصل مكانه)</label>
+        <label class="mv-lbl" title="بعد القوس: القطعة تتكمل لوحدها لحد آخر الصورة بدل ما تحدد باقيها بنقط"><input type="checkbox" id="mvDomeAuto"> تكميل باقي القطعة تلقائيًا (من غير نقط)</label>
         <label class="mv-lbl" title="قطع بقوس حوالين مركز الدوران (Dome osteotomy)"><input type="checkbox" id="mvCutDome"> ⌓ Dome osteotomy (قوس حوالين مركز الدوران)</label>
         <div class="mv-row"><button id="mvCutDone">✔ إنهاء القص</button></div>
       </div>
@@ -3965,11 +3966,11 @@ const MV_HINTS = {
 function mvUpdateHint(){
   let t;
   if(mv.tool === 'cut' && mv.dome && mv.dome.step < 3){
-    t = mv.dome.step === 1 ? mvL('Dome: اضغط على نقطة على الدايرة (بتحدد نصف القطر) — بداية القوس عند حافة العظم', 'Dome: click a point on the circle (sets the radius) — arc start at the bone edge') : mvL('Dome: اضغط على نهاية القوس (الحافة التانية للعظم) — القطعة هتتقص تلقائيًا لحد آخر الصورة', 'Dome: click the arc end (other bone edge) — the piece is cut automatically to the image edge');
+    t = mv.dome.step === 1 ? mvL('Dome: اضغط على نقطة على الدايرة (بتحدد نصف القطر) — بداية القوس عند حافة العظم', 'Dome: click a point on the circle (sets the radius) — arc start at the bone edge') : mvL('Dome: اضغط على نهاية القوس (الحافة التانية للعظم)', 'Dome: click the arc end (other bone edge)');
   } else if(mv.tool === 'cut' && mvDomeOn() && !mv.dome){
     t = mvL('Dome osteotomy: اضغط على مركز الدوران (Center) الأول', 'Dome osteotomy: click the rotation center first');
   } else if(mv.tool === 'cut' && mv.dome){
-    t = mvL('كمّل نقط حوالين الجزء السفلي (بعد القوس) وأنهي بالضغط على النقطة الأولى أو Enter — مركز الدوران هيتضبط تلقائي', 'Continue points around the distal part, finish on the first point or Enter — rotation center is set automatically');
+    t = mvL('كمّل بنقط متصلة تحدد باقي القطعة (بعد القوس)، وأنهي بالضغط على النقطة الأولى (الخضرا) أو Enter — مركز الدوران هيتضبط تلقائي', 'Continue points around the distal part, finish on the first point or Enter — rotation center is set automatically');
   } else if(mv.tool === 'cut'){
     t = mv.pending.length < 3
       ? mvL(`القص: اضغط نقاط حول الجزء المطلوب (${mv.pending.length} نقطة، على الأقل 3)`, `Cut: click points around the area (${mv.pending.length} points, min 3)`)
@@ -5006,6 +5007,7 @@ function mvClickAt(p){
       }
       if(mv.dome.step === 2){
         const arc = mvDomeArc(mv.dome.C, mv.pending[0], p);
+        if(!$('mvDomeAuto').checked){ mv.dome.step = 3; mv.dome.arcN = arc.length; mv.pending = arc; mvUpdateHint(); mvDraw(); return; }
         const A = arc[0], B = arc[arc.length-1], C = mv.dome.C;
         let nx = -(B.y - A.y), ny = B.x - A.x; const nl = Math.hypot(nx, ny) || 1; nx /= nl; ny /= nl;
         const mx = (A.x + B.x)/2 - C.x, my = (A.y + B.y)/2 - C.y;
