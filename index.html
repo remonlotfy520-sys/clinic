@@ -83,6 +83,20 @@ var n=localStorage.getItem('clinicName');if(n)document.title=n;}catch(e){}})();
   .dropdown-menu.open{display:flex;}
   .dropdown-item{background:none; border:none; text-align:right; padding:10px 12px; border-radius:8px; font-family:'Tajawal'; font-weight:700; font-size:13.5px; color:var(--ink); cursor:pointer;}
   .dropdown-item:hover{background:var(--hov);}
+  .dropdown-menu{min-width:290px; gap:1px; padding:5px;}
+  .dropdown-item{font-size:14.5px; line-height:1.3; padding:8px 12px;}
+  .dropdown-item::first-letter{font-size:1.4em;}
+  #settingsModal .card{max-width:620px !important;}
+  #settingsModal h2{margin:0 0 12px !important;}
+  .set-grid{display:grid !important; grid-template-columns:1fr 1fr; gap:8px !important;}
+  .set-grid > *:not(button){grid-column:1/-1;}
+  .set-grid > #runClinicNumberMigrationBtn{grid-column:1/-1;}
+  .set-grid > button{font-size:14px; line-height:1.3; padding:10px 12px; text-align:right;}
+  .set-grid > button::first-letter{font-size:1.45em;}
+  .set-grid .set-sec{padding:8px 12px;}
+  .set-grid .set-sec .ttl{margin-bottom:6px;}
+  #aboutText{line-height:1.5 !important;}
+  @media (max-width:480px){ .set-grid{grid-template-columns:1fr;} }
   .header-icons .btn{padding:9px 12px; font-size:13px;}
   .dashboard-grid{display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:16px; margin-bottom:24px;}
   .dashboard-card{background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px 18px; box-shadow:var(--shadow);}
@@ -1457,7 +1471,7 @@ var n=localStorage.getItem('clinicName');if(n)document.title=n;}catch(e){}})();
   <div class="card" style="max-width:440px; width:100%; position:relative; max-height:92vh; overflow-y:auto;">
     <button id="closeSettingsBtn" class="btn btn-ghost" style="position:absolute; top:14px; left:14px; padding:6px 12px;">✕</button>
     <h2 style="margin:0 0 18px;">⚙️ الضبط</h2>
-    <div style="display:flex; flex-direction:column; gap:10px;">
+    <div class="set-grid" style="display:flex; flex-direction:column; gap:10px;">
       <button class="btn btn-primary" id="runBackupBtn" style="text-align:right;">💾 عمل نسخة احتياطية دلوقتي</button>
       <button class="btn btn-outline-red" id="restoreBackupBtn" style="text-align:right;">♻️ استعادة آخر نسخة احتياطية</button>
       <button class="btn btn-ghost" id="openListsManagerBtn" style="text-align:right;">🗂️ إدارة القوايم (أدوية، خدمات، مستخدمين...)</button>
@@ -1597,7 +1611,7 @@ var n=localStorage.getItem('clinicName');if(n)document.title=n;}catch(e){}})();
         <div class="mv-tgrid">
           <button id="mvToolPoint">● نقطة</button>
           <button id="mvToolMid">⊹ منتصف خط</button>
-          <button id="mvToolSeg">➖ خط</button>
+          <button id="mvToolSeg">╱ خط</button>
           <button id="mvToolCurve">〰 منحنى (تقوس)</button>
           <button id="mvToolPen">✏️ رسم حر</button>
           <button id="mvToolText">🔤 كتابة</button>
@@ -1681,6 +1695,7 @@ var n=localStorage.getItem('clinicName');if(n)document.title=n;}catch(e){}})();
       <div class="mv-sec" id="mvCutGrp" style="display:none;">
         <div class="mv-sh">✂️ خيارات القص</div>
         <label class="mv-lbl"><input type="checkbox" id="mvKeepOrig"> نسخ بدل القص (اترك الأصل مكانه)</label>
+        <label class="mv-lbl" title="قطع بقوس حوالين مركز الدوران (Dome osteotomy)"><input type="checkbox" id="mvCutDome"> ⌓ Dome osteotomy (قوس حوالين مركز الدوران)</label>
         <div class="mv-row"><button id="mvCutDone">✔ إنهاء القص</button></div>
       </div>
       <div class="mv-sec" id="mvLineGrp" style="display:none;">
@@ -3946,7 +3961,13 @@ const MV_HINTS = {
 };
 function mvUpdateHint(){
   let t;
-  if(mv.tool === 'cut'){
+  if(mv.tool === 'cut' && mv.dome && mv.dome.step < 3){
+    t = mv.dome.step === 1 ? mvL('Dome: اضغط على نقطة على الدايرة (بتحدد نصف القطر) — بداية القوس عند حافة العظم', 'Dome: click a point on the circle (sets the radius) — arc start at the bone edge') : mvL('Dome: اضغط على نهاية القوس (الحافة التانية للعظم)', 'Dome: click the arc end (other bone edge)');
+  } else if(mv.tool === 'cut' && mvDomeOn() && !mv.dome){
+    t = mvL('Dome osteotomy: اضغط على مركز الدوران (Center) الأول', 'Dome osteotomy: click the rotation center first');
+  } else if(mv.tool === 'cut' && mv.dome){
+    t = mvL('كمّل نقط حوالين الجزء السفلي (بعد القوس) وأنهي بالضغط على النقطة الأولى أو Enter — مركز الدوران هيتضبط تلقائي', 'Continue points around the distal part, finish on the first point or Enter — rotation center is set automatically');
+  } else if(mv.tool === 'cut'){
     t = mv.pending.length < 3
       ? mvL(`القص: اضغط نقاط حول الجزء المطلوب (${mv.pending.length} نقطة، على الأقل 3)`, `Cut: click points around the area (${mv.pending.length} points, min 3)`)
       : mvL(`${mv.pending.length} نقطة — لإنهاء القص اضغط على النقطة الأولى أو دبل-كليك أو Enter`, `${mv.pending.length} points — to finish click the first point, double-click, or press Enter`);
@@ -4614,9 +4635,10 @@ function mvEnsurePivot(force){
   if(!mv.pivot || force){ const c = mvSelCenter(); mv.pivot = { x:c.x, y:c.y }; mv.rot.phi = -Math.PI/2; mv.rot.from = null; mv.rot.total = 0; }
 }
 function mvRotRadius(){ return 90 / mv.zoom; }
-function mvRotHandlePos(){
-  const R = mvRotRadius();
-  return { x: mv.pivot.x + R*Math.cos(mv.rot.phi), y: mv.pivot.y + R*Math.sin(mv.rot.phi) };
+const MV_ROT_HANDLES = 8;
+function mvRotHandlePos(off){
+  const R = mvRotRadius(), a = mv.rot.phi + (off || 0);
+  return { x: mv.pivot.x + R*Math.cos(a), y: mv.pivot.y + R*Math.sin(a) };
 }
 function mvRotateByDeg(deg){
   if(!mv.multi.size){ showToast(mvT('حدد عنصر أو أكتر الأول (اضغط عليه)'), true); return; }
@@ -4755,8 +4777,20 @@ function mvDraw(forExport){
       ctx.beginPath(); q.forEach((pt,i)=> i ? ctx.lineTo(pt.x,pt.y) : ctx.moveTo(pt.x,pt.y));
       if(q.length >= 3){ ctx.closePath(); ctx.fillStyle = 'rgba(255,230,109,.15)'; ctx.fill(); }
       ctx.lineWidth = 2*u; ctx.strokeStyle = '#ffe66d'; ctx.setLineDash([8*u,5*u]); ctx.stroke(); ctx.setLineDash([]);
-      q.forEach((pt,i)=> mvDot(ctx, pt, u, i === 0 ? '#39ff88' : '#ffffff', i === 0 ? 7 : 4.5));
-      if(mv.mouse){ ctx.setLineDash([4*u,5*u]); mvSeg(ctx, q[q.length-1], mv.mouse, 1.5*u, 'rgba(255,255,255,.8)'); ctx.setLineDash([]); }
+      q.forEach((pt,i)=>{ if(mv.dome && mv.dome.arcN && i > 0 && i < mv.dome.arcN - 1) return; mvDot(ctx, pt, u, i === 0 ? '#39ff88' : '#ffffff', i === 0 ? 7 : 4.5); });
+      if(mv.mouse && !(mv.dome && mv.dome.step === 2)){ ctx.setLineDash([4*u,5*u]); mvSeg(ctx, q[q.length-1], mv.mouse, 1.5*u, 'rgba(255,255,255,.8)'); ctx.setLineDash([]); }
+    }
+    if(mv.dome){
+      const D = mv.dome; let rr = D.r;
+      if(D.step === 1 && mv.mouse) rr = mvDist(D.C, mv.mouse);
+      if(rr > 0){ ctx.beginPath(); ctx.arc(D.C.x, D.C.y, rr, 0, Math.PI*2); ctx.setLineDash([6*u,6*u]); ctx.lineWidth = 1.5*u; ctx.strokeStyle = 'rgba(255,255,255,.45)'; ctx.stroke(); ctx.setLineDash([]); }
+      if(D.step === 1 && mv.mouse){ ctx.setLineDash([4*u,5*u]); mvSeg(ctx, D.C, mv.mouse, 1.5*u, 'rgba(255,255,255,.8)'); ctx.setLineDash([]); }
+      if(D.step === 2 && mv.mouse && q.length){
+        const pa = mvDomeArc(D.C, q[0], mv.mouse); ctx.beginPath(); pa.forEach((pt,i)=> i ? ctx.lineTo(pt.x,pt.y) : ctx.moveTo(pt.x,pt.y));
+        ctx.lineWidth = 2.5*u; ctx.strokeStyle = '#ffe66d'; ctx.stroke();
+      }
+      ctx.beginPath(); ctx.arc(D.C.x, D.C.y, 9*u, 0, Math.PI*2); ctx.fillStyle = '#ff7a1a'; ctx.fill(); ctx.lineWidth = 2*u; ctx.strokeStyle = '#000'; ctx.stroke();
+      mvLabel(ctx, mvL('مركز', 'Center'), D.C.x + 14*u, D.C.y - 16*u, u, '#ffb347');
     }
   } else {
     mv.pending.forEach(p=> mvDot(ctx, p, u, '#ffffff', 5));
@@ -4801,6 +4835,7 @@ function mvDraw(forExport){
     }
     const H = mvRotHandlePos();
     ctx.beginPath(); ctx.moveTo(P.x, P.y); ctx.lineTo(H.x, H.y); ctx.lineWidth = 1.2*u; ctx.strokeStyle = 'rgba(77,208,225,.7)'; ctx.stroke();
+    for(let k = 1; k < MV_ROT_HANDLES; k++){ const h2 = mvRotHandlePos(k * 2 * Math.PI / MV_ROT_HANDLES); ctx.beginPath(); ctx.arc(h2.x, h2.y, 8*u, 0, Math.PI*2); ctx.fillStyle = 'rgba(77,208,225,.75)'; ctx.fill(); ctx.lineWidth = 1.6*u; ctx.strokeStyle = '#000'; ctx.stroke(); }
     ctx.beginPath(); ctx.arc(H.x, H.y, 9*u, 0, Math.PI*2); ctx.fillStyle = '#4dd0e1'; ctx.fill(); ctx.lineWidth = 2*u; ctx.strokeStyle = '#000'; ctx.stroke();
     ctx.beginPath(); ctx.arc(P.x, P.y, 9*u, 0, Math.PI*2); ctx.fillStyle = '#ff7a1a'; ctx.fill(); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(P.x-17*u, P.y); ctx.lineTo(P.x+17*u, P.y); ctx.moveTo(P.x, P.y-17*u); ctx.lineTo(P.x, P.y+17*u);
@@ -4823,7 +4858,7 @@ function mvSetTool(t){
   if(t === 'zoom' && mv.tool !== 'zoom') mv.prevTool = mv.tool;
   if(t === 'crop' && mv.tool !== 'crop'){ mv.cropTarget = mvSelPieces()[0] || null; }
   mv.tool = t; mv.drag = null; mv.zoomRect = null;
-  if(!keepWork){ mv.pending = []; mv.pendRefs = []; }
+  if(!keepWork){ mv.pending = []; mv.pendRefs = []; mv.dome = null; }
   if(!keepWork && t !== 'move' && t !== 'rotate' && t !== 'crop') mvSetSel(null);
   const ids = { line:'mvToolLine', seg:'mvToolSeg', angle:'mvToolAngle', angle2:'mvToolAngle2', linkangle:'mvToolLink', calib:'mvToolCalib',
                 pen:'mvToolPen', text:'mvToolText', curve:'mvToolCurve', mid:'mvToolMid', point:'mvToolPoint', crop:'mvToolCrop', zoom:'mvToolZoom', cut:'mvToolCut', move:'mvToolMove', rotate:'mvToolRotate', pan:'mvToolPan' };
@@ -4892,10 +4927,23 @@ function mvCutFromPiece(sh, q){
   mvSetTool('move'); mvSetSel(np); mvSyncControls(); mvUpdateHint(); mvDraw();
   showToast(mvT('تم القص من القطعة — تقدر تحركها وتلفها وتقص منها تاني'));
 }
+
+// ===== Dome osteotomy: قطع بقوس حوالين مركز الدوران =====
+function mvDomeArc(C, A, B){
+  const r = mvDist(C, A), a0 = Math.atan2(A.y - C.y, A.x - C.x), a1 = Math.atan2(B.y - C.y, B.x - C.x);
+  let d = a1 - a0; while(d > Math.PI) d -= 2*Math.PI; while(d < -Math.PI) d += 2*Math.PI;
+  const n = Math.max(2, Math.ceil(Math.abs(d) / (Math.PI/90))), out = [];
+  for(let i = 0; i <= n; i++){ const a = a0 + d * i / n; out.push({ x:C.x + r*Math.cos(a), y:C.y + r*Math.sin(a) }); }
+  out[0] = { x:A.x, y:A.y };
+  return out;
+}
+function mvDomeOn(){ const c = $('mvCutDome'); return !!(c && c.checked); }
 function mvFinishCut(){
   const q = mv.pending;
   if(q.length < 3){ showToast(mvT('حدد 3 نقاط على الأقل حوالين الجزء'), true); return; }
   mv.pending = [];
+  const domeC = mv.dome && mv.dome.step === 3 ? { x:mv.dome.C.x, y:mv.dome.C.y } : null; mv.dome = null;
+  if(domeC){ mv.pivot = domeC; mv.rot.phi = -Math.PI/2; mv.rot.from = null; mv.rot.total = 0; }
   const srcPc = mvCutSourcePiece(q);
   if(srcPc){ mvCutFromPiece(srcPc, q); return; }
   let minx=1e9, miny=1e9, maxx=-1e9, maxy=-1e9;
@@ -4944,7 +4992,18 @@ function mvClickAt(p){
   }
   if(tool === 'curve'){ mv.pending.push(mvSnap(p)); mvUpdateHint(); mvDraw(); return; }
   if(tool === 'cut'){
-    if(mv.pending.length >= 3 && mvDist(p, mv.pending[0]) <= mvHitRadius()){ mvFinishCut(); return; }
+    if(mvDomeOn()){
+      if(!mv.dome){ mv.dome = { C:{ x:p.x, y:p.y }, r:0, step:1, arcN:0 }; mv.pending = []; mvUpdateHint(); mvDraw(); return; }
+      if(mv.dome.step === 1){
+        if(mvDist(mv.dome.C, p) < 3 / mv.zoom) return;
+        mv.dome.r = mvDist(mv.dome.C, p); mv.dome.step = 2; mv.pending = [{ x:p.x, y:p.y }]; mvUpdateHint(); mvDraw(); return;
+      }
+      if(mv.dome.step === 2){
+        const arc = mvDomeArc(mv.dome.C, mv.pending[0], p);
+        mv.dome.step = 3; mv.dome.arcN = arc.length; mv.pending = arc; mvUpdateHint(); mvDraw(); return;
+      }
+    }
+    if(mv.pending.length >= 3 && mvDist(p, mv.pending[0]) <= mvHitRadius() && !(mv.dome && mv.dome.step < 3)){ mvFinishCut(); return; }
     mv.pending.push(p); mvUpdateHint(); mvDraw(); return;
   }
   if(tool === 'text'){
@@ -5027,9 +5086,12 @@ function mvBind(){
       mvEnsurePivot();
       const r = mvHitRadius();
       if(mvDist(p, mv.pivot) <= r){ mv.drag = { mode:'pivot' }; return; }
-      if(mvDist(p, mvRotHandlePos()) <= r){
-        if(!mv.multi.size){ showToast(mvT('حدد عنصر أو أكتر الأول (اضغط عليه)'), true); mv.drag = null; return; }
-        mv.rot.from = mv.rot.phi; mv.rot.total = 0; mv.drag = { mode:'rot' }; return;
+      for(let k = 0; k < MV_ROT_HANDLES; k++){
+        const hp = mvRotHandlePos(k * 2 * Math.PI / MV_ROT_HANDLES);
+        if(mvDist(p, hp) <= r){
+          if(!mv.multi.size){ showToast(mvT('حدد عنصر أو أكتر الأول (اضغط عليه)'), true); mv.drag = null; return; }
+          mv.rot.from = mv.rot.phi; mv.rot.total = 0; mv.drag = { mode:'rot', off:k * 2 * Math.PI / MV_ROT_HANDLES }; return;
+        }
       }
       const b = mvHitBody(p);
       if(b){ mvSetSel(b, true); mvSyncControls(); mvDraw(); }
@@ -5088,12 +5150,12 @@ function mvBind(){
         mv.cropRect = { x0:n.x0+dx, y0:n.y0+dy, x1:n.x1+dx, y1:n.y1+dy };
       }
       else if(d.mode === 'rot'){
-        const na = Math.atan2(p.y - mv.pivot.y, p.x - mv.pivot.x);
+        const na = Math.atan2(p.y - mv.pivot.y, p.x - mv.pivot.x) - (d.off || 0);
         let delta = na - mv.rot.phi; while(delta > Math.PI) delta -= 2*Math.PI; while(delta < -Math.PI) delta += 2*Math.PI;
         mvRotateSel(delta); mv.rot.phi = na; mv.rot.total += delta;
       }
       mvDraw();
-    } else if(mv.pending.length) mvDraw();
+    } else if(mv.pending.length || mv.dome) mvDraw();
   });
   const endPtr = e=>{
     const d = mv.drag; mv.drag = null;
@@ -5179,6 +5241,7 @@ function mvBind(){
   $('mvPivotCenter').onclick = ()=>{ mvEnsurePivot(true); mvDraw(); };
   $('mvSelAll').onclick = ()=>{ mv.multi = new Set(mv.shapes.filter(s=>s.type !== 'lineangle' && s.type !== 'cropmark')); mv.sel = [...mv.multi].pop() || null; mv.rot.from = null; mvSyncControls(); mvDraw(); };
   $('mvCutDone').onclick = mvFinishCut;
+  $('mvCutDome').onchange = ()=>{ mv.dome = null; mv.pending = []; mvUpdateHint(); mvDraw(); };
   $('mvZoomIn').onclick = ()=> mvZoomCenter(1.4);
   $('mvZoomOut').onclick = ()=> mvZoomCenter(1/1.4);
   $('mvZoomFit').onclick = ()=>{ mvViewPush(); mvSetZoom(mv.fit); const st = $('mvStage'); st.scrollLeft = 0; st.scrollTop = 0; mvDraw(); };
@@ -5276,7 +5339,7 @@ function mvBind(){
       if(mv.tool === 'crop' && mv.cropRect){ mv.cropRect = null; mvDraw(); }
       else if(mv.tool === 'zoom'){ mvSetTool(mv.prevTool || 'move'); }
       else if(mv.cmp.open){ mvCloseCompare(); }
-      else if(mv.pending.length || mv.pendRefs.length){ mv.pending = []; mv.pendRefs = []; mvUpdateHint(); mvDraw(); }
+      else if(mv.pending.length || mv.pendRefs.length || mv.dome){ mv.pending = []; mv.pendRefs = []; mv.dome = null; mvUpdateHint(); mvDraw(); }
       else if(mv.multi.size){ mvSetSel(null); mvSyncControls(); mvDraw(); }
       else closeMeasureViewer();
     }
@@ -6248,7 +6311,7 @@ async function mvImportJson(file){
 function closeMeasureViewer(){
   if(mv.cmp.open) mvCloseCompare();
   $('measureViewer').classList.remove('open');
-  mv.img = null; mv.shapes = []; mv.pending = []; mv.pendRefs = []; mvSetSel(null); mv.drag = null; mv.pivot = null; mv.baseUrl = null;
+  mv.img = null; mv.shapes = []; mv.pending = []; mv.pendRefs = []; mv.dome = null; mvSetSel(null); mv.drag = null; mv.pivot = null; mv.baseUrl = null;
 }
 async function mvOpen(dataUrl){
   mvBind();
