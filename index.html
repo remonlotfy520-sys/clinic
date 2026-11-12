@@ -1624,6 +1624,7 @@ var n=localStorage.getItem('clinicName');if(n)document.title=n;}catch(e){}})();
           <button id="mvToolPan">🖐 تنقّل</button>
           <button id="mvToolCrop">🔲 كروب</button>
           <button id="mvToolCut">✂️ قص</button>
+          <button id="mvToolDome" title="Dome osteotomy: مركز + حافتين، والقطعة بتتقص بقوس وتلف حوالين المركز">⌓ Dome</button>
           <button id="mvToolRotate">🔄 تدوير</button>
           <button id="mvScaleDown">🔍➖ تصغير القطعة</button>
           <button id="mvScaleUp">🔍➕ تكبير القطعة</button>
@@ -4095,7 +4096,7 @@ function mvInitFloat(){
 
 // ===== شكل قوائم الأدوات: (1) عايمة (2) لوحة جنب ثابتة (3) شريط أيقونات تخصصه بنفسك =====
 const MV_LAYOUTS = ['float','panel','strip'];
-const MV_STRIP_DEFAULT = ['mvToolLine','mvToolCalib','mvToolAngle','mvToolAngle2','|','mvToolPoint','mvToolSeg','mvToolCurve','mvToolPen','mvToolText','|','mvToolMove','mvToolPan','mvToolCrop','mvToolCut','mvToolRotate','|','mvUndo','mvRedo','mvZoomFit'];
+const MV_STRIP_DEFAULT = ['mvToolLine','mvToolCalib','mvToolAngle','mvToolAngle2','|','mvToolPoint','mvToolSeg','mvToolCurve','mvToolPen','mvToolText','|','mvToolMove','mvToolPan','mvToolCrop','mvToolCut','mvToolDome','mvToolRotate','|','mvUndo','mvRedo','mvZoomFit'];
 const MV_STRIP_EXCL = /^(mvTopFab|mvQUndo|mvQRedo|mvSideHide|mvSideFab|mvDockFab|mvCmp\w*|mvInsert2|mvTpl2|calcFabBtn|stickyFabBtn|todoFabBtn|mvLayoutBtn)$/;
 const MV_ICON_FIX = { mvZoomFit:'⛶' };
 let mvStripItems = null, mvStripObs = null, mvDockOpen = true, mvStripFull = false;
@@ -4865,6 +4866,7 @@ function mvSetTool(t){
   const ids = { line:'mvToolLine', seg:'mvToolSeg', angle:'mvToolAngle', angle2:'mvToolAngle2', linkangle:'mvToolLink', calib:'mvToolCalib',
                 pen:'mvToolPen', text:'mvToolText', curve:'mvToolCurve', mid:'mvToolMid', point:'mvToolPoint', crop:'mvToolCrop', zoom:'mvToolZoom', cut:'mvToolCut', move:'mvToolMove', rotate:'mvToolRotate', pan:'mvToolPan' };
   Object.entries(ids).forEach(([k,id])=> $(id).classList.toggle('active', k === t));
+  mvDomeSync();
   $('mvCanvas').style.cursor = t === 'move' ? 'move' : t === 'pan' ? 'grab' : t === 'text' ? 'text' : t === 'zoom' ? 'zoom-in' : 'crosshair';
   $('mvRotGrp').style.display = t === 'rotate' ? 'block' : 'none';
   $('mvCutGrp').style.display = t === 'cut' ? 'block' : 'none';
@@ -4939,6 +4941,7 @@ function mvDomeArc(C, A, B){
   out[0] = { x:A.x, y:A.y };
   return out;
 }
+function mvDomeSync(){ const d = $('mvToolDome'); if(!d) return; const on = mv.tool === 'cut' && mvDomeOn(); d.classList.toggle('active', on); if(on) $('mvToolCut').classList.remove('active'); }
 function mvDomeOn(){ const c = $('mvCutDome'); return !!(c && c.checked); }
 function mvFinishCut(){
   const q = mv.pending;
@@ -4947,7 +4950,7 @@ function mvFinishCut(){
   const domeC = mv.dome && mv.dome.step === 3 ? { x:mv.dome.C.x, y:mv.dome.C.y } : null; mv.dome = null;
   if(domeC){ mv.pivot = domeC; mv.rot.phi = -Math.PI/2; mv.rot.from = null; mv.rot.total = 0; }
   const srcPc = mvCutSourcePiece(q);
-  if(srcPc){ mvCutFromPiece(srcPc, q); return; }
+  if(srcPc){ mvCutFromPiece(srcPc, q); if(domeC){ mvSetTool('rotate'); showToast(mvT('تم القص — لف القطعة بالنقط السماوي حوالين المركز')); } return; }
   let minx=1e9, miny=1e9, maxx=-1e9, maxy=-1e9;
   q.forEach(p=>{ minx=Math.min(minx,p.x); miny=Math.min(miny,p.y); maxx=Math.max(maxx,p.x); maxy=Math.max(maxy,p.y); });
   const bx = Math.floor(minx), by = Math.floor(miny), bw = Math.max(2, Math.ceil(maxx - bx)), bh = Math.max(2, Math.ceil(maxy - by));
@@ -4963,7 +4966,8 @@ function mvFinishCut(){
   const sh = mvNewShape({ type:'piece', cvs:pc, cw:bw, ch:bh, lpoly:q.map(p=>({x:p.x-cx, y:p.y-cy})), C:{x:cx, y:cy}, theta:0, sx:1, sy:1,
                           hole: keep ? null : q.map(p=>({x:p.x, y:p.y})) });
   mvSetTool('move'); mvSetSel(sh); mvSyncControls(); mvUpdateHint(); mvDraw();
-  showToast(mvT('تم القص — اسحب القطعة لتحريكها، أو استخدم أداة التدوير'));
+  if(domeC){ mvSetTool('rotate'); showToast(mvT('تم القص — لف القطعة بالنقط السماوي حوالين المركز')); }
+  else showToast(mvT('تم القص — اسحب القطعة لتحريكها، أو استخدم أداة التدوير'));
 }
 function mvFinishCurve(){
   const q = mv.pending;
@@ -5226,8 +5230,10 @@ function mvBind(){
     }
   });
   const tools = { mvToolLine:'line', mvToolSeg:'seg', mvToolAngle:'angle', mvToolAngle2:'angle2', mvToolLink:'linkangle', mvToolCalib:'calib',
-                  mvToolPen:'pen', mvToolText:'text', mvToolCurve:'curve', mvToolMid:'mid', mvToolPoint:'point', mvToolCrop:'crop', mvToolZoom:'zoom', mvToolCut:'cut', mvToolMove:'move', mvToolRotate:'rotate', mvToolPan:'pan' };
+                  mvToolPen:'pen', mvToolText:'text', mvToolCurve:'curve', mvToolMid:'mid', mvToolPoint:'point', mvToolCrop:'crop', mvToolZoom:'zoom', mvToolMove:'move', mvToolRotate:'rotate', mvToolPan:'pan' };
   Object.entries(tools).forEach(([id,t])=> $(id).onclick = ()=> mvSetTool(t));
+  $('mvToolCut').onclick = ()=>{ $('mvCutDome').checked = false; mvSetTool('cut'); };
+  $('mvToolDome').onclick = ()=>{ $('mvCutDome').checked = true; mvSetTool('cut'); };
   $('mvUndo').onclick = ()=>{
     if(mv.pending.length) mv.pending.pop();
     else if(mv.pendRefs.length) mv.pendRefs.pop();
@@ -5252,7 +5258,7 @@ function mvBind(){
   $('mvPivotCenter').onclick = ()=>{ mvEnsurePivot(true); mvDraw(); };
   $('mvSelAll').onclick = ()=>{ mv.multi = new Set(mv.shapes.filter(s=>s.type !== 'lineangle' && s.type !== 'cropmark')); mv.sel = [...mv.multi].pop() || null; mv.rot.from = null; mvSyncControls(); mvDraw(); };
   $('mvCutDone').onclick = mvFinishCut;
-  $('mvCutDome').onchange = ()=>{ mv.dome = null; mv.pending = []; mvUpdateHint(); mvDraw(); };
+  $('mvCutDome').onchange = ()=>{ mv.dome = null; mv.pending = []; mvDomeSync(); mvUpdateHint(); mvDraw(); };
   $('mvZoomIn').onclick = ()=> mvZoomCenter(1.4);
   $('mvZoomOut').onclick = ()=> mvZoomCenter(1/1.4);
   $('mvZoomFit').onclick = ()=>{ mvViewPush(); mvSetZoom(mv.fit); const st = $('mvStage'); st.scrollLeft = 0; st.scrollTop = 0; mvDraw(); };
