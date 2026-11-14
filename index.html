@@ -8626,12 +8626,31 @@ $('closeMessagesViewBtn').onclick = ()=>{
 
 /* ---------- قوايم سريعة: مرضى العمليات و Red Flag ---------- */
 let IMG_THUMBS = {};
+const THUMB_CACHE = {};
 function thumbImg(id){
   let f = IMG_THUMBS[id];
   if(!f) return '<span class="row-thumbs"><span class="row-thumb row-thumb-empty">🖼️</span></span>';
   if(!Array.isArray(f)) f = [f];
   return '<span class="row-thumbs">' + f.slice(0,3).map(x =>
-    `<img class="row-thumb" loading="lazy" referrerpolicy="no-referrer" src="https://drive.google.com/thumbnail?id=${encodeURIComponent(x)}&sz=w160" alt="" onerror="this.style.display='none'">`).join('') + '</span>';
+    THUMB_CACHE[x] ? `<img class="row-thumb" src="${THUMB_CACHE[x]}" alt="">`
+                   : `<span class="row-thumb row-thumb-empty" data-fid="${escapeHtml(x)}">🖼️</span>`).join('') + '</span>';
+}
+async function fillThumbs(root){
+  const need = [...new Set([...root.querySelectorAll('[data-fid]')].map(e=>e.dataset.fid))].filter(x=>!THUMB_CACHE[x]);
+  if(!need.length) return;
+  const token = await ensureAppsScriptLogin();
+  for(let i=0;i<need.length;i+=4){
+    const part = need.slice(i,i+4);
+    try{
+      const r = await fetch(`${APPS_SCRIPT_URL}?action=getThumbData&token=${encodeURIComponent(token)}&ids=${encodeURIComponent(part.join(','))}`);
+      const d = await r.json();
+      Object.entries(d.thumbs||{}).forEach(([k,v])=>{ if(v) THUMB_CACHE[k]=v; });
+    }catch(_){}
+    root.querySelectorAll('[data-fid]').forEach(el=>{
+      const v = THUMB_CACHE[el.dataset.fid];
+      if(v){ const im=document.createElement('img'); im.className='row-thumb'; im.src=v; im.alt=''; el.replaceWith(im); }
+    });
+  }
 }
 function renderQuickPatientsList(containerId, list){
   const box = $(containerId);
@@ -8782,6 +8801,7 @@ $('viewImagesPatientsBtn').onclick = async ()=>{
     IMG_THUMBS = data.thumbs || {};
     const patients = allPatients.filter(p => ids.has(p.id));
     renderQuickPatientsList('imagesPatientsList', patients);
+    fillThumbs($('imagesPatientsList'));
 
     if(!currentCases.length) await loadOperationCases();
     const casesWithImages = currentCases.filter(c => ids.has(c.id));
@@ -8796,6 +8816,7 @@ $('viewImagesPatientsBtn').onclick = async ()=>{
             <div class="pmeta">${escapeHtml(String(c.CaseDate || '').slice(0,10))}</div>
           </div>
         </div>`).join('');
+      fillThumbs(casesBox);
       casesBox.querySelectorAll('.patient-row').forEach(row=>{
         row.addEventListener('click', ()=>{
           $('imagesPatientsView').style.display = 'none';
