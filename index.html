@@ -517,6 +517,20 @@ var n=localStorage.getItem('clinicName');if(n)document.title=n;}catch(e){}})();
   .row-thumb{width:56px; height:56px; border-radius:10px; object-fit:cover; flex:none; background:var(--card2); border:1px solid var(--line);}
   .row-thumb-doc{border:2px solid var(--teal); object-position:top;}
   .row-thumb-empty{display:flex; align-items:center; justify-content:center; font-size:22px; opacity:.5;}
+  /* ===== ملف المريض: بيانات أساسية + أقسام بتظهر لما فيها بيانات ===== */
+  #workspace .tabs{display:none !important;}
+  #workspace .tab-panel{display:none;}
+  #workspace .tab-panel.active, #workspace .tab-panel.sec-on{display:block;}
+  #workspace #tab-basic{display:block !important;}
+  #secBar{display:flex; align-items:center; justify-content:space-between; gap:10px; margin:0 0 14px; padding-bottom:10px; border-bottom:1px solid var(--line);}
+  #secBar .sec-title{font-weight:700; font-size:17px;}
+  #secBar .menu-wrap{position:relative;}
+  #secAddBtn{font-size:20px; line-height:1; padding:6px 16px; border-radius:12px;}
+  #secMenu{min-width:240px;}
+  #secMenu .dropdown-item{display:flex; justify-content:space-between; align-items:center; gap:10px;}
+  #secMenu .sec-state{font-size:11px; opacity:.7;}
+  .sec-head{display:flex; align-items:center; justify-content:space-between; font-weight:700; font-size:16px; margin:26px 0 12px; padding:9px 14px; background:var(--card2); border-radius:12px;}
+  .sec-head .sec-x{background:none; border:none; cursor:pointer; font-size:16px; color:var(--muted); padding:2px 8px;}
   /* ===== Apple design language (clinic UI only) ===== */
   :root{
     --apple-font:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display","SF Arabic","SF Pro",system-ui,"Segoe UI","Helvetica Neue",Tahoma,Arial,sans-serif;
@@ -2706,6 +2720,7 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
     document.querySelectorAll('.tab-panel').forEach(p=> p.classList.remove('active'));
     btn.classList.add('active');
     $(btn.dataset.tab).classList.add('active');
+    if(btn.dataset.tab !== 'tab-basic' && typeof showSection === 'function'){ try{ showSection(btn.dataset.tab); }catch(_){} }
   });
 });
 
@@ -3052,7 +3067,70 @@ function openPatient(id){
   }
 }
 
+/* ---------- أقسام ملف المريض (تظهر لما فيها بيانات + زرار +) ---------- */
+const SEC_DEFS = [
+  {id:'tab-kashf',      icon:'🩺', name:'الكشف والزيارات',  count:()=>currentVisits.length},
+  {id:'tab-operations', icon:'🔪', name:'العمليات',          count:(p)=>currentOperations.length || (p && p.GoogleDocLink ? 1 : 0)},
+  {id:'tab-reports',    icon:'📄', name:'التقارير الطبية',   count:()=>currentHistory.filter(h=>h.Type==='report').length},
+  {id:'tab-physio',     icon:'🏃', name:'العلاج الطبيعي',    count:()=>currentHistory.filter(h=>h.Type==='physio').length},
+  {id:'tab-rx',         icon:'💊', name:'الروشتة',           count:()=>currentHistory.filter(h=>h.Type==='rx').length},
+  {id:'tab-images',     icon:'🖼️', name:'الصور',             count:()=>currentImages.length},
+  {id:'tab-invoices',   icon:'🧾', name:'الفواتير',          count:()=>currentInvoices.length}
+];
+function secCount(d){
+  try{ return d.count(allPatients.find(x=>x.id===currentPatientId)) || 0; }catch(_){ return 0; }
+}
+function refreshSections(){
+  SEC_DEFS.forEach(d=>{
+    const el = $(d.id); if(!el) return;
+    const has = secCount(d) > 0;
+    el.classList.toggle('sec-on', has || el.classList.contains('sec-manual'));
+    const x = el.querySelector('.sec-x');
+    if(x) x.style.display = has ? 'none' : '';
+  });
+  const m = $('secMenu');
+  if(m) m.innerHTML = SEC_DEFS.map(d=>{
+    const n = secCount(d);
+    return `<button class="dropdown-item" data-sec="${d.id}"><span>${d.icon} ${d.name}</span><span class="sec-state">${n ? n + ' ✓' : '＋ جديد'}</span></button>`;
+  }).join('');
+}
+function showSection(id){
+  const el = $(id); if(!el) return;
+  el.classList.add('sec-manual'); el.classList.add('sec-on');
+  refreshSections();
+  setTimeout(()=> el.scrollIntoView({behavior:'smooth', block:'start'}), 50);
+}
+(function initSections(){
+  const tabs = document.querySelector('#workspace .tabs');
+  if(!tabs) return;
+  const bar = document.createElement('div');
+  bar.id = 'secBar';
+  bar.innerHTML = '<div class="sec-title">البيانات الأساسية</div><div class="menu-wrap"><button type="button" class="btn btn-primary" id="secAddBtn" title="إضافة قسم">＋</button><div class="dropdown-menu" id="secMenu"></div></div>';
+  tabs.parentNode.insertBefore(bar, tabs);
+  SEC_DEFS.forEach(d=>{
+    const el = $(d.id); if(!el) return;
+    const h = document.createElement('div');
+    h.className = 'sec-head';
+    h.innerHTML = `<span>${d.icon} ${d.name}</span><button type="button" class="sec-x" title="إخفاء القسم">✕</button>`;
+    h.querySelector('.sec-x').onclick = ()=>{ el.classList.remove('sec-manual','sec-on','active'); refreshSections(); };
+    el.insertBefore(h, el.firstChild);
+  });
+  $('secAddBtn').onclick = (e)=>{ e.stopPropagation(); refreshSections(); $('secMenu').classList.toggle('open'); };
+  $('secMenu').addEventListener('click', e=>{
+    const b = e.target.closest('[data-sec]'); if(!b) return;
+    $('secMenu').classList.remove('open');
+    showSection(b.dataset.sec);
+  });
+  document.addEventListener('click', ()=>{ const m=$('secMenu'); if(m) m.classList.remove('open'); });
+  let t = null;
+  const mo = new MutationObserver(()=>{ clearTimeout(t); t = setTimeout(()=>{ try{ refreshSections(); }catch(_){} }, 250); });
+  ['visitsList','operationsList','imagesSidebarList','imagesMainGrid','invoicesList','rxHistoryList','physioHistoryList','reportHistoryList'].forEach(i=>{ const e=$(i); if(e) mo.observe(e,{childList:true,subtree:true}); });
+  refreshSections();
+})();
+
 function resetToBasicTab(){
+  document.querySelectorAll('.tab-panel').forEach(p=> p.classList.remove('sec-manual','sec-on'));
+  try{ refreshSections(); }catch(_){}
   document.querySelectorAll('.tab-btn').forEach(b=> b.classList.remove('active'));
   document.querySelectorAll('.tab-panel').forEach(p=> p.classList.remove('active'));
   document.querySelector('.tab-btn[data-tab="tab-basic"]').classList.add('active');
