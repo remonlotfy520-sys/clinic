@@ -551,8 +551,8 @@ var n=localStorage.getItem('clinicName');if(n)document.title=n;}catch(e){}})();
   html[data-theme="blue"]{--teal:#007AFF; --teal-dark:#0A60D0; --bg:#EEF3FA; --card2:#F5F8FC; --inp:#EEF3FA; --hov:#E3EBF6; --line:#D4DEEC;}
   html[data-theme="rose"]{--teal:#FF2D55; --teal-dark:#D70F3A; --bg:#FBF1F3; --card2:#FDF6F7; --inp:#F8ECEF; --hov:#F5E3E7; --line:#EBD5DA;}
   html body, html body *:not(code):not(pre):not(canvas):not(svg):not(svg *){font-family:inherit;}
-  html body{font-family:var(--apple-font); -webkit-font-smoothing:antialiased; letter-spacing:-.003em; line-height:1.45;}
-  h2,h3{color:var(--ink); font-weight:700; letter-spacing:-.01em;}
+  html body{font-family:var(--apple-font); -webkit-font-smoothing:antialiased; line-height:1.45;}
+  h2,h3{color:var(--ink); font-weight:700;}
   .btn{border-radius:12px; font-weight:600; padding:10px 18px; transition:opacity .15s, transform .1s, background .15s;}
   .btn:active{transform:scale(.97);}
   .btn-primary{background:var(--teal); color:#fff;}
@@ -560,7 +560,7 @@ var n=localStorage.getItem('clinicName');if(n)document.title=n;}catch(e){}})();
   .btn-ghost:hover{background:var(--hov);}
   .btn-outline-red{background:var(--card); border:1px solid transparent; box-shadow:0 0 0 1px rgba(255,59,48,.4) inset; color:var(--red);}
   .card{border-radius:18px; border:none; box-shadow:var(--shadow);}
-  .field label{color:var(--muted); font-weight:600; font-size:12.5px; letter-spacing:.01em;}
+  .field label{color:var(--muted); font-weight:600; font-size:12.5px;}
   .field input,.field textarea,.field select,.header-search input,.search-wrap input{border-radius:10px; border:1px solid transparent; background:var(--inp); transition:box-shadow .15s, background .15s;}
   .field input:focus,.field textarea:focus,.field select:focus,.header-search input:focus,.search-wrap input:focus{border-color:var(--teal); background:var(--card); box-shadow:0 0 0 3px rgba(0,122,255,.2);}
   header{background:rgba(255,255,255,.72); -webkit-backdrop-filter:saturate(180%) blur(20px); backdrop-filter:saturate(180%) blur(20px); border-bottom:1px solid rgba(0,0,0,.08); position:sticky; top:0; z-index:100;}
@@ -573,8 +573,9 @@ var n=localStorage.getItem('clinicName');if(n)document.title=n;}catch(e){}})();
   .set-sec{border:none; background:var(--card2); border-radius:12px;}
   .theme-sw.sel{box-shadow:0 0 0 2px var(--card),0 0 0 4px var(--teal);}
   .dashboard-card h3{font-weight:600;}
-  .dashboard-card .dash-count{font-weight:700; letter-spacing:-.02em;}
+  .dashboard-card .dash-count{font-weight:700;}
   ::selection{background:rgba(0,122,255,.25);}
+  html body, html body *{letter-spacing:normal !important;}
 </style>
 </head>
 <body>
