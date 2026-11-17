@@ -529,8 +529,15 @@ var n=localStorage.getItem('clinicName');if(n)document.title=n;}catch(e){}})();
   #secMenu{min-width:240px;}
   #secMenu .dropdown-item{display:flex; justify-content:space-between; align-items:center; gap:10px;}
   #secMenu .sec-state{font-size:11px; opacity:.7;}
-  .sec-head{display:flex; align-items:center; justify-content:space-between; font-weight:700; font-size:16px; margin:26px 0 12px; padding:9px 14px; background:var(--card2); border-radius:12px;}
-  .sec-head .sec-x{background:none; border:none; cursor:pointer; font-size:16px; color:var(--muted); padding:2px 8px;}
+  .sec-head{display:flex; align-items:center; gap:10px; font-weight:700; font-size:16px; margin:8px 0 0; padding:12px 14px; background:var(--card2); border-radius:12px; cursor:pointer; user-select:none;}
+  .sec-head:hover{background:var(--hov);}
+  .sec-head .sec-name{flex:1;}
+  .sec-head .sec-cnt{font-size:12px; font-weight:600; color:var(--muted); background:var(--card); border-radius:999px; padding:2px 9px;}
+  .sec-head .sec-chev{font-size:13px; color:var(--muted); transition:transform .15s;}
+  .tab-panel.sec-open > .sec-head .sec-chev, .tab-panel.active > .sec-head .sec-chev{transform:rotate(180deg);}
+  .sec-head .sec-x{background:none; border:none; cursor:pointer; font-size:15px; color:var(--muted); padding:2px 8px;}
+  #workspace .tab-panel.sec-on:not(.sec-open):not(.active) > *:not(.sec-head){display:none !important;}
+  #workspace .tab-panel.sec-open > .sec-head, #workspace .tab-panel.active > .sec-head{margin-bottom:12px;}
   /* ===== Apple design language (clinic UI only) ===== */
   :root{
     --apple-font:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display","SF Arabic","SF Pro",system-ui,"Segoe UI","Helvetica Neue",Tahoma,Arial,sans-serif;
@@ -544,8 +551,8 @@ var n=localStorage.getItem('clinicName');if(n)document.title=n;}catch(e){}})();
   html[data-theme="blue"]{--teal:#007AFF; --teal-dark:#0A60D0; --bg:#EEF3FA; --card2:#F5F8FC; --inp:#EEF3FA; --hov:#E3EBF6; --line:#D4DEEC;}
   html[data-theme="rose"]{--teal:#FF2D55; --teal-dark:#D70F3A; --bg:#FBF1F3; --card2:#FDF6F7; --inp:#F8ECEF; --hov:#F5E3E7; --line:#EBD5DA;}
   html body, html body *:not(code):not(pre):not(canvas):not(svg):not(svg *){font-family:inherit;}
-  html body{font-family:var(--apple-font); -webkit-font-smoothing:antialiased; letter-spacing:-.003em; line-height:1.45;}
-  h2,h3{color:var(--ink); font-weight:700; letter-spacing:-.01em;}
+  html body{font-family:var(--apple-font); -webkit-font-smoothing:antialiased; line-height:1.45;}
+  h2,h3{color:var(--ink); font-weight:700;}
   .btn{border-radius:12px; font-weight:600; padding:10px 18px; transition:opacity .15s, transform .1s, background .15s;}
   .btn:active{transform:scale(.97);}
   .btn-primary{background:var(--teal); color:#fff;}
@@ -553,7 +560,7 @@ var n=localStorage.getItem('clinicName');if(n)document.title=n;}catch(e){}})();
   .btn-ghost:hover{background:var(--hov);}
   .btn-outline-red{background:var(--card); border:1px solid transparent; box-shadow:0 0 0 1px rgba(255,59,48,.4) inset; color:var(--red);}
   .card{border-radius:18px; border:none; box-shadow:var(--shadow);}
-  .field label{color:var(--muted); font-weight:600; font-size:12.5px; letter-spacing:.01em;}
+  .field label{color:var(--muted); font-weight:600; font-size:12.5px;}
   .field input,.field textarea,.field select,.header-search input,.search-wrap input{border-radius:10px; border:1px solid transparent; background:var(--inp); transition:box-shadow .15s, background .15s;}
   .field input:focus,.field textarea:focus,.field select:focus,.header-search input:focus,.search-wrap input:focus{border-color:var(--teal); background:var(--card); box-shadow:0 0 0 3px rgba(0,122,255,.2);}
   header{background:rgba(255,255,255,.72); -webkit-backdrop-filter:saturate(180%) blur(20px); backdrop-filter:saturate(180%) blur(20px); border-bottom:1px solid rgba(0,0,0,.08); position:sticky; top:0; z-index:100;}
@@ -566,8 +573,9 @@ var n=localStorage.getItem('clinicName');if(n)document.title=n;}catch(e){}})();
   .set-sec{border:none; background:var(--card2); border-radius:12px;}
   .theme-sw.sel{box-shadow:0 0 0 2px var(--card),0 0 0 4px var(--teal);}
   .dashboard-card h3{font-weight:600;}
-  .dashboard-card .dash-count{font-weight:700; letter-spacing:-.02em;}
+  .dashboard-card .dash-count{font-weight:700;}
   ::selection{background:rgba(0,122,255,.25);}
+  html body, html body *{letter-spacing:normal !important;}
 </style>
 </head>
 <body>
@@ -3084,19 +3092,24 @@ function refreshSections(){
   SEC_DEFS.forEach(d=>{
     const el = $(d.id); if(!el) return;
     const has = secCount(d) > 0;
-    el.classList.toggle('sec-on', has || el.classList.contains('sec-manual'));
+    el.classList.toggle('sec-on', has || (el.classList.contains('sec-manual') && (el.classList.contains('sec-open') || el.classList.contains('active'))));
     const x = el.querySelector('.sec-x');
     if(x) x.style.display = has ? 'none' : '';
+    const cn = el.querySelector('.sec-cnt');
+    if(cn){ const n = secCount(d); cn.textContent = n ? n : ''; cn.style.display = n ? '' : 'none'; }
   });
   const m = $('secMenu');
-  if(m) m.innerHTML = SEC_DEFS.map(d=>{
-    const n = secCount(d);
-    return `<button class="dropdown-item" data-sec="${d.id}"><span>${d.icon} ${d.name}</span><span class="sec-state">${n ? n + ' ✓' : '＋ جديد'}</span></button>`;
-  }).join('');
+  if(m){
+    const empty = SEC_DEFS.filter(d => secCount(d) === 0);
+    m.innerHTML = empty.length
+      ? empty.map(d=>`<button class="dropdown-item" data-sec="${d.id}"><span>${d.icon} ${d.name}</span><span class="sec-state">${$(d.id).classList.contains('sec-on') ? 'مفتوح' : '＋ إضافة'}</span></button>`).join('')
+      : '<div class="hint" style="padding:10px 12px;">كل الأقسام فيها بيانات ✓</div>';
+  }
 }
 function showSection(id){
   const el = $(id); if(!el) return;
-  el.classList.add('sec-manual'); el.classList.add('sec-on');
+  SEC_DEFS.forEach(o=>{ const e2=$(o.id); if(e2 && e2!==el){ e2.classList.remove('sec-open'); } });
+  el.classList.add('sec-manual'); el.classList.add('sec-on'); el.classList.add('sec-open');
   refreshSections();
   setTimeout(()=> el.scrollIntoView({behavior:'smooth', block:'start'}), 50);
 }
@@ -3111,8 +3124,14 @@ function showSection(id){
     const el = $(d.id); if(!el) return;
     const h = document.createElement('div');
     h.className = 'sec-head';
-    h.innerHTML = `<span>${d.icon} ${d.name}</span><button type="button" class="sec-x" title="إخفاء القسم">✕</button>`;
-    h.querySelector('.sec-x').onclick = ()=>{ el.classList.remove('sec-manual','sec-on','active'); refreshSections(); };
+    h.innerHTML = `<span class="sec-name">${d.icon} ${d.name}</span><span class="sec-cnt"></span><button type="button" class="sec-x" title="إخفاء القسم">✕</button><span class="sec-chev">▾</span>`;
+    h.querySelector('.sec-x').onclick = (ev)=>{ ev.stopPropagation(); el.classList.remove('sec-manual','sec-on','sec-open','active'); refreshSections(); };
+    h.onclick = ()=>{
+      const isOpen = el.classList.contains('sec-open') || el.classList.contains('active');
+      SEC_DEFS.forEach(o=>{ const e2=$(o.id); if(e2){ e2.classList.remove('sec-open','active'); } });
+      if(!isOpen){ el.classList.add('sec-open'); setTimeout(()=> h.scrollIntoView({behavior:'smooth', block:'start'}), 30); }
+      refreshSections();
+    };
     el.insertBefore(h, el.firstChild);
   });
   $('secAddBtn').onclick = (e)=>{ e.stopPropagation(); refreshSections(); $('secMenu').classList.toggle('open'); };
@@ -3129,7 +3148,7 @@ function showSection(id){
 })();
 
 function resetToBasicTab(){
-  document.querySelectorAll('.tab-panel').forEach(p=> p.classList.remove('sec-manual','sec-on'));
+  document.querySelectorAll('.tab-panel').forEach(p=> p.classList.remove('sec-manual','sec-on','sec-open'));
   try{ refreshSections(); }catch(_){}
   document.querySelectorAll('.tab-btn').forEach(b=> b.classList.remove('active'));
   document.querySelectorAll('.tab-panel').forEach(p=> p.classList.remove('active'));
