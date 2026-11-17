@@ -515,6 +515,7 @@ var n=localStorage.getItem('clinicName');if(n)document.title=n;}catch(e){}})();
   .sticky-note textarea{width:100%; height:180px; border:none; background:transparent; padding:12px; font-family:'Tajawal'; font-size:13.5px; resize:vertical; outline:none; color:#4a3f00;}
   .row-thumbs{display:flex; gap:5px; flex:none;}
   .row-thumb{width:56px; height:56px; border-radius:10px; object-fit:cover; flex:none; background:var(--card2); border:1px solid var(--line);}
+  .row-thumb-doc{border:2px solid var(--teal); object-position:top;}
   .row-thumb-empty{display:flex; align-items:center; justify-content:center; font-size:22px; opacity:.5;}
   /* ===== Apple design language (clinic UI only) ===== */
   :root{
@@ -8625,15 +8626,20 @@ $('closeMessagesViewBtn').onclick = ()=>{
 };
 
 /* ---------- قوايم سريعة: مرضى العمليات و Red Flag ---------- */
-let IMG_THUMBS = {};
+let IMG_THUMBS = {}; let IMG_THUMBS_READY = false;
 const THUMB_CACHE = {};
-function thumbImg(id){
-  let f = IMG_THUMBS[id];
-  if(!f) return '<span class="row-thumbs"><span class="row-thumb row-thumb-empty">🖼️</span></span>';
+function thumbImg(id, rec){
+  let f = IMG_THUMBS[id] || [];
   if(!Array.isArray(f)) f = [f];
-  return '<span class="row-thumbs">' + f.slice(0,3).map(x =>
-    THUMB_CACHE[x] ? `<img class="row-thumb" src="${THUMB_CACHE[x]}" alt="">`
-                   : `<span class="row-thumb row-thumb-empty" data-fid="${escapeHtml(x)}">🖼️</span>`).join('') + '</span>';
+  const items = f.slice(0,3).map(x => ({fid:x, doc:false}));
+  const g = rec && rec.GoogleDocLink ? extractGoogleDocId(rec.GoogleDocLink) : null;
+  if(g) items.unshift({fid:g.id, doc:true});
+  if(!items.length) return '<span class="row-thumbs"><span class="row-thumb row-thumb-empty">🖼️</span></span>';
+  return '<span class="row-thumbs">' + items.map(it => {
+    const cls = 'row-thumb' + (it.doc ? ' row-thumb-doc' : '');
+    return THUMB_CACHE[it.fid] ? `<img class="${cls}" src="${THUMB_CACHE[it.fid]}" alt="">`
+      : `<span class="${cls} row-thumb-empty" data-fid="${escapeHtml(it.fid)}" data-doc="${it.doc?1:0}">${it.doc?'📄':'🖼️'}</span>`;
+  }).join('') + '</span>';
 }
 async function fillThumbs(root){
   const need = [...new Set([...root.querySelectorAll('[data-fid]')].map(e=>e.dataset.fid))].filter(x=>!THUMB_CACHE[x]);
@@ -8648,17 +8654,17 @@ async function fillThumbs(root){
     }catch(_){}
     root.querySelectorAll('[data-fid]').forEach(el=>{
       const v = THUMB_CACHE[el.dataset.fid];
-      if(v){ const im=document.createElement('img'); im.className='row-thumb'; im.src=v; im.alt=''; el.replaceWith(im); }
+      if(v){ const im=document.createElement('img'); im.className='row-thumb' + (el.dataset.doc==='1'?' row-thumb-doc':''); im.src=v; im.alt=''; el.replaceWith(im); }
     });
   }
 }
 function renderQuickPatientsList(containerId, list){
   const box = $(containerId);
   if(!list.length){ box.innerHTML = '<div class="no-visits">لا يوجد مرضى</div>'; return; }
-  const withTh = containerId === 'imagesPatientsList';
+  const withTh = containerId === 'imagesPatientsList' || (containerId === 'operationsPatientsList' && IMG_THUMBS_READY);
   box.innerHTML = list.map(p => `
     <div class="patient-row" data-id="${p.id}"${withTh?' style="display:flex;align-items:center;gap:12px;"':''}>
-      ${withTh ? thumbImg(p.id) : ''}
+      ${withTh ? thumbImg(p.id, p) : ''}
       <div>
         <div class="pname">${escapeHtml(p.Name || '—')} ${p.RedFlag ? '🚩' : ''}</div>
         <div class="pmeta">${escapeHtml(p.Phone || '')} ${p.ClinicNumber ? '· رقم ' + escapeHtml(p.ClinicNumber) : ''}</div>
@@ -8751,6 +8757,20 @@ $('viewOperationPatientsBtn').onclick = async ()=>{
   $('operationCasesList').innerHTML = '<div class="no-visits">جاري التحميل...</div>';
   await loadOperationCases();
   renderOperationCasesList();
+  try{
+    if(navigator.onLine !== false){
+      const token = await ensureAppsScriptLogin();
+      const res = await fetch(`${APPS_SCRIPT_URL}?action=getPatientIdsWithImages&token=${encodeURIComponent(token)}`);
+      const data = await res.json();
+      if(!data.error){
+        IMG_THUMBS = {}; Object.entries(data.thumbs || {}).forEach(([k,v])=>{ IMG_THUMBS[String(k).trim()] = v; });
+        IMG_THUMBS_READY = true;
+        renderQuickPatientsList('operationsPatientsList', allPatients.filter(p => p.HasOperation));
+        renderOperationCasesList();
+        fillThumbs($('operationsPatientsList')); fillThumbs($('operationCasesList'));
+      }
+    }
+  }catch(_){}
 };
 $('closeOperationsViewBtn').onclick = ()=>{
   $('operationsPatientsView').style.display = 'none';
@@ -8797,11 +8817,12 @@ $('viewImagesPatientsBtn').onclick = async ()=>{
     const res = await fetch(`${APPS_SCRIPT_URL}?action=getPatientIdsWithImages&token=${encodeURIComponent(token)}`);
     const data = await res.json();
     if(data.error){ $('imagesPatientsList').innerHTML = `<div class="no-visits">${escapeHtml(data.error)}</div>`; return; }
-    const ids = new Set(data.patientIds || []);
-    IMG_THUMBS = data.thumbs || {};
-    const patients = allPatients.filter(p => ids.has(p.id));
+    const ids = new Set((data.patientIds || []).map(x=>String(x).trim()));
+    IMG_THUMBS_READY = true; IMG_THUMBS = {}; Object.entries(data.thumbs || {}).forEach(([k,v])=>{ IMG_THUMBS[String(k).trim()] = v; });
+    const patients = allPatients.filter(p => ids.has(String(p.id).trim()));
     renderQuickPatientsList('imagesPatientsList', patients);
     fillThumbs($('imagesPatientsList'));
+    window.__imgIds = ids; window.__imgPatients = patients.length;
 
     if(!currentCases.length) await loadOperationCases();
     const casesWithImages = currentCases.filter(c => ids.has(c.id));
@@ -8810,13 +8831,20 @@ $('viewImagesPatientsBtn').onclick = async ()=>{
     else{
       casesBox.innerHTML = casesWithImages.map(c => `
         <div class="patient-row" data-id="${c.id}" style="display:flex;align-items:center;gap:12px;">
-          ${thumbImg(c.id)}
+          ${thumbImg(c.id, c)}
           <div>
             <div class="pname">🩹 ${escapeHtml(c.Name || '—')}</div>
             <div class="pmeta">${escapeHtml(String(c.CaseDate || '').slice(0,10))}</div>
           </div>
         </div>`).join('');
       fillThumbs(casesBox);
+      try{
+        const shown = patients.length + casesWithImages.length;
+        const orphan = [...ids].filter(i => !allPatients.some(p=>p.id===i) && !currentCases.some(c=>c.id===i));
+        let note = $('imagesCountNote');
+        if(!note){ note = document.createElement('div'); note.id='imagesCountNote'; note.className='hint'; note.style.margin='8px 0'; $('imagesPatientsList').parentNode.insertBefore(note, $('imagesPatientsList')); }
+        note.textContent = `📊 عدد اللي ليهم صور في السيستم: ${ids.size} — ظاهر هنا: ${shown}` + (orphan.length ? ` — ${orphan.length} صور مربوطة بحالة مش موجودة (اتمسحت أو رقمها مختلف)` : '');
+      }catch(_){}
       casesBox.querySelectorAll('.patient-row').forEach(row=>{
         row.addEventListener('click', ()=>{
           $('imagesPatientsView').style.display = 'none';
@@ -10769,7 +10797,8 @@ function renderOperationCasesList(){
   const box = $('operationCasesList');
   if(!currentCases.length){ box.innerHTML = '<div class="no-visits">لا يوجد حالات مستقلة مسجلة</div>'; return; }
   box.innerHTML = currentCases.map(c => `
-    <div class="patient-row" data-id="${c.id}">
+    <div class="patient-row" data-id="${c.id}"${IMG_THUMBS_READY?' style="display:flex;align-items:center;gap:12px;"':''}>
+      ${IMG_THUMBS_READY ? thumbImg(c.id, c) : ''}
       <div>
         <div class="pname">🩹 ${escapeHtml(c.Name || '—')}</div>
         <div class="pmeta">${escapeHtml(String(c.CaseDate || '').slice(0,10))} ${c.Location ? '· ' + escapeHtml(c.Location) : ''}</div>
