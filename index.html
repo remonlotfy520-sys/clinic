@@ -3089,10 +3089,12 @@ function refreshSections(){
     if(x) x.style.display = has ? 'none' : '';
   });
   const m = $('secMenu');
-  if(m) m.innerHTML = SEC_DEFS.map(d=>{
-    const n = secCount(d);
-    return `<button class="dropdown-item" data-sec="${d.id}"><span>${d.icon} ${d.name}</span><span class="sec-state">${n ? n + ' ✓' : '＋ جديد'}</span></button>`;
-  }).join('');
+  if(m){
+    const empty = SEC_DEFS.filter(d => secCount(d) === 0);
+    m.innerHTML = empty.length
+      ? empty.map(d=>`<button class="dropdown-item" data-sec="${d.id}"><span>${d.icon} ${d.name}</span><span class="sec-state">${$(d.id).classList.contains('sec-on') ? 'مفتوح' : '＋ إضافة'}</span></button>`).join('')
+      : '<div class="hint" style="padding:10px 12px;">كل الأقسام فيها بيانات ✓</div>';
+  }
 }
 function showSection(id){
   const el = $(id); if(!el) return;
