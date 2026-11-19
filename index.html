@@ -1664,6 +1664,7 @@ var n=localStorage.getItem('clinicName');if(n)document.title=n;}catch(e){}})();
         <div class="mv-tgrid">
           <button id="mvToolLine" class="active">📏 طول</button>
           <button id="mvToolCalib">🎯 معايرة</button>
+          <button id="mvToolRuler">↔️ مسطرة متحركة</button>
           <button id="mvToolAngle">📐 زاوية 3 نقاط</button>
           <button id="mvToolAngle2">∠ زاوية 4 نقاط</button>
           <button id="mvToolLink" class="wide">🔗 زاوية بين خطين موجودين</button>
@@ -1762,6 +1763,11 @@ var n=localStorage.getItem('clinicName');if(n)document.title=n;}catch(e){}})();
         <label class="mv-lbl" title="بعد القوس: القطعة تتكمل لوحدها لحد آخر الصورة بدل ما تحدد باقيها بنقط"><input type="checkbox" id="mvDomeAuto"> تكميل باقي القطعة تلقائيًا (من غير نقط)</label>
         <label class="mv-lbl" title="قطع بقوس حوالين مركز الدوران (Dome osteotomy)"><input type="checkbox" id="mvCutDome"> ⌓ Dome osteotomy (قوس حوالين مركز الدوران)</label>
         <div class="mv-row"><button id="mvCutDone">✔ إنهاء القص</button></div>
+      </div>
+      <div class="mv-sec" id="mvRulerGrp" style="display:none;">
+        <div class="mv-sh">📏 المسطرة المتحركة</div>
+        <div style="font-size:12px;opacity:.8;line-height:1.6;padding:2px 2px 6px;">اسحب جسم المسطرة لتحريكها، واسحب أي طرف (الدايرة) لتلفها وتطوّلها. اسحب في مكان فاضي لرسم مسطرة جديدة. Shift = زوايا ثابتة كل 15°.</div>
+        <div class="mv-tgrid"><button id="mvRulerPin">📌 تثبيت كقياس</button><button id="mvRulerHide">✕ إخفاء المسطرة</button></div>
       </div>
       <div class="mv-sec" id="mvLineGrp" style="display:none;">
         <div class="mv-sh">⊹ خيارات الخط</div>
@@ -4028,6 +4034,10 @@ const MV_EN = {
 "الحالة الأولى": "Initial state",
 "📏 خط قياس": "📏 Measuring line",
 "📐 معايرة": "📐 Calibration",
+"↔️ مسطرة متحركة": "↔️ Free ruler",
+"📏 المسطرة المتحركة": "↔️ Free ruler",
+"📌 تثبيت كقياس": "📌 Pin as measurement",
+"✕ إخفاء المسطرة": "✕ Hide ruler",
 "∠ زاوية": "∠ Angle",
 "🔤 نص": "🔤 Text",
 "〰 منحنى": "〰 Curve",
@@ -4084,6 +4094,7 @@ function mvApplyLang(){
 }
 const MV_NEED = { line:2, seg:2, calib:2, angle:3, angle2:4 };
 const MV_HINTS = {
+  ruler:    ['اسحب جسم المسطرة لتحريكها، واسحب أي طرف لتلفها وتطوّلها'],
   line:     ['اضغط على بداية الخط', 'اضغط على نهاية الخط'],
   seg:      ['اضغط على بداية الخط (بدون رقم)', 'اضغط على نهاية الخط — تقدر تعدّله بعدين بتحريك أي نقطة'],
   mid:      ['اضغط على خط موجود لتحديد منتصفه، أو اضغط نقطتين لرسم خط جديد يتعلّم منتصفه تلقائيًا', 'اضغط على نهاية الخط الجديد'],
@@ -4235,7 +4246,7 @@ function mvInitFloat(){
 
 // ===== شكل قوائم الأدوات: (1) عايمة (2) لوحة جنب ثابتة (3) شريط أيقونات تخصصه بنفسك =====
 const MV_LAYOUTS = ['float','panel','strip'];
-const MV_STRIP_DEFAULT = ['mvToolLine','mvToolCalib','mvToolAngle','mvToolAngle2','|','mvToolPoint','mvToolSeg','mvToolCurve','mvToolPen','mvToolText','|','mvToolMove','mvToolPan','mvToolCrop','mvToolCut','mvToolDome','mvToolRotate','|','mvUndo','mvRedo','mvZoomFit'];
+const MV_STRIP_DEFAULT = ['mvToolLine','mvToolCalib','mvToolRuler','mvToolAngle','mvToolAngle2','|','mvToolPoint','mvToolSeg','mvToolCurve','mvToolPen','mvToolText','|','mvToolMove','mvToolPan','mvToolCrop','mvToolCut','mvToolDome','mvToolRotate','|','mvUndo','mvRedo','mvZoomFit'];
 const MV_STRIP_EXCL = /^(mvTopFab|mvQUndo|mvQRedo|mvSideHide|mvSideFab|mvDockFab|mvCmp\w*|mvInsert2|mvTpl2|calcFabBtn|stickyFabBtn|todoFabBtn|mvLayoutBtn)$/;
 const MV_ICON_FIX = { mvZoomFit:'⛶' };
 let mvStripItems = null, mvStripObs = null, mvDockOpen = true, mvStripFull = false;
@@ -4949,6 +4960,7 @@ function mvDraw(forExport){
     const z = mv.zoomRect, zx = Math.min(z.x0, z.x1), zy = Math.min(z.y0, z.y1), zw = Math.abs(z.x1 - z.x0), zh = Math.abs(z.y1 - z.y0);
     ctx.fillStyle = 'rgba(77,208,225,.15)'; ctx.fillRect(zx, zy, zw, zh); ctx.setLineDash([6*u,4*u]); ctx.lineWidth = 2*u; ctx.strokeStyle = '#4dd0e1'; ctx.strokeRect(zx, zy, zw, zh); ctx.setLineDash([]);
   }
+  if(!forExport && mv.rulerOn && mv.ruler) mvDrawRuler(ctx, u);
   if(mv.tool === 'crop' && mv.cropRect){
     const n = mvCropNorm(), W = cv.width, H = cv.height;
     ctx.save(); ctx.fillStyle = 'rgba(0,0,0,.55)'; ctx.beginPath(); ctx.rect(0,0,W,H); ctx.rect(n.x0, n.y0, n.x1-n.x0, n.y1-n.y0); ctx.fill('evenodd'); ctx.restore();
@@ -4995,6 +5007,58 @@ function mvSyncControls(){
   $('mvDelSel').style.visibility = mv.multi.size ? 'visible' : 'hidden';
   mvSyncAdjUI(); mvSyncPieceUI();
 }
+
+// ===== المسطرة المتحركة (زي مسطرة الآيفون): بتتسحب وتتلف وتتطوّل وتقيس أي حاجة في الصورة =====
+function mvEnsureRuler(){
+  if(!mv.img) return;
+  const W = $('mvCanvas').width, H = $('mvCanvas').height;
+  if(!mv.ruler){ mv.ruler = { a:{x:W*0.3, y:H*0.5}, b:{x:W*0.7, y:H*0.5} }; }
+  mv.rulerOn = true;
+}
+function mvRulerSegDist(p, a, b){
+  const dx = b.x - a.x, dy = b.y - a.y, l2 = dx*dx + dy*dy || 1;
+  const t = Math.max(0, Math.min(1, ((p.x-a.x)*dx + (p.y-a.y)*dy) / l2));
+  return Math.hypot(p.x - (a.x + t*dx), p.y - (a.y + t*dy));
+}
+function mvDrawRuler(ctx, u){
+  const r = mv.ruler; if(!r) return;
+  let a = r.a, b = r.b;
+  if(b.x < a.x || (b.x === a.x && b.y < a.y)){ const t = a; a = b; b = t; }   // الكلام دايمًا مقروء مش مقلوب
+  const L = mvDist(a, b); if(L < 1) return;
+  const ang = Math.atan2(b.y - a.y, b.x - a.x), T = 34*u;
+  const ppu = mv.mmPerPx ? 1/mv.mmPerPx : 1;              // بكسل لكل وحدة (مم أو بكسل)
+  const steps = [1,2,5,10,20,50,100,200,500,1000,2000,5000];
+  let step = steps.find(s => s * ppu * mv.zoom >= 7) || 5000;
+  ctx.save(); ctx.translate(a.x, a.y); ctx.rotate(ang);
+  ctx.fillStyle = 'rgba(255,255,255,.28)'; ctx.fillRect(0, -T/2, L, T);
+  ctx.lineWidth = 1.5*u; ctx.strokeStyle = 'rgba(255,255,255,.95)'; ctx.strokeRect(0, -T/2, L, T);
+  ctx.fillStyle = '#fff'; ctx.strokeStyle = '#fff'; ctx.textAlign = 'center'; ctx.textBaseline = 'top'; ctx.shadowColor = 'rgba(0,0,0,.9)'; ctx.shadowBlur = 3*u;
+  ctx.font = `bold ${Math.round(10*u)}px sans-serif`;
+  const total = L / ppu;
+  const majorEvery = mv.mmPerPx ? 10 : step * 5;
+  for(let k = 0; k * step <= total + 1e-6; k++){
+    const v = k * step, x = v * ppu;
+    const isMajor = mv.mmPerPx ? (v % 10 === 0) : (v % majorEvery === 0);
+    const isMid = mv.mmPerPx ? (v % 5 === 0) : false;
+    const len = (isMajor ? 13 : isMid ? 9 : 5) * u;
+    ctx.lineWidth = (isMajor ? 1.3 : 0.9) * u;
+    ctx.beginPath(); ctx.moveTo(x, -T/2); ctx.lineTo(x, -T/2 + len); ctx.stroke();
+    if(isMajor && x > 4*u && x < L - 10*u){
+      ctx.fillText(mv.mmPerPx ? String(v/10) : String(v), x, -T/2 + len + 1*u);
+    }
+  }
+  ctx.restore();
+  // مقابض الأطراف
+  [r.a, r.b].forEach(q=>{
+    ctx.beginPath(); ctx.arc(q.x, q.y, 9*u, 0, Math.PI*2);
+    ctx.fillStyle = 'rgba(255,255,255,.55)'; ctx.fill(); ctx.lineWidth = 2.5*u; ctx.strokeStyle = '#fff'; ctx.stroke();
+  });
+  // القراءة
+  const mx = (a.x + b.x)/2, my = (a.y + b.y)/2;
+  const nx = -Math.sin(ang), ny = Math.cos(ang);
+  mvLabel(ctx, mvLen(L) + '  ·  ' + Math.round(ang*180/Math.PI*10)/10 + '°', mx + nx*(T/2 + 16*u)*-1, my + ny*(T/2 + 16*u)*-1, u, '#ffffff');
+}
+
 function mvSetTool(t){
   const keepWork = (t === 'zoom') || (mv.tool === 'zoom');
   if(t === 'zoom' && mv.tool !== 'zoom') mv.prevTool = mv.tool;
@@ -5002,7 +5066,7 @@ function mvSetTool(t){
   mv.tool = t; mv.drag = null; mv.zoomRect = null;
   if(!keepWork){ mv.pending = []; mv.pendRefs = []; mv.dome = null; }
   if(!keepWork && t !== 'move' && t !== 'rotate' && t !== 'crop') mvSetSel(null);
-  const ids = { line:'mvToolLine', seg:'mvToolSeg', angle:'mvToolAngle', angle2:'mvToolAngle2', linkangle:'mvToolLink', calib:'mvToolCalib',
+  const ids = { line:'mvToolLine', seg:'mvToolSeg', angle:'mvToolAngle', angle2:'mvToolAngle2', linkangle:'mvToolLink', calib:'mvToolCalib', ruler:'mvToolRuler',
                 pen:'mvToolPen', text:'mvToolText', curve:'mvToolCurve', mid:'mvToolMid', point:'mvToolPoint', crop:'mvToolCrop', zoom:'mvToolZoom', cut:'mvToolCut', move:'mvToolMove', rotate:'mvToolRotate', pan:'mvToolPan' };
   Object.entries(ids).forEach(([k,id])=> $(id).classList.toggle('active', k === t));
   mvDomeSync();
@@ -5015,6 +5079,8 @@ function mvSetTool(t){
   if(t !== 'crop'){ mv.cropRect = null; mv.cropTarget = null; }
   else $('mvCropTarget').textContent = mvT(mv.cropTarget ? 'الهدف: الصورة المدرجة المحددة فقط' : 'الهدف: الصورة الأساسية (الخلفية)');
   $('mvLineGrp').style.display = (t === 'line' || t === 'seg') ? 'block' : 'none';
+  $('mvRulerGrp').style.display = t === 'ruler' ? 'block' : 'none';
+  if(t === 'ruler') mvEnsureRuler();
   if(window.innerWidth <= 760){ $('mvSide').classList.remove('open'); if(typeof mvUiSync === 'function') mvUiSync(); }
   if(t === 'rotate') mvEnsurePivot();
   if(mv.img){
@@ -5219,6 +5285,15 @@ function mvBind(){
     try{ cv.setPointerCapture(e.pointerId); }catch(_){}
     const multiKey = e.shiftKey || e.ctrlKey || e.metaKey;
     if(mv.tool === 'pan'){ mv.drag = { mode:'pan', sx:e.clientX, sy:e.clientY, sl:st.scrollLeft, st:st.scrollTop }; cv.style.cursor = 'grabbing'; return; }
+    if(mv.tool === 'ruler'){
+      mvEnsureRuler();
+      const R = mv.ruler, rr = mvHitRadius();
+      if(mvDist(p, R.a) <= rr*1.3){ mv.drag = { mode:'rulerA' }; }
+      else if(mvDist(p, R.b) <= rr*1.3){ mv.drag = { mode:'rulerB' }; }
+      else if(mvRulerSegDist(p, R.a, R.b) <= 17 / mv.zoom){ mv.drag = { mode:'rulerMove', last:p }; cv.style.cursor = 'grabbing'; }
+      else { R.a = { x:p.x, y:p.y }; R.b = { x:p.x, y:p.y }; mv.drag = { mode:'rulerB' }; }
+      mvDraw(); return;
+    }
     if(mv.tool === 'pen'){
       const sh = mvNewShape({type:'pen', pts:[p]});
       mv.drag = { mode:'pen', shape:sh }; mvDraw(); return;
@@ -5285,6 +5360,13 @@ function mvBind(){
         d.shapes.forEach(s=>{ mvTranslate(s, dx, dy); if(s.type === 'calib') mvRecalcCalib(); });
       }
       else if(d.mode === 'pivot'){ mv.pivot.x = p.x; mv.pivot.y = p.y; }
+      else if(d.mode === 'rulerMove'){ const dx = p.x - d.last.x, dy = p.y - d.last.y; d.last = p; mv.ruler.a.x += dx; mv.ruler.a.y += dy; mv.ruler.b.x += dx; mv.ruler.b.y += dy; }
+      else if(d.mode === 'rulerA' || d.mode === 'rulerB'){
+        const mine = d.mode === 'rulerA' ? mv.ruler.a : mv.ruler.b, other = d.mode === 'rulerA' ? mv.ruler.b : mv.ruler.a;
+        let q = { x:p.x, y:p.y };
+        if(e.shiftKey){ const L = mvDist(other, q), an = Math.round(Math.atan2(q.y-other.y, q.x-other.x) / (Math.PI/12)) * (Math.PI/12); q = { x:other.x + L*Math.cos(an), y:other.y + L*Math.sin(an) }; }
+        mine.x = q.x; mine.y = q.y;
+      }
       else if(d.mode === 'presize'){
         const sh = d.shape, cs = Math.cos(-sh.theta), sn = Math.sin(-sh.theta), dx = p.x - sh.C.x, dy = p.y - sh.C.y;
         const lx = dx*cs - dy*sn, ly = dx*sn + dy*cs;
@@ -5315,6 +5397,7 @@ function mvBind(){
   const endPtr = e=>{
     const d = mv.drag; mv.drag = null;
     if(d && d.mode === 'pan'){ cv.style.cursor = d.restore && !mv.space ? (mv.tool === 'move' ? 'move' : mv.tool === 'text' ? 'text' : mv.tool === 'zoom' ? 'zoom-in' : mv.tool === 'pan' ? 'grab' : 'crosshair') : 'grab'; return; }
+    if(d && String(d.mode).startsWith('ruler')){ cv.style.cursor = 'crosshair'; mvDraw(); return; }
     if(d && d.mode === 'presize'){ mvDraw(); return; }
     if(d && d.mode === 'zoomrect'){
       const zr = mv.zoomRect; mv.zoomRect = null;
@@ -5374,6 +5457,13 @@ function mvBind(){
   Object.entries(tools).forEach(([id,t])=> $(id).onclick = ()=> mvSetTool(t));
   $('mvToolCut').onclick = ()=>{ $('mvCutDome').checked = false; mvSetTool('cut'); };
   $('mvToolDome').onclick = ()=>{ $('mvCutDome').checked = true; mvSetTool('cut'); };
+  $('mvToolRuler').onclick = ()=>{ mvSetTool('ruler'); };
+  $('mvRulerHide').onclick = ()=>{ mv.rulerOn = false; mvDraw(); };
+  $('mvRulerPin').onclick = ()=>{
+    if(!mv.ruler || !mv.rulerOn) return;
+    mvNewShape({ type:'line', a:{ x:mv.ruler.a.x, y:mv.ruler.a.y }, b:{ x:mv.ruler.b.x, y:mv.ruler.b.y } });
+    mv.rulerOn = false; mvDraw();
+  };
   $('mvUndo').onclick = ()=>{
     if(mv.pending.length) mv.pending.pop();
     else if(mv.pendRefs.length) mv.pendRefs.pop();
