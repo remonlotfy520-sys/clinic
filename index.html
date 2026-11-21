@@ -3790,7 +3790,7 @@ async function loadImages(ownerId, targetElId){
     await imgOrderLoad(ownerId, targetElId);
     renderImagesTimeline(currentImages, targetElId);
   }catch(err){
-    $(statusElId).innerHTML = '<div class="no-visits">تعذر تحميل الصور - جرب تاني</div>';
+    $(statusElId).innerHTML = '<div class="no-visits">تعذر تحميل الصور - جرب تاني<br><small style="opacity:.7">' + escapeHtml(String(err && err.message || err)).slice(0,160) + '</small></div>';
   }
 }
 
@@ -7179,17 +7179,18 @@ $('imageFileInput').addEventListener('change', async (e)=>{
   }
   const sessionNote = pendingUploadSection.note;
   const sessionDate = pendingUploadSection.date;
-  let successCount = 0, failCount = 0;
+  let successCount = 0, failCount = 0, firstErr = '';
   for(let i = 0; i < files.length; i++){
     showToast(`جاري رفع الصورة ${i+1} من ${files.length}...`);
     try{
       const dataUrl = await resizeImageFile(files[i], 1000);
       const base64 = dataUrl.split(',')[1];
       const result = await uploadPatientImageRemote(currentPatientId, base64, 'image/jpeg', sessionNote, sessionDate);
-      if(result.error) failCount++; else successCount++;
-    }catch(err){ failCount++; }
+      if(result.error){ failCount++; if(!firstErr) firstErr = String(result.error); } else successCount++;
+    }catch(err){ failCount++; if(!firstErr) firstErr = String(err && err.message || err); }
   }
-  showToast(failCount ? `اتحفظ ${successCount} صورة، وفشل ${failCount}` : `اتحفظت ${successCount} صورة ✓`, !!failCount);
+  if(failCount) console.error('Image upload error:', firstErr);
+  showToast(failCount ? `اتحفظ ${successCount} صورة، وفشل ${failCount} — السبب: ${firstErr.slice(0,120)}` : `اتحفظت ${successCount} صورة ✓`, !!failCount);
   pendingUploadSection = null;
   await loadImages(currentPatientId, currentImagesTargetElId);
 });
