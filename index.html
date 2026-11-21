@@ -759,6 +759,11 @@ var n=localStorage.getItem('clinicName');if(n)document.title=n;}catch(e){}})();
     <div id="imagesCasesList" style="background:var(--inp); border:1px solid var(--line); border-radius:10px; padding:8px; margin-bottom:20px;"></div>
     <h2 style="margin:0 0 10px; font-size:15px;">مرضى ليهم صور</h2>
     <div id="imagesPatientsList" style="background:var(--inp); border:1px solid var(--line); border-radius:10px; padding:8px;"></div>
+    <div id="imagesOrphanBox" style="display:none; margin-top:20px;">
+      <h2 style="margin:0 0 6px; font-size:15px;">⚠️ صور غير مربوطة بمريض أو حالة</h2>
+      <div class="hint" style="margin-bottom:8px;">الصور دي موجودة وسليمة، لكن رقمها مش بيطابق أي مريض أو حالة حالياً (غالباً اتمسحوا أو رقمهم اتغير). اضغط على رقم لفتح الصورة.</div>
+      <div id="imagesOrphanList" style="background:var(--inp); border:1px solid var(--line); border-radius:10px; padding:8px;"></div>
+    </div>
   </div>
 
   <div id="messagesView" style="display:none;">
@@ -9013,6 +9018,22 @@ $('viewImagesPatientsBtn').onclick = async ()=>{
     window.__imgIds = ids; window.__imgPatients = patients.length;
 
     if(!currentCases.length) await loadOperationCases();
+    try{
+      const orphanIds = [...ids].filter(i => !allPatients.some(p=>String(p.id).trim()===i) && !currentCases.some(c=>String(c.id).trim()===i));
+      const oBox = $('imagesOrphanBox'), oList = $('imagesOrphanList');
+      if(oBox && oList){
+        oBox.style.display = orphanIds.length ? '' : 'none';
+        oList.innerHTML = orphanIds.map(id => {
+          const files = (IMG_THUMBS[id] || []);
+          const links = files.map((f,i) => `<a href="https://drive.google.com/file/d/${encodeURIComponent(f)}/view" target="_blank" rel="noopener" style="margin-inline-start:8px;">صورة ${i+1}</a>`).join('');
+          return `<div class="patient-row" style="display:flex;align-items:center;gap:12px;cursor:default;">
+            ${thumbImg(id, {})}
+            <div><div class="pname" style="direction:ltr;text-align:right;">رقم: ${escapeHtml(id)}</div><div class="pmeta">${links || 'مفيش ملف صورة'}</div></div>
+          </div>`;
+        }).join('');
+        fillThumbs(oList);
+      }
+    }catch(_){}
     const casesWithImages = currentCases.filter(c => ids.has(c.id));
     const casesBox = $('imagesCasesList');
     if(!casesWithImages.length){ casesBox.innerHTML = '<div class="no-visits">لا يوجد حالات عمليات ليها صور</div>'; }
