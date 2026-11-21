@@ -973,6 +973,7 @@ var n=localStorage.getItem('clinicName');if(n)document.title=n;}catch(e){}})();
 
           <div class="kashf-sidebar">
             <h2 style="margin:0 0 10px; font-size:15px;">سجل الزيارات</h2>
+            <button type="button" class="btn btn-primary" id="newVisitBtn" style="width:100%; margin-bottom:10px;">➕ إضافة فيزيت جديدة</button>
             <div id="visitsList"></div>
           </div>
         </div>
@@ -3071,7 +3072,7 @@ function openPatient(id){
     $('bookApptCard').style.display = 'none';
   } else {
     migrateOldExamDataToVisit(id, p);
-    loadVisits(id);
+    loadVisits(id).then(()=>openLatestVisit(id)).catch(()=>{});
     resetOperationForm();
     loadOperations(id);
     resetPrescriptionForm(); resetPhysioForm(); resetReportForm();
@@ -3417,7 +3418,7 @@ function renderVisits(visits){
   });
 }
 
-function startEditVisit(visit){
+function startEditVisit(visit, noScroll){
   editingVisitId = visit.id;
   $('vDate').value = String(visit.VisitDate || '').slice(0,10);
   setVNotesPlain(visit.VisitNotes || '');
@@ -3430,8 +3431,20 @@ function startEditVisit(visit){
   $('visitPdfFromFormBtn').style.display = 'inline-block';
   $('visitPrintFromFormBtn').style.display = 'inline-block';
   renderVisits(currentVisits);
-  document.querySelector('.kashf-main').scrollIntoView({behavior:'smooth', block:'start'});
+  if(!noScroll) document.querySelector('.kashf-main').scrollIntoView({behavior:'smooth', block:'start'});
 }
+
+/* لما نفتح ملف مريض عنده زيارات: نفتح آخر زيارة بدل فورم فاضي */
+function openLatestVisit(patientId){
+  if(currentPatientId !== patientId || editingVisitId || !currentVisits.length) return;
+  const latest = currentVisits[0];
+  if(latest && !latest._pending) startEditVisit(latest, true);
+}
+$('newVisitBtn').onclick = ()=>{
+  resetVisitForm();
+  renderVisits(currentVisits);
+  try{ document.querySelector('.kashf-main').scrollIntoView({behavior:'smooth', block:'start'}); }catch(_){}
+};
 
 $('visitDeleteFromFormBtn').onclick = ()=>{
   if(!editingVisitId) return;
