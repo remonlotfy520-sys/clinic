@@ -1134,6 +1134,7 @@ var n=localStorage.getItem('clinicName');if(n)document.title=n;}catch(e){}})();
               <div class="field">
                 <label>الأدوية</label>
                 <div id="rxMedicines"></div>
+                <button type="button" class="btn btn-primary" id="openMedPickerBtn" style="margin-top:4px;">💊 اختيار الأدوية</button>
                 <button type="button" class="btn btn-ghost" id="addMedicineRowBtn" style="margin-top:4px;">+ إضافة دواء</button>
               </div>
 
@@ -2491,13 +2492,14 @@ function attachAutocomplete(input, getOptions){
   input.addEventListener('blur', ()=> setTimeout(()=> list.style.display = 'none', 150));
 }
 
+const MED_MAX = 12;
 let medicineRowsVisibleCount = 1;
 function buildMedicineRows(){
   const box = $('rxMedicines');
   const prevValues = Array.from(document.querySelectorAll('.rx-med-select')).map(s => s.value);
   const prevInstr = Array.from(document.querySelectorAll('.rx-med-instructions')).map(i => i.value);
   box.innerHTML = '';
-  for(let i = 0; i < 7; i++){
+  for(let i = 0; i < MED_MAX; i++){
     const row = document.createElement('div');
     row.className = 'rx-med-row';
     row.style.display = i < medicineRowsVisibleCount ? '' : 'none';
@@ -2520,14 +2522,143 @@ function buildMedicineRows(){
     });
   }
   const addBtn = $('addMedicineRowBtn');
-  if(addBtn) addBtn.style.display = medicineRowsVisibleCount >= 7 ? 'none' : 'inline-block';
+  if(addBtn) addBtn.style.display = medicineRowsVisibleCount >= MED_MAX ? 'none' : 'inline-block';
 }
 $('addMedicineRowBtn').onclick = ()=>{
-  if(medicineRowsVisibleCount >= 7) return;
+  if(medicineRowsVisibleCount >= MED_MAX) return;
   medicineRowsVisibleCount++;
   const rows = document.querySelectorAll('#rxMedicines .rx-med-row');
   if(rows[medicineRowsVisibleCount-1]) rows[medicineRowsVisibleCount-1].style.display = '';
-  $('addMedicineRowBtn').style.display = medicineRowsVisibleCount >= 7 ? 'none' : 'inline-block';
+  $('addMedicineRowBtn').style.display = medicineRowsVisibleCount >= MED_MAX ? 'none' : 'inline-block';
+};
+
+/* ---------- نافذة اختيار الأدوية: صفوف حسب النوع، دوسة تضيف ودوسة تانية تشيل ---------- */
+const MED_CATS = ['مسكنات', 'باسط عضلات', 'مضاد حيوي', 'مضاد التهاب', 'أخرى'];
+const MED_CAT_GUESS = {
+  'مسكنات': ['باراسيتامول','بنادول','ادول','ترامادول','تراماكس','كيتورول','paracetamol','panadol','tramadol','adol'],
+  'باسط عضلات': ['ميدوكالم','سيردالود','سيرداجين','تيزانيدين','ثيوكولشيكوزيد','ثيوكولشيكوسايد','ميوتاكس','باسط','ريلاكس','tolperisone','tizanidine','sirdalud','relax','muscle','orphenadrine','thiocolchicoside'],
+  'مضاد حيوي': ['اوجمنتين','سيبروفلوكساسين','سيبرو','اموكسيسيلين','اموكس','سيفترياكسون','سيفوروكسيم','زيناسيف','فلاجيل','ميترونيدازول','كلينداميسين','ليفوفلوكساسين','ازيثروميسين','مضاد حيوي','augmentin','amox','cef','cipro','clinda','levo','azith','flagyl','antibio'],
+  'مضاد التهاب': ['فولتارين','ديكلوفيناك','ديكلو','بروفين','ايبوبروفين','كاتافلام','اركوكسيا','ايتوريكوكسيب','موبيك','ميلوكسيكام','سيليبركس','سيليكوكسيب','نابروكسين','كيتوبروفين','اندوميثاسين','مضاد التهاب','cataflam','arcoxia','mobic','voltaren','brufen','ibuprofen','diclo','celebrex','naproxen','meloxicam','nsaid','etoricoxib']
+};
+function medNorm_(x){ return String(x || '').toLowerCase().replace(/[أإآ]/g,'ا').replace(/ى/g,'ي').replace(/ة/g,'ه').replace(/\s+/g,' ').trim(); }
+function medCatMap_(){ try{ return JSON.parse(localStorage.getItem('medCats') || '{}') || {}; }catch(_){ return {}; } }
+function medCatOf_(name){
+  const saved = medCatMap_()[name];
+  if(saved && MED_CATS.includes(saved)) return saved;
+  const n = medNorm_(name);
+  for(const cat of Object.keys(MED_CAT_GUESS)){
+    if(MED_CAT_GUESS[cat].some(k => n.includes(medNorm_(k)))) return cat;
+  }
+  return 'أخرى';
+}
+function currentMedList_(){
+  return Array.from(document.querySelectorAll('.rx-med-select')).map((sel, i) => ({
+    name: sel.value.trim(),
+    instructions: (document.querySelector(`.rx-med-instructions[data-idx="${i}"]`) || {value:''}).value.trim()
+  })).filter(m => m.name);
+}
+function applyMedList_(list){
+  medicineRowsVisibleCount = Math.min(MED_MAX, Math.max(1, list.length));
+  buildMedicineRows();
+  document.querySelectorAll('.rx-med-select').forEach((sel, i)=>{
+    const m = list[i];
+    sel.value = m ? m.name : '';
+    document.querySelector(`.rx-med-instructions[data-idx="${i}"]`).value = m ? (m.instructions || '') : '';
+  });
+}
+function toggleMedFromPicker_(name){
+  const list = currentMedList_();
+  const idx = list.findIndex(m => m.name === name);
+  if(idx >= 0){ list.splice(idx, 1); applyMedList_(list); return; }
+  if(list.length >= MED_MAX){ showToast('وصلت للحد الأقصى (' + MED_MAX + ' أدوية)', true); return; }
+  const med = MEDICINES_LIST.find(m => m.name === name) || {};
+  list.push({ name, instructions: med.instructions || '' });
+  applyMedList_(list);
+  if(med.diagnosis && !$('rxDiagnosis').value.trim()) $('rxDiagnosis').value = med.diagnosis;
+}
+
+let medPickerEdit_ = false, medPickerMove_ = null, medPickerQuery_ = '';
+function ensureMedPicker_(){
+  let ov = $('medPickerOverlay');
+  if(ov) return ov;
+  const st = document.createElement('style');
+  st.textContent = `
+    #medPickerOverlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:300;align-items:flex-end;justify-content:center;}
+    #medPickerPanel{background:var(--card,#fff);width:100%;max-width:720px;max-height:92vh;border-radius:18px 18px 0 0;display:flex;flex-direction:column;overflow:hidden;}
+    @media (min-width:760px){#medPickerOverlay{align-items:center;} #medPickerPanel{border-radius:18px;max-height:86vh;}}
+    #medPickerHead{padding:12px 14px;border-bottom:1px solid var(--line,#ddd);display:flex;flex-direction:column;gap:8px;}
+    #medPickerBody{padding:10px 14px 16px;overflow:auto;}
+    .medp-cat{margin-bottom:14px;}
+    .medp-cat h3{margin:0 0 6px;font-size:14px;}
+    .medp-row{display:flex;flex-wrap:wrap;gap:8px;}
+    .medp-chip{border:1px solid var(--line,#ccc);background:var(--inp,#f4f4f4);color:inherit;border-radius:12px;padding:9px 13px;font-size:14px;cursor:pointer;font-family:inherit;}
+    .medp-chip.on{background:var(--teal,#007AFF);border-color:var(--teal,#007AFF);color:#fff;font-weight:700;}
+    .medp-chip.mv{outline:2px dashed #FF9500;}
+  `;
+  document.head.appendChild(st);
+  ov = document.createElement('div');
+  ov.id = 'medPickerOverlay';
+  ov.innerHTML = `
+    <div id="medPickerPanel">
+      <div id="medPickerHead">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+          <b style="font-size:16px;">💊 اختيار الأدوية <span id="medPickerCount" style="font-weight:400;font-size:13px;opacity:.7;"></span></b>
+          <div style="display:flex;gap:6px;">
+            <button type="button" class="btn btn-ghost" id="medPickerEditBtn" style="padding:6px 10px;font-size:12px;">✎ تعديل الأنواع</button>
+            <button type="button" class="btn btn-primary" id="medPickerDoneBtn" style="padding:6px 14px;">تم</button>
+          </div>
+        </div>
+        <input type="text" id="medPickerSearch" placeholder="ابحث عن دواء..." autocomplete="off">
+        <div id="medPickerMoveBar" style="display:none;"></div>
+      </div>
+      <div id="medPickerBody"></div>
+    </div>`;
+  document.body.appendChild(ov);
+  ov.addEventListener('click', e => { if(e.target === ov) closeMedPicker_(); });
+  $('medPickerDoneBtn').onclick = closeMedPicker_;
+  $('medPickerSearch').addEventListener('input', e => { medPickerQuery_ = e.target.value; renderMedPicker_(); });
+  $('medPickerEditBtn').onclick = ()=>{
+    medPickerEdit_ = !medPickerEdit_; medPickerMove_ = null;
+    $('medPickerEditBtn').textContent = medPickerEdit_ ? '✔ خلصت التعديل' : '✎ تعديل الأنواع';
+    renderMedPicker_();
+  };
+  return ov;
+}
+function closeMedPicker_(){ const ov = $('medPickerOverlay'); if(ov) ov.style.display = 'none'; }
+function renderMedPicker_(){
+  const body = $('medPickerBody'), bar = $('medPickerMoveBar');
+  const q = medNorm_(medPickerQuery_);
+  const selected = new Set(currentMedList_().map(m => m.name));
+  $('medPickerCount').textContent = '(' + selected.size + ' مختار)';
+  const groups = {}; MED_CATS.forEach(c => groups[c] = []);
+  MEDICINES_LIST.forEach(m => { if(!q || medNorm_(m.name).includes(q)) groups[medCatOf_(m.name)].push(m); });
+  body.innerHTML = MED_CATS.filter(c => groups[c].length).map(c => `
+    <div class="medp-cat"><h3>${escapeHtml(c)} <span style="font-weight:400;opacity:.6;font-size:12px;">(${groups[c].length})</span></h3>
+      <div class="medp-row">${groups[c].map(m => `<button type="button" class="medp-chip${selected.has(m.name) ? ' on' : ''}${medPickerMove_ === m.name ? ' mv' : ''}" data-name="${escapeHtml(m.name)}">${selected.has(m.name) && !medPickerEdit_ ? '✓ ' : ''}${escapeHtml(m.name)}</button>`).join('')}</div>
+    </div>`).join('') || '<div class="no-visits">لا يوجد أدوية</div>';
+  if(medPickerEdit_ && medPickerMove_){
+    bar.style.display = '';
+    bar.innerHTML = `<div class="hint" style="margin-bottom:6px;">انقل «${escapeHtml(medPickerMove_)}» إلى:</div><div class="medp-row">${MED_CATS.map(c => `<button type="button" class="medp-chip medp-moveto" data-cat="${escapeHtml(c)}">${escapeHtml(c)}</button>`).join('')}</div>`;
+    bar.querySelectorAll('.medp-moveto').forEach(b => b.onclick = ()=>{
+      const map = medCatMap_(); map[medPickerMove_] = b.dataset.cat;
+      try{ localStorage.setItem('medCats', JSON.stringify(map)); }catch(_){}
+      medPickerMove_ = null; renderMedPicker_();
+    });
+  }else if(medPickerEdit_){
+    bar.style.display = ''; bar.innerHTML = '<div class="hint">اضغط على الدواء اللي عايز تغيّر نوعه</div>';
+  }else{ bar.style.display = 'none'; bar.innerHTML = ''; }
+  body.querySelectorAll('.medp-chip').forEach(ch => ch.onclick = ()=>{
+    const name = ch.dataset.name;
+    if(medPickerEdit_){ medPickerMove_ = name; renderMedPicker_(); }
+    else{ const top = body.scrollTop; toggleMedFromPicker_(name); renderMedPicker_(); body.scrollTop = top; }
+  });
+}
+$('openMedPickerBtn').onclick = ()=>{
+  const ov = ensureMedPicker_();
+  medPickerEdit_ = false; medPickerMove_ = null; medPickerQuery_ = '';
+  $('medPickerSearch').value = ''; $('medPickerEditBtn').textContent = '✎ تعديل الأنواع';
+  renderMedPicker_();
+  ov.style.display = 'flex';
 };
 
 function renderPresetRxList(){
@@ -7245,7 +7376,7 @@ function collectPrescription(){
 function loadPrescription(raw){
   let rx; try{ rx = raw ? JSON.parse(raw) : null; }catch(e){ rx = null; }
   rx = rx || { diagnosis:'', medicines:[], recommendations:[], radiologyRequested:[], labsRequested:[] };
-  medicineRowsVisibleCount = Math.max(1, (rx.medicines || []).length);
+  medicineRowsVisibleCount = Math.min(MED_MAX, Math.max(1, (rx.medicines || []).length));
   buildMedicineRows();
   $('rxDiagnosis').value = rx.diagnosis || '';
   document.querySelectorAll('.rx-med-select').forEach((sel, i)=>{
