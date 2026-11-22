@@ -2533,7 +2533,7 @@ $('addMedicineRowBtn').onclick = ()=>{
 };
 
 /* ---------- نافذة اختيار الأدوية: صفوف حسب النوع، دوسة تضيف ودوسة تانية تشيل ---------- */
-const MED_CATS = ['مسكنات', 'باسط عضلات', 'مضاد حيوي', 'مضاد التهاب', 'أخرى'];
+const MED_CATS_DEFAULT = ['مسكنات', 'باسط عضلات', 'مضاد حيوي', 'مضاد التهاب', 'أخرى'];
 const MED_CAT_GUESS = {
   'مسكنات': ['باراسيتامول','بنادول','ادول','ترامادول','تراماكس','كيتورول','paracetamol','panadol','tramadol','adol'],
   'باسط عضلات': ['ميدوكالم','سيردالود','سيرداجين','تيزانيدين','ثيوكولشيكوزيد','ثيوكولشيكوسايد','ميوتاكس','باسط','ريلاكس','tolperisone','tizanidine','sirdalud','relax','muscle','orphenadrine','thiocolchicoside'],
@@ -2542,12 +2542,21 @@ const MED_CAT_GUESS = {
 };
 function medNorm_(x){ return String(x || '').toLowerCase().replace(/[أإآ]/g,'ا').replace(/ى/g,'ي').replace(/ة/g,'ه').replace(/\s+/g,' ').trim(); }
 function medCatMap_(){ try{ return JSON.parse(localStorage.getItem('medCats') || '{}') || {}; }catch(_){ return {}; } }
+function medCatMapSave_(m){ try{ localStorage.setItem('medCats', JSON.stringify(m)); }catch(_){} }
+function medCats_(){
+  let l; try{ l = JSON.parse(localStorage.getItem('medCatsList') || 'null'); }catch(_){ l = null; }
+  if(!Array.isArray(l) || !l.length) l = MED_CATS_DEFAULT.slice();
+  l = l.filter(x => x && x !== 'أخرى'); l.push('أخرى');
+  return l;
+}
+function medCatsSave_(l){ try{ localStorage.setItem('medCatsList', JSON.stringify(l.filter(x => x !== 'أخرى'))); }catch(_){} }
 function medCatOf_(name){
+  const cats = medCats_();
   const saved = medCatMap_()[name];
-  if(saved && MED_CATS.includes(saved)) return saved;
+  if(saved && cats.includes(saved)) return saved;
   const n = medNorm_(name);
   for(const cat of Object.keys(MED_CAT_GUESS)){
-    if(MED_CAT_GUESS[cat].some(k => n.includes(medNorm_(k)))) return cat;
+    if(cats.includes(cat) && MED_CAT_GUESS[cat].some(k => n.includes(medNorm_(k)))) return cat;
   }
   return 'أخرى';
 }
@@ -2577,7 +2586,7 @@ function toggleMedFromPicker_(name){
   if(med.diagnosis && !$('rxDiagnosis').value.trim()) $('rxDiagnosis').value = med.diagnosis;
 }
 
-let medPickerEdit_ = false, medPickerMove_ = null, medPickerQuery_ = '';
+let medPickerEdit_ = false, medPickerSel_ = null, medPickerForm_ = null, medPickerQuery_ = '';
 function ensureMedPicker_(){
   let ov = $('medPickerOverlay');
   if(ov) return ov;
@@ -2589,11 +2598,15 @@ function ensureMedPicker_(){
     #medPickerHead{padding:12px 14px;border-bottom:1px solid var(--line,#ddd);display:flex;flex-direction:column;gap:8px;}
     #medPickerBody{padding:10px 14px 16px;overflow:auto;}
     .medp-cat{margin-bottom:14px;}
-    .medp-cat h3{margin:0 0 6px;font-size:14px;}
+    .medp-cat h3{margin:0 0 6px;font-size:14px;display:flex;align-items:center;gap:8px;}
     .medp-row{display:flex;flex-wrap:wrap;gap:8px;}
     .medp-chip{border:1px solid var(--line,#ccc);background:var(--inp,#f4f4f4);color:inherit;border-radius:12px;padding:9px 13px;font-size:14px;cursor:pointer;font-family:inherit;}
     .medp-chip.on{background:var(--teal,#007AFF);border-color:var(--teal,#007AFF);color:#fff;font-weight:700;}
     .medp-chip.mv{outline:2px dashed #FF9500;}
+    .medp-act{padding:7px 11px;font-size:13px;}
+    .medp-form{display:grid;gap:8px;grid-template-columns:1fr 1fr;}
+    .medp-form input,.medp-form select{padding:9px 10px;border-radius:9px;border:1px solid var(--line,#ccc);font-family:inherit;font-size:14px;background:var(--inp,#fff);color:inherit;width:100%;box-sizing:border-box;}
+    .medp-form .full{grid-column:1/-1;}
   `;
   document.head.appendChild(st);
   ov = document.createElement('div');
@@ -2604,12 +2617,12 @@ function ensureMedPicker_(){
         <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
           <b style="font-size:16px;">💊 اختيار الأدوية <span id="medPickerCount" style="font-weight:400;font-size:13px;opacity:.7;"></span></b>
           <div style="display:flex;gap:6px;">
-            <button type="button" class="btn btn-ghost" id="medPickerEditBtn" style="padding:6px 10px;font-size:12px;">✎ تعديل الأنواع</button>
+            <button type="button" class="btn btn-ghost" id="medPickerEditBtn" style="padding:6px 10px;font-size:12px;">✎ تعديل</button>
             <button type="button" class="btn btn-primary" id="medPickerDoneBtn" style="padding:6px 14px;">تم</button>
           </div>
         </div>
         <input type="text" id="medPickerSearch" placeholder="ابحث عن دواء..." autocomplete="off">
-        <div id="medPickerMoveBar" style="display:none;"></div>
+        <div id="medPickerBar" style="display:none;"></div>
       </div>
       <div id="medPickerBody"></div>
     </div>`;
@@ -2618,45 +2631,111 @@ function ensureMedPicker_(){
   $('medPickerDoneBtn').onclick = closeMedPicker_;
   $('medPickerSearch').addEventListener('input', e => { medPickerQuery_ = e.target.value; renderMedPicker_(); });
   $('medPickerEditBtn').onclick = ()=>{
-    medPickerEdit_ = !medPickerEdit_; medPickerMove_ = null;
-    $('medPickerEditBtn').textContent = medPickerEdit_ ? '✔ خلصت التعديل' : '✎ تعديل الأنواع';
+    medPickerEdit_ = !medPickerEdit_; medPickerSel_ = null; medPickerForm_ = null;
+    $('medPickerEditBtn').textContent = medPickerEdit_ ? '✔ خلصت التعديل' : '✎ تعديل';
     renderMedPicker_();
   };
   return ov;
 }
 function closeMedPicker_(){ const ov = $('medPickerOverlay'); if(ov) ov.style.display = 'none'; }
+async function medRefresh_(){ try{ await tryFetchListsRemote(true); }catch(_){} renderMedPicker_(); }
+
 function renderMedPicker_(){
-  const body = $('medPickerBody'), bar = $('medPickerMoveBar');
+  const body = $('medPickerBody'), bar = $('medPickerBar');
   const q = medNorm_(medPickerQuery_);
+  const cats = medCats_();
   const selected = new Set(currentMedList_().map(m => m.name));
   $('medPickerCount').textContent = '(' + selected.size + ' مختار)';
-  const groups = {}; MED_CATS.forEach(c => groups[c] = []);
+  const groups = {}; cats.forEach(c => groups[c] = []);
   MEDICINES_LIST.forEach(m => { if(!q || medNorm_(m.name).includes(q)) groups[medCatOf_(m.name)].push(m); });
-  body.innerHTML = MED_CATS.filter(c => groups[c].length).map(c => `
-    <div class="medp-cat"><h3>${escapeHtml(c)} <span style="font-weight:400;opacity:.6;font-size:12px;">(${groups[c].length})</span></h3>
-      <div class="medp-row">${groups[c].map(m => `<button type="button" class="medp-chip${selected.has(m.name) ? ' on' : ''}${medPickerMove_ === m.name ? ' mv' : ''}" data-name="${escapeHtml(m.name)}">${selected.has(m.name) && !medPickerEdit_ ? '✓ ' : ''}${escapeHtml(m.name)}</button>`).join('')}</div>
+  const showCats = medPickerEdit_ ? cats : cats.filter(c => groups[c].length);
+  body.innerHTML = showCats.map(c => `
+    <div class="medp-cat"><h3>${escapeHtml(c)} <span style="font-weight:400;opacity:.6;font-size:12px;">(${groups[c].length})</span>${medPickerEdit_ && c !== 'أخرى' ? `<button type="button" class="btn btn-outline-red medp-act medp-delcat" data-cat="${escapeHtml(c)}" style="padding:2px 8px;font-size:11px;">🗑 حذف القائمة</button>` : ''}</h3>
+      <div class="medp-row">${groups[c].map(m => `<button type="button" class="medp-chip${selected.has(m.name) ? ' on' : ''}${medPickerSel_ === m.name ? ' mv' : ''}" data-name="${escapeHtml(m.name)}">${selected.has(m.name) && !medPickerEdit_ ? '✓ ' : ''}${escapeHtml(m.name)}</button>`).join('') || '<span class="hint">فاضية</span>'}</div>
     </div>`).join('') || '<div class="no-visits">لا يوجد أدوية</div>';
-  if(medPickerEdit_ && medPickerMove_){
+
+  // شريط الأدوات
+  if(!medPickerEdit_){ bar.style.display = 'none'; bar.innerHTML = ''; }
+  else{
     bar.style.display = '';
-    bar.innerHTML = `<div class="hint" style="margin-bottom:6px;">انقل «${escapeHtml(medPickerMove_)}» إلى:</div><div class="medp-row">${MED_CATS.map(c => `<button type="button" class="medp-chip medp-moveto" data-cat="${escapeHtml(c)}">${escapeHtml(c)}</button>`).join('')}</div>`;
+    let h = `<div class="medp-row" style="margin-bottom:8px;"><button type="button" class="btn btn-ghost medp-act" id="mpAddCat">➕ إضافة قائمة</button><button type="button" class="btn btn-ghost medp-act" id="mpAddMed">➕ إضافة دواء</button></div>`;
+    if(medPickerForm_){
+      const f = medPickerForm_;
+      h += `<div class="medp-form">
+        <input class="full" id="mpfName" placeholder="اسم الدواء" value="${escapeHtml(f.name || '')}">
+        <input id="mpfInstr" placeholder="طريقة الإعطاء" value="${escapeHtml(f.instructions || '')}">
+        <input id="mpfDur" placeholder="المدة" value="${escapeHtml(f.duration || '')}">
+        <input class="full" id="mpfDiag" placeholder="التشخيص المرتبط (اختياري)" value="${escapeHtml(f.diagnosis || '')}">
+        <select class="full" id="mpfCat">${cats.map(c => `<option value="${escapeHtml(c)}"${c === f.cat ? ' selected' : ''}>${escapeHtml(c)}</option>`).join('')}</select>
+        <button type="button" class="btn btn-primary full" id="mpfSave">${f.old ? 'حفظ التعديل' : 'إضافة الدواء'}</button>
+        <button type="button" class="btn btn-ghost full" id="mpfCancel">إلغاء</button>
+      </div>`;
+    }else if(medPickerSel_){
+      h += `<div class="hint" style="margin-bottom:6px;">«${escapeHtml(medPickerSel_)}» — اختار إجراء:</div>
+        <div class="medp-row" style="margin-bottom:6px;"><button type="button" class="btn btn-ghost medp-act" id="mpEdit">✏️ تعديل</button><button type="button" class="btn btn-outline-red medp-act" id="mpDel">🗑 حذف الدواء</button></div>
+        <div class="hint" style="margin-bottom:4px;">أو انقله إلى قائمة:</div>
+        <div class="medp-row">${cats.map(c => `<button type="button" class="medp-chip medp-moveto" data-cat="${escapeHtml(c)}">${escapeHtml(c)}</button>`).join('')}</div>`;
+    }else{
+      h += '<div class="hint">اضغط على أي دواء لتعديله أو حذفه أو نقله لقائمة تانية</div>';
+    }
+    bar.innerHTML = h;
+
+    $('mpAddCat').onclick = ()=>{
+      const name = (prompt('اسم القائمة الجديدة:') || '').trim();
+      if(!name) return;
+      const l = medCats_();
+      if(l.includes(name)){ showToast('القائمة دي موجودة', true); return; }
+      l.splice(l.length - 1, 0, name);
+      medCatsSave_(l); renderMedPicker_();
+    };
+    $('mpAddMed').onclick = ()=>{ medPickerSel_ = null; medPickerForm_ = { cat: cats[0] }; renderMedPicker_(); };
+    if($('mpEdit')) $('mpEdit').onclick = ()=>{
+      const m = MEDICINES_LIST.find(x => x.name === medPickerSel_) || { name: medPickerSel_ };
+      medPickerForm_ = { old: m.name, name: m.name, instructions: m.instructions || '', duration: m.duration || '', diagnosis: m.diagnosis || '', cat: medCatOf_(m.name) };
+      renderMedPicker_();
+    };
+    if($('mpDel')) $('mpDel').onclick = async ()=>{
+      const name = medPickerSel_;
+      if(!confirm('حذف دواء "' + name + '" من القايمة؟')) return;
+      const r = await mgrBridgeCall('deleteMedicine', { name });
+      if(r && r.error){ showToast(r.error, true); return; }
+      const mp = medCatMap_(); delete mp[name]; medCatMapSave_(mp);
+      medPickerSel_ = null; showToast('اتحذف ✓'); await medRefresh_();
+    };
     bar.querySelectorAll('.medp-moveto').forEach(b => b.onclick = ()=>{
-      const map = medCatMap_(); map[medPickerMove_] = b.dataset.cat;
-      try{ localStorage.setItem('medCats', JSON.stringify(map)); }catch(_){}
-      medPickerMove_ = null; renderMedPicker_();
+      const mp = medCatMap_(); mp[medPickerSel_] = b.dataset.cat; medCatMapSave_(mp);
+      medPickerSel_ = null; renderMedPicker_();
     });
-  }else if(medPickerEdit_){
-    bar.style.display = ''; bar.innerHTML = '<div class="hint">اضغط على الدواء اللي عايز تغيّر نوعه</div>';
-  }else{ bar.style.display = 'none'; bar.innerHTML = ''; }
+    if($('mpfCancel')) $('mpfCancel').onclick = ()=>{ medPickerForm_ = null; renderMedPicker_(); };
+    if($('mpfSave')) $('mpfSave').onclick = async ()=>{
+      const f = medPickerForm_;
+      const name = $('mpfName').value.trim();
+      if(!name){ showToast('اكتب اسم الدواء', true); return; }
+      const data = { name, instructions: $('mpfInstr').value.trim(), duration: $('mpfDur').value.trim(), diagnosis: $('mpfDiag').value.trim() };
+      const cat = $('mpfCat').value;
+      const r = f.old ? await mgrBridgeCall('updateMedicine', { oldName: f.old, data }) : await mgrBridgeCall('addMedicine', { data });
+      if(r && r.error){ showToast(r.error, true); return; }
+      const mp = medCatMap_(); if(f.old && f.old !== name) delete mp[f.old]; mp[name] = cat; medCatMapSave_(mp);
+      medPickerForm_ = null; medPickerSel_ = null; showToast(f.old ? 'اتعدّل ✓' : 'اتضاف ✓'); await medRefresh_();
+    };
+    body.querySelectorAll('.medp-delcat').forEach(b => b.onclick = ()=>{
+      const c = b.dataset.cat;
+      if(!confirm('حذف قائمة "' + c + '"؟ الأدوية اللي فيها هتتنقل لـ "أخرى" ومش هتتحذف.')) return;
+      const l = medCats_().filter(x => x !== c); medCatsSave_(l);
+      const mp = medCatMap_(); Object.keys(mp).forEach(k => { if(mp[k] === c) delete mp[k]; }); medCatMapSave_(mp);
+      renderMedPicker_();
+    });
+  }
   body.querySelectorAll('.medp-chip').forEach(ch => ch.onclick = ()=>{
     const name = ch.dataset.name;
-    if(medPickerEdit_){ medPickerMove_ = name; renderMedPicker_(); }
+    if(medPickerEdit_){ medPickerForm_ = null; medPickerSel_ = name; renderMedPicker_(); }
     else{ const top = body.scrollTop; toggleMedFromPicker_(name); renderMedPicker_(); body.scrollTop = top; }
   });
 }
 $('openMedPickerBtn').onclick = ()=>{
   const ov = ensureMedPicker_();
-  medPickerEdit_ = false; medPickerMove_ = null; medPickerQuery_ = '';
-  $('medPickerSearch').value = ''; $('medPickerEditBtn').textContent = '✎ تعديل الأنواع';
+  medPickerEdit_ = false; medPickerSel_ = null; medPickerForm_ = null; medPickerQuery_ = '';
+  $('medPickerSearch').value = ''; $('medPickerEditBtn').textContent = '✎ تعديل';
   renderMedPicker_();
   ov.style.display = 'flex';
 };
