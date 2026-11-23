@@ -2536,6 +2536,30 @@ $('addMedicineRowBtn').onclick = ()=>{
   $('addMedicineRowBtn').style.display = medicineRowsVisibleCount >= MED_MAX ? 'none' : 'inline-block';
 };
 
+/* ---------- مزامنة قوائم الأدوية/الأشعة/التحاليل بين الأجهزة (Firestore: settings/lists) ---------- */
+const LISTS_SYNC_KEYS = ['medCats','medCatsList','radiologyCats','radiologyCatsList','labsCats','labsCatsList'];
+let listsSyncTimer = null, listsToastShown = false;
+function listsLocalSnapshot_(){ const o = {}; LISTS_SYNC_KEYS.forEach(k => { const v = localStorage.getItem(k); if(v !== null) o[k] = v; }); return o; }
+function listsPush_(){
+  try{
+    if(!auth.currentUser) return;
+    setDoc(doc(db, 'settings', 'lists'), { json: JSON.stringify(listsLocalSnapshot_()), updatedAt: serverTimestamp() })
+      .catch(()=>{ if(!listsToastShown){ listsToastShown = true; showToast('القوائم اتحفظت على الجهاز ده بس - مفيش صلاحية مزامنة (راجع قواعد Firebase)', true); } });
+  }catch(_){}
+}
+function listsSchedulePush_(){ clearTimeout(listsSyncTimer); listsSyncTimer = setTimeout(listsPush_, 600); }
+async function listsPull_(){
+  try{
+    if(!auth.currentUser) return;
+    const snap = await getDoc(doc(db, 'settings', 'lists'));
+    if(snap.exists()){
+      const o = JSON.parse(snap.data().json || '{}');
+      LISTS_SYNC_KEYS.forEach(k => { if(o[k] !== undefined) localStorage.setItem(k, o[k]); else localStorage.removeItem(k); });
+    }else if(Object.keys(listsLocalSnapshot_()).length){ listsPush_(); } /* أول مرة: ارفع اللي على الجهاز */
+  }catch(_){ /* بنكمل بالنسخة المحلية */ }
+}
+function listsPullFast_(){ return Promise.race([listsPull_(), new Promise(r => setTimeout(r, 1500))]); }
+
 /* ---------- نافذة اختيار الأدوية: صفوف حسب النوع، دوسة تضيف ودوسة تانية تشيل ---------- */
 const MED_CATS_DEFAULT = ['مسكنات', 'باسط عضلات', 'مضاد حيوي', 'مضاد التهاب', 'أخرى'];
 const MED_CAT_GUESS = {
@@ -2546,14 +2570,14 @@ const MED_CAT_GUESS = {
 };
 function medNorm_(x){ return String(x || '').toLowerCase().replace(/[أإآ]/g,'ا').replace(/ى/g,'ي').replace(/ة/g,'ه').replace(/\s+/g,' ').trim(); }
 function medCatMap_(){ try{ return JSON.parse(localStorage.getItem('medCats') || '{}') || {}; }catch(_){ return {}; } }
-function medCatMapSave_(m){ try{ localStorage.setItem('medCats', JSON.stringify(m)); }catch(_){} }
+function medCatMapSave_(m){ try{ localStorage.setItem('medCats', JSON.stringify(m)); }catch(_){} listsSchedulePush_(); }
 function medCats_(){
   let l; try{ l = JSON.parse(localStorage.getItem('medCatsList') || 'null'); }catch(_){ l = null; }
   if(!Array.isArray(l) || !l.length) l = MED_CATS_DEFAULT.slice();
   l = l.filter(x => x && x !== 'أخرى'); l.push('أخرى');
   return l;
 }
-function medCatsSave_(l){ try{ localStorage.setItem('medCatsList', JSON.stringify(l.filter(x => x !== 'أخرى'))); }catch(_){} }
+function medCatsSave_(l){ try{ localStorage.setItem('medCatsList', JSON.stringify(l.filter(x => x !== 'أخرى'))); }catch(_){} listsSchedulePush_(); }
 const MED_CAT_COLORS = { 'مسكنات':'#FF9500', 'باسط عضلات':'#5856D6', 'مضاد حيوي':'#34C759', 'مضاد التهاب':'#FF2D55', 'أخرى':'#8E8E93' };
 const MED_CAT_EXTRA = ['#30B0C7','#C9A800','#AF52DE','#FF3B30','#A2845E','#007AFF'];
 function medCatColor_(cat){
@@ -2762,7 +2786,8 @@ function renderMedPicker_(){
     else{ const top = body.scrollTop; toggleMedFromPicker_(name); renderMedPicker_(); body.scrollTop = top; }
   });
 }
-$('openMedPickerBtn').onclick = ()=>{
+$('openMedPickerBtn').onclick = async ()=>{
+  await listsPullFast_();
   const ov = ensureMedPicker_();
   medPickerEdit_ = false; medPickerSel_ = null; medPickerForm_ = null; medPickerQuery_ = '';
   $('medPickerSearch').value = ''; $('medPickerEditBtn').textContent = '✎ تعديل';
@@ -2797,14 +2822,14 @@ const LP_EXTRA = ['#30B0C7','#C9A800','#AF52DE','#FF3B30','#A2845E','#007AFF'];
 const LP = { kind: null, target: null, edit: false, sel: null, form: null, query: '' };
 function lpCfg_(){ return LP_CFG[LP.kind]; }
 function lpCatMap_(){ try{ return JSON.parse(localStorage.getItem(LP.kind + 'Cats') || '{}') || {}; }catch(_){ return {}; } }
-function lpCatMapSave_(m){ try{ localStorage.setItem(LP.kind + 'Cats', JSON.stringify(m)); }catch(_){} }
+function lpCatMapSave_(m){ try{ localStorage.setItem(LP.kind + 'Cats', JSON.stringify(m)); }catch(_){} listsSchedulePush_(); }
 function lpCats_(){
   let l; try{ l = JSON.parse(localStorage.getItem(LP.kind + 'CatsList') || 'null'); }catch(_){ l = null; }
   if(!Array.isArray(l) || !l.length) l = lpCfg_().cats.slice();
   l = l.filter(x => x && x !== 'أخرى'); l.push('أخرى');
   return l;
 }
-function lpCatsSave_(l){ try{ localStorage.setItem(LP.kind + 'CatsList', JSON.stringify(l.filter(x => x !== 'أخرى'))); }catch(_){} }
+function lpCatsSave_(l){ try{ localStorage.setItem(LP.kind + 'CatsList', JSON.stringify(l.filter(x => x !== 'أخرى'))); }catch(_){} listsSchedulePush_(); }
 function lpColor_(cat){
   const c = lpCfg_().colors[cat]; if(c) return c;
   let h = 0; for(const ch of String(cat)) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
@@ -2956,7 +2981,8 @@ function lpRender_(){
     else{ const top = body.scrollTop; lpToggle_(name); lpRender_(); body.scrollTop = top; }
   });
 }
-document.querySelectorAll('.list-picker-btn').forEach(btn => btn.onclick = ()=>{
+document.querySelectorAll('.list-picker-btn').forEach(btn => btn.onclick = async ()=>{
+  await listsPullFast_();
   LP.kind = btn.dataset.kind; LP.target = btn.dataset.target; LP.edit = false; LP.sel = null; LP.form = null; LP.query = '';
   const ov = lpEnsure_();
   $('lpTitle').textContent = lpCfg_().title; $('lpSearch').value = ''; $('lpEditBtn').textContent = '✎ تعديل';
@@ -3339,6 +3365,7 @@ onAuthStateChanged(auth, (user)=>{
     hideLoginScreen();
     initApp();
     loadClinicSettings();
+    listsPull_();
     setTimeout(webReqBackgroundCheck, 2500);
     startBookingsWatch();
   } else {
