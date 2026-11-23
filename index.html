@@ -2550,6 +2550,13 @@ function medCats_(){
   return l;
 }
 function medCatsSave_(l){ try{ localStorage.setItem('medCatsList', JSON.stringify(l.filter(x => x !== 'أخرى'))); }catch(_){} }
+const MED_CAT_COLORS = { 'مسكنات':'#FF9500', 'باسط عضلات':'#5856D6', 'مضاد حيوي':'#34C759', 'مضاد التهاب':'#FF2D55', 'أخرى':'#8E8E93' };
+const MED_CAT_EXTRA = ['#30B0C7','#C9A800','#AF52DE','#FF3B30','#A2845E','#007AFF'];
+function medCatColor_(cat){
+  if(MED_CAT_COLORS[cat]) return MED_CAT_COLORS[cat];
+  let h = 0; for(const ch of String(cat)) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  return MED_CAT_EXTRA[h % MED_CAT_EXTRA.length];
+}
 function medCatOf_(name){
   const cats = medCats_();
   const saved = medCatMap_()[name];
@@ -2597,13 +2604,22 @@ function ensureMedPicker_(){
     @media (min-width:760px){#medPickerOverlay{align-items:center;} #medPickerPanel{border-radius:18px;max-height:86vh;}}
     #medPickerHead{padding:12px 14px;border-bottom:1px solid var(--line,#ddd);display:flex;flex-direction:column;gap:8px;}
     #medPickerBody{padding:10px 14px 16px;overflow:auto;}
-    .medp-cat{margin-bottom:14px;}
+    .medp-cat{--mc:#8E8E93;margin-bottom:12px;padding:9px 11px;border-radius:14px;border-inline-start:5px solid var(--mc);background:color-mix(in srgb,var(--mc) 9%,transparent);}
+    .medp-cat h3{color:color-mix(in srgb,var(--mc) 75%,var(--ink,#222));}
+    .medp-cat .medp-chip{background:color-mix(in srgb,var(--mc) 16%,var(--card,#fff));border-color:color-mix(in srgb,var(--mc) 45%,transparent);}
+    .medp-cat .medp-chip.on{background:var(--mc);border-color:var(--mc);color:#fff;}
     .medp-cat h3{margin:0 0 6px;font-size:14px;display:flex;align-items:center;gap:8px;}
     .medp-row{display:flex;flex-wrap:wrap;gap:8px;}
     .medp-chip{border:1px solid var(--line,#ccc);background:var(--inp,#f4f4f4);color:inherit;border-radius:12px;padding:9px 13px;font-size:14px;cursor:pointer;font-family:inherit;}
     .medp-chip.on{background:var(--teal,#007AFF);border-color:var(--teal,#007AFF);color:#fff;font-weight:700;}
     .medp-chip.mv{outline:2px dashed #FF9500;}
     .medp-act{padding:7px 11px;font-size:13px;}
+    #medPickerJump{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;-webkit-overflow-scrolling:touch;}
+    #medPickerJump:empty{display:none;}
+    .medp-jump{flex:0 0 auto;border:1px solid color-mix(in srgb,var(--mc) 55%,transparent);background:color-mix(in srgb,var(--mc) 16%,var(--card,#fff));color:color-mix(in srgb,var(--mc) 80%,var(--ink,#222));border-radius:999px;padding:6px 12px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;}
+    .medp-jump:active{background:var(--mc);color:#fff;}
+    .medp-cat.flash{animation:medpFlash .9s ease;}
+    @keyframes medpFlash{0%{box-shadow:0 0 0 3px var(--mc);}100%{box-shadow:0 0 0 0 transparent;}}
     .medp-form{display:grid;gap:8px;grid-template-columns:1fr 1fr;}
     .medp-form input,.medp-form select{padding:9px 10px;border-radius:9px;border:1px solid var(--line,#ccc);font-family:inherit;font-size:14px;background:var(--inp,#fff);color:inherit;width:100%;box-sizing:border-box;}
     .medp-form .full{grid-column:1/-1;}
@@ -2622,6 +2638,7 @@ function ensureMedPicker_(){
           </div>
         </div>
         <input type="text" id="medPickerSearch" placeholder="ابحث عن دواء..." autocomplete="off">
+        <div id="medPickerJump"></div>
         <div id="medPickerBar" style="display:none;"></div>
       </div>
       <div id="medPickerBody"></div>
@@ -2650,10 +2667,19 @@ function renderMedPicker_(){
   MEDICINES_LIST.forEach(m => { if(!q || medNorm_(m.name).includes(q)) groups[medCatOf_(m.name)].push(m); });
   const showCats = medPickerEdit_ ? cats : cats.filter(c => groups[c].length);
   body.innerHTML = showCats.map(c => `
-    <div class="medp-cat"><h3>${escapeHtml(c)} <span style="font-weight:400;opacity:.6;font-size:12px;">(${groups[c].length})</span>${medPickerEdit_ && c !== 'أخرى' ? `<button type="button" class="btn btn-outline-red medp-act medp-delcat" data-cat="${escapeHtml(c)}" style="padding:2px 8px;font-size:11px;">🗑 حذف القائمة</button>` : ''}</h3>
+    <div class="medp-cat" data-cat="${escapeHtml(c)}" style="--mc:${medCatColor_(c)}"><h3>${escapeHtml(c)} <span style="font-weight:400;opacity:.6;font-size:12px;">(${groups[c].length})</span>${medPickerEdit_ && c !== 'أخرى' ? `<button type="button" class="btn btn-outline-red medp-act medp-delcat" data-cat="${escapeHtml(c)}" style="padding:2px 8px;font-size:11px;">🗑 حذف القائمة</button>` : ''}</h3>
       <div class="medp-row">${groups[c].map(m => `<button type="button" class="medp-chip${selected.has(m.name) ? ' on' : ''}${medPickerSel_ === m.name ? ' mv' : ''}" data-name="${escapeHtml(m.name)}">${selected.has(m.name) && !medPickerEdit_ ? '✓ ' : ''}${escapeHtml(m.name)}</button>`).join('') || '<span class="hint">فاضية</span>'}</div>
     </div>`).join('') || '<div class="no-visits">لا يوجد أدوية</div>';
 
+  // أيقونات الانتقال السريع للقوائم
+  const jump = $('medPickerJump');
+  jump.innerHTML = showCats.map(c => `<button type="button" class="medp-jump" data-cat="${escapeHtml(c)}" style="--mc:${medCatColor_(c)}">${escapeHtml(c)}</button>`).join('');
+  jump.querySelectorAll('.medp-jump').forEach(b => b.onclick = ()=>{
+    const el = Array.from(body.querySelectorAll('.medp-cat')).find(x => x.dataset.cat === b.dataset.cat);
+    if(!el) return;
+    body.scrollTo({ top: el.offsetTop - body.offsetTop - 4, behavior: 'smooth' });
+    el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash');
+  });
   // شريط الأدوات
   if(!medPickerEdit_){ bar.style.display = 'none'; bar.innerHTML = ''; }
   else{
