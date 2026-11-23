@@ -549,17 +549,29 @@ var n=localStorage.getItem('clinicName');if(n)document.title=n;}catch(e){}})();
   .b-tab{--c:#888; min-height:48px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; text-align:center; direction:rtl; padding:5px 6px; font-family:inherit; font-size:11.5px; font-weight:600; line-height:1.25; letter-spacing:0; cursor:pointer; border:1px solid color-mix(in srgb,var(--c) 38%,transparent); border-right:none; border-radius:14px 0 0 14px; background:color-mix(in srgb,var(--c) 11%,var(--card)); color:color-mix(in srgb,var(--c) 72%,var(--ink)); width:calc(100% - 4px); margin-right:4px; box-sizing:border-box; box-shadow:-2px 3px 8px rgba(0,0,0,.05); transition:width .15s, background .15s, box-shadow .15s;}
   .b-tab:hover{background:color-mix(in srgb,var(--c) 20%,var(--card));}
   .b-tab.on{background:var(--c); color:#fff; border-color:var(--c); width:calc(100% + 1px); margin-right:-1px; box-shadow:-4px 4px 12px color-mix(in srgb,var(--c) 35%,transparent); font-weight:700;}
+  .b-tab .n-short{display:none;}
   .b-tab .b-cnt{font-size:10px; font-weight:700; line-height:1; border-radius:999px; padding:2px 7px; background:color-mix(in srgb,var(--c) 18%,var(--card)); color:inherit;}
   .b-tab.on .b-cnt{background:rgba(255,255,255,.28); color:#fff;}
-  .b-add{--c:#8E8E93; border-style:dashed; background:transparent; box-shadow:none; color:var(--muted); min-height:40px;}
+  .b-add{--c:#8E8E93; border-style:dashed; border-right-style:none; background:transparent; box-shadow:none; color:var(--muted); min-height:40px;}
   .b-addwrap{position:relative;}
   .b-addwrap #secAddBtn{font-size:11.5px; line-height:1.25; padding:5px 4px; border-radius:14px 0 0 14px;}
   .b-addwrap #secMenu{left:0; top:auto; bottom:calc(100% + 6px); min-width:230px; direction:rtl;}
   #binderPage{flex:1; min-width:0; direction:rtl; border:1px solid color-mix(in srgb,var(--bc) 70%,transparent); border-radius:4px 18px 18px 18px; padding:20px 14px 14px; background:var(--card); position:relative; z-index:1; min-height:360px; box-shadow:0 10px 28px rgba(0,0,0,.06);}
   #binderPage::before{content:''; position:absolute; top:-1px; right:22px; left:22px; height:3px; border-radius:0 0 6px 6px; background:var(--bc);}
-  @media (max-width:480px){
-    #binderStrip{width:68px; flex-basis:68px;} .b-tab{font-size:10.5px; padding:4px 3px; border-radius:12px 0 0 12px;}
-    #binderPage{padding:18px 10px 10px;}
+  @media (max-width:700px){
+    #workspace > .card{padding:12px 0 0; margin-left:-16px; margin-right:-16px; border-radius:0; border:none; box-shadow:none;}
+    #workspace > .card > div:first-child{padding:0 14px;}
+    #binderStrip{width:36px; flex-basis:36px; padding-top:14px; position:sticky; top:8px; gap:6px;}
+    #binderTabs{gap:6px;}
+    .b-tab{width:calc(100% - 2px); margin-right:2px; min-height:0; padding:9px 0; gap:6px; border-radius:11px 0 0 11px; flex-direction:column;}
+    .b-tab.on{width:calc(100% + 1px); margin-right:-1px;}
+    .b-tab .n-full{display:none;}
+    .b-tab .n-short{display:block; writing-mode:vertical-rl; transform:rotate(180deg); white-space:nowrap; font-size:12.5px; line-height:1.2;}
+    .b-tab .b-cnt{font-size:9.5px; padding:1px 5px;}
+    .b-add{padding:9px 0;}
+    .b-addwrap #secAddBtn{padding:9px 0; font-size:12px; border-radius:11px 0 0 11px;}
+    .b-addwrap #secMenu{left:34px; bottom:0; top:auto;}
+    #binderPage{padding:18px 8px 10px; border-right:none; border-radius:4px 0 0 14px; box-shadow:none;}
   }
   /* ===== Apple design language (clinic UI only) ===== */
   :root{
@@ -3636,6 +3648,7 @@ function refreshSections(){
   }
   try{ renderBinder_(); }catch(_){}
 }
+const SEC_SHORT = {'tab-basic':'البيانات','tab-kashf':'الكشف','tab-operations':'العمليات','tab-reports':'التقارير','tab-physio':'علاج طبيعي','tab-rx':'الروشتة','tab-images':'الصور','tab-invoices':'الفواتير'};
 function renderBinder_(){
   const tabsBox = $('binderTabs'); if(!tabsBox) return;
   const isOpen = d => { const e = $(d.id); return e && (e.classList.contains('sec-open') || e.classList.contains('active')); };
@@ -3644,7 +3657,7 @@ function renderBinder_(){
   if(!open){ open = SEC_DEFS.find(isVisible) || SEC_DEFS[0]; $(open.id).classList.add('sec-open','sec-on'); }
   tabsBox.innerHTML = SEC_DEFS.filter(d => isVisible(d) || d === open).map(d => {
     const n = d.always ? 0 : secCount(d);
-    return `<button type="button" class="b-tab${d === open ? ' on' : ''}" data-sec="${d.id}" style="--c:${d.color}"><span>${d.name}</span>${n ? `<span class="b-cnt">${n}</span>` : ''}</button>`;
+    return `<button type="button" class="b-tab${d === open ? ' on' : ''}" data-sec="${d.id}" style="--c:${d.color}">${n ? `<span class="b-cnt">${n}</span>` : ''}<span class="n-full">${d.name}</span><span class="n-short">${SEC_SHORT[d.id] || d.name}</span></button>`;
   }).join('');
   tabsBox.querySelectorAll('.b-tab').forEach(b => b.onclick = ()=>{
     const id = b.dataset.sec;
@@ -3667,7 +3680,7 @@ function showSection(id){
   if(!tabs) return;
   const binder = document.createElement('div'); binder.id = 'binder';
   const strip = document.createElement('div'); strip.id = 'binderStrip';
-  strip.innerHTML = '<div id="binderTabs"></div><div class="b-addwrap"><button type="button" class="b-tab b-add" id="secAddBtn" title="إضافة قسم">+ قسم</button><div class="dropdown-menu" id="secMenu"></div></div>';
+  strip.innerHTML = '<div id="binderTabs"></div><div class="b-addwrap"><button type="button" class="b-tab b-add" id="secAddBtn" title="إضافة قسم"><span class="n-full">+ قسم</span><span class="n-short">+ قسم</span></button><div class="dropdown-menu" id="secMenu"></div></div>';
   const page = document.createElement('div'); page.id = 'binderPage';
   binder.appendChild(strip); binder.appendChild(page);
   tabs.parentNode.insertBefore(binder, tabs);
