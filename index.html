@@ -2848,6 +2848,38 @@ function lpCatOf_(name){
 }
 function lpGetLines_(id){ const el = $(id); const t = el.isContentEditable ? (el.innerText || '') : (el.value || ''); return t.split('\n').map(x => x.trim()).filter(Boolean); }
 function lpSetLines_(id, lines){ const el = $(id); const t = lines.join('\n'); if(el.isContentEditable) setEditableValue(id, t); else el.value = t; }
+function lpMatch_(line, name){ return line === name || line === 'Right ' + name || line === 'Left ' + name; }
+function lpAskSide_(name, isSel){
+  return new Promise(res => {
+    const ov = document.createElement('div');
+    ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:400;display:flex;align-items:center;justify-content:center;padding:20px;';
+    ov.innerHTML = `<div style="background:var(--card,#fff);color:inherit;border-radius:18px;padding:18px;width:100%;max-width:360px;text-align:center;direction:rtl;">
+      <div style="font-weight:700;margin-bottom:4px;">${escapeHtml(name)}</div>
+      <div class="hint" style="margin-bottom:12px;">اختار الجهة</div>
+      <div style="display:flex;gap:10px;margin-bottom:10px;">
+        <button type="button" class="btn btn-primary" data-v="Right" style="flex:1;padding:14px 0;font-size:17px;">Right<br><small>يمين</small></button>
+        <button type="button" class="btn btn-primary" data-v="Left" style="flex:1;padding:14px 0;font-size:17px;">Left<br><small>شمال</small></button>
+      </div>
+      <div style="display:flex;gap:8px;">
+        ${isSel ? '<button type="button" class="btn btn-outline-red" data-v="remove" style="flex:1;">🗑 إزالة</button>' : '<button type="button" class="btn btn-ghost" data-v="" style="flex:1;">بدون تحديد</button>'}
+        <button type="button" class="btn btn-ghost" data-v="cancel" style="flex:1;">إلغاء</button>
+      </div></div>`;
+    document.body.appendChild(ov);
+    const done = v => { ov.remove(); res(v); };
+    ov.addEventListener('click', e => { if(e.target === ov) return done('cancel'); const b = e.target.closest('button'); if(b) done(b.dataset.v); });
+  });
+}
+async function lpPick_(name){
+  const lines = lpGetLines_(LP.target);
+  const has = lines.some(l => lpMatch_(l, name));
+  if(LP.kind !== 'radiology'){ lpToggle_(name); return; }
+  const v = await lpAskSide_(name, has);
+  if(v === 'cancel' || v === undefined) return;
+  if(v === 'remove'){ lpSetLines_(LP.target, lines.filter(l => !lpMatch_(l, name))); return; }
+  const line = v ? v + ' ' + name : name;
+  lines.push(line);
+  lpSetLines_(LP.target, lines);
+}
 function lpToggle_(name){
   const lines = lpGetLines_(LP.target); const i = lines.indexOf(name);
   if(i >= 0) lines.splice(i, 1); else lines.push(name);
@@ -2909,14 +2941,15 @@ async function lpRefresh_(){ try{ await tryFetchListsRemote(true); }catch(_){} l
 function lpRender_(){
   const cfg = lpCfg_(), body = $('lpBody'), bar = $('lpBar');
   const q = medNorm_(LP.query), cats = lpCats_();
-  const selected = new Set(lpGetLines_(LP.target));
-  $('lpCount').textContent = '(' + selected.size + ' مختار)';
+  const curLines = lpGetLines_(LP.target);
+  const cnt = n => curLines.filter(l => lpMatch_(l, n)).length;
+  $('lpCount').textContent = '(' + curLines.length + ' مختار)';
   const groups = {}; cats.forEach(c => groups[c] = []);
   cfg.getList().forEach(name => { if(!q || medNorm_(name).includes(q)) groups[lpCatOf_(name)].push(name); });
   const showCats = LP.edit ? cats : cats.filter(c => groups[c].length);
   body.innerHTML = showCats.map(c => `
     <div class="lp-cat" data-cat="${escapeHtml(c)}" style="--mc:${lpColor_(c)}"><h3>${escapeHtml(c)} <span style="font-weight:400;opacity:.6;font-size:12px;">(${groups[c].length})</span>${LP.edit && c !== 'أخرى' ? `<button type="button" class="btn btn-outline-red lp-act lp-delcat" data-cat="${escapeHtml(c)}" style="padding:2px 8px;font-size:11px;">🗑 حذف القائمة</button>` : ''}</h3>
-      <div class="lp-row">${groups[c].map(n => `<button type="button" class="lp-chip${selected.has(n) ? ' on' : ''}${LP.sel === n ? ' mv' : ''}" data-name="${escapeHtml(n)}">${selected.has(n) && !LP.edit ? '✓ ' : ''}${escapeHtml(n)}</button>`).join('') || '<span class="hint">فاضية</span>'}</div>
+      <div class="lp-row">${groups[c].map(n => `<button type="button" class="lp-chip${cnt(n) ? ' on' : ''}${LP.sel === n ? ' mv' : ''}" data-name="${escapeHtml(n)}">${cnt(n) && !LP.edit ? '✓ ' : ''}${escapeHtml(n)}${cnt(n) > 1 && !LP.edit ? ' ×' + cnt(n) : ''}</button>`).join('') || '<span class="hint">فاضية</span>'}</div>
     </div>`).join('') || '<div class="no-visits">لا يوجد عناصر</div>';
   const jump = $('lpJump');
   jump.innerHTML = showCats.map(c => `<button type="button" class="lp-jump" data-cat="${escapeHtml(c)}" style="--mc:${lpColor_(c)}">${escapeHtml(c)}</button>`).join('');
@@ -2978,7 +3011,7 @@ function lpRender_(){
   body.querySelectorAll('.lp-chip').forEach(ch => ch.onclick = ()=>{
     const name = ch.dataset.name;
     if(LP.edit){ LP.form = null; LP.sel = name; lpRender_(); }
-    else{ const top = body.scrollTop; lpToggle_(name); lpRender_(); body.scrollTop = top; }
+    else{ const top = body.scrollTop; Promise.resolve(lpPick_(name)).then(()=>{ lpRender_(); body.scrollTop = top; }); }
   });
 }
 document.querySelectorAll('.list-picker-btn').forEach(btn => btn.onclick = async ()=>{
