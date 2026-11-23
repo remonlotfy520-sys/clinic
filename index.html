@@ -538,6 +538,29 @@ var n=localStorage.getItem('clinicName');if(n)document.title=n;}catch(e){}})();
   .sec-head .sec-x{background:none; border:none; cursor:pointer; font-size:15px; color:var(--muted); padding:2px 8px;}
   #workspace .tab-panel.sec-on:not(.sec-open):not(.active) > *:not(.sec-head){display:none !important;}
   #workspace .tab-panel.sec-open > .sec-head, #workspace .tab-panel.active > .sec-head{margin-bottom:12px;}
+  /* ===== ملف المريض كفولدر: ألسنة ملونة على الشمال + صفحة بإطار رفيع ===== */
+  #secBar{display:none !important;}
+  .sec-head{display:none !important;}
+  #workspace .tab-panel{display:none !important;}
+  #workspace .tab-panel.sec-open, #workspace .tab-panel.active{display:block !important;}
+  #binder{display:flex; direction:ltr; align-items:flex-start; margin-top:4px; --bc:#34C759;}
+  #binderStrip{width:78px; flex:0 0 78px; display:flex; flex-direction:column; gap:7px; padding-top:18px; position:relative; z-index:2;}
+  #binderTabs{display:flex; flex-direction:column; gap:7px;}
+  .b-tab{--c:#888; min-height:48px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; text-align:center; direction:rtl; padding:5px 6px; font-family:inherit; font-size:11.5px; font-weight:600; line-height:1.25; letter-spacing:0; cursor:pointer; border:1px solid color-mix(in srgb,var(--c) 38%,transparent); border-right:none; border-radius:14px 0 0 14px; background:color-mix(in srgb,var(--c) 11%,var(--card)); color:color-mix(in srgb,var(--c) 72%,var(--ink)); width:calc(100% - 4px); margin-right:4px; box-sizing:border-box; box-shadow:-2px 3px 8px rgba(0,0,0,.05); transition:width .15s, background .15s, box-shadow .15s;}
+  .b-tab:hover{background:color-mix(in srgb,var(--c) 20%,var(--card));}
+  .b-tab.on{background:var(--c); color:#fff; border-color:var(--c); width:calc(100% + 1px); margin-right:-1px; box-shadow:-4px 4px 12px color-mix(in srgb,var(--c) 35%,transparent); font-weight:700;}
+  .b-tab .b-cnt{font-size:10px; font-weight:700; line-height:1; border-radius:999px; padding:2px 7px; background:color-mix(in srgb,var(--c) 18%,var(--card)); color:inherit;}
+  .b-tab.on .b-cnt{background:rgba(255,255,255,.28); color:#fff;}
+  .b-add{--c:#8E8E93; border-style:dashed; background:transparent; box-shadow:none; color:var(--muted); min-height:40px;}
+  .b-addwrap{position:relative;}
+  .b-addwrap #secAddBtn{font-size:11.5px; line-height:1.25; padding:5px 4px; border-radius:14px 0 0 14px;}
+  .b-addwrap #secMenu{left:0; top:auto; bottom:calc(100% + 6px); min-width:230px; direction:rtl;}
+  #binderPage{flex:1; min-width:0; direction:rtl; border:1px solid color-mix(in srgb,var(--bc) 70%,transparent); border-radius:4px 18px 18px 18px; padding:20px 14px 14px; background:var(--card); position:relative; z-index:1; min-height:360px; box-shadow:0 10px 28px rgba(0,0,0,.06);}
+  #binderPage::before{content:''; position:absolute; top:-1px; right:22px; left:22px; height:3px; border-radius:0 0 6px 6px; background:var(--bc);}
+  @media (max-width:480px){
+    #binderStrip{width:68px; flex-basis:68px;} .b-tab{font-size:10.5px; padding:4px 3px; border-radius:12px 0 0 12px;}
+    #binderPage{padding:18px 10px 10px;}
+  }
   /* ===== Apple design language (clinic UI only) ===== */
   :root{
     --apple-font:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display","SF Arabic","SF Pro",system-ui,"Segoe UI","Helvetica Neue",Tahoma,Arial,sans-serif;
@@ -3611,6 +3634,26 @@ function refreshSections(){
       ? empty.map(d=>`<button class="dropdown-item" data-sec="${d.id}"><span>${d.icon} ${d.name}</span><span class="sec-state">${$(d.id).classList.contains('sec-on') ? 'مفتوح' : '＋ إضافة'}</span></button>`).join('')
       : '<div class="hint" style="padding:10px 12px;">كل الأقسام فيها بيانات ✓</div>';
   }
+  try{ renderBinder_(); }catch(_){}
+}
+function renderBinder_(){
+  const tabsBox = $('binderTabs'); if(!tabsBox) return;
+  const isOpen = d => { const e = $(d.id); return e && (e.classList.contains('sec-open') || e.classList.contains('active')); };
+  const isVisible = d => { const e = $(d.id); return e && (d.always || e.classList.contains('sec-on')); };
+  let open = SEC_DEFS.find(isOpen);
+  if(!open){ open = SEC_DEFS.find(isVisible) || SEC_DEFS[0]; $(open.id).classList.add('sec-open','sec-on'); }
+  tabsBox.innerHTML = SEC_DEFS.filter(d => isVisible(d) || d === open).map(d => {
+    const n = d.always ? 0 : secCount(d);
+    return `<button type="button" class="b-tab${d === open ? ' on' : ''}" data-sec="${d.id}" style="--c:${d.color}"><span>${d.name}</span>${n ? `<span class="b-cnt">${n}</span>` : ''}</button>`;
+  }).join('');
+  tabsBox.querySelectorAll('.b-tab').forEach(b => b.onclick = ()=>{
+    const id = b.dataset.sec;
+    SEC_DEFS.forEach(o => { const e2 = $(o.id); if(e2) e2.classList.remove('sec-open','active'); });
+    $(id).classList.add('sec-open');
+    refreshSections();
+    try{ $('binder').scrollIntoView({behavior:'smooth', block:'start'}); }catch(_){}
+  });
+  $('binder').style.setProperty('--bc', open.color);
 }
 function showSection(id){
   const el = $(id); if(!el) return;
@@ -3622,29 +3665,18 @@ function showSection(id){
 (function initSections(){
   const tabs = document.querySelector('#workspace .tabs');
   if(!tabs) return;
-  const bar = document.createElement('div');
-  bar.id = 'secBar';
-  bar.innerHTML = '<div class="sec-title">ملف المريض</div><div class="menu-wrap"><button type="button" class="btn btn-primary" id="secAddBtn" title="إضافة قسم">＋</button><div class="dropdown-menu" id="secMenu"></div></div>';
-  tabs.parentNode.insertBefore(bar, tabs);
-  SEC_DEFS.forEach(d=>{
-    const el = $(d.id); if(!el) return;
-    const h = document.createElement('div');
-    h.className = 'sec-head'; h.style.setProperty('--sc', d.color);
-    h.innerHTML = `<span class="sec-name">${d.icon} ${d.name}</span><span class="sec-cnt"></span><button type="button" class="sec-x" title="إخفاء القسم">✕</button><span class="sec-chev">▾</span>`;
-    h.querySelector('.sec-x').onclick = (ev)=>{ ev.stopPropagation(); el.classList.remove('sec-manual','sec-on','sec-open','active'); refreshSections(); };
-    h.onclick = ()=>{
-      const isOpen = el.classList.contains('sec-open') || el.classList.contains('active');
-      SEC_DEFS.forEach(o=>{ const e2=$(o.id); if(e2){ e2.classList.remove('sec-open','active'); } });
-      if(!isOpen){ el.classList.add('sec-open'); setTimeout(()=> h.scrollIntoView({behavior:'smooth', block:'start'}), 30); }
-      refreshSections();
-    };
-    el.insertBefore(h, el.firstChild);
-  });
+  const binder = document.createElement('div'); binder.id = 'binder';
+  const strip = document.createElement('div'); strip.id = 'binderStrip';
+  strip.innerHTML = '<div id="binderTabs"></div><div class="b-addwrap"><button type="button" class="b-tab b-add" id="secAddBtn" title="إضافة قسم">+ قسم</button><div class="dropdown-menu" id="secMenu"></div></div>';
+  const page = document.createElement('div'); page.id = 'binderPage';
+  binder.appendChild(strip); binder.appendChild(page);
+  tabs.parentNode.insertBefore(binder, tabs);
+  SEC_DEFS.forEach(d=>{ const el = $(d.id); if(el) page.appendChild(el); });
   $('secAddBtn').onclick = (e)=>{ e.stopPropagation(); refreshSections(); $('secMenu').classList.toggle('open'); };
   $('secMenu').addEventListener('click', e=>{
-    const b = e.target.closest('[data-sec]'); if(!b) return;
+    const bt = e.target.closest('[data-sec]'); if(!bt) return;
     $('secMenu').classList.remove('open');
-    showSection(b.dataset.sec);
+    showSection(bt.dataset.sec);
   });
   document.addEventListener('click', ()=>{ const m=$('secMenu'); if(m) m.classList.remove('open'); });
   let t = null;
