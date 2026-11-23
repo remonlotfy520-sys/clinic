@@ -926,6 +926,7 @@ var n=localStorage.getItem('clinicName');if(n)document.title=n;}catch(e){}})();
               <div class="collapsible-content" id="kashfRadLabsContent">
                 <div class="field">
                   <label>الأشعة</label>
+                  <button type="button" class="btn btn-primary list-picker-btn" data-kind="radiology" data-target="vRadiology" style="margin-bottom:8px;">📋 اختيار الأشعة</button>
                   <select id="vRadiologySelect" class="dropdown-add-select" style="margin-bottom:8px;"></select>
                   <div class="highlight-toolbar" data-target="vRadiology">
                     <span class="hint" style="align-self:center; margin-left:4px;">حدّد كلمة وعلّم عليها:</span>
@@ -943,6 +944,7 @@ var n=localStorage.getItem('clinicName');if(n)document.title=n;}catch(e){}})();
                 </div>
                 <div class="field">
                   <label>التحاليل</label>
+                  <button type="button" class="btn btn-primary list-picker-btn" data-kind="labs" data-target="vLabTests" style="margin-bottom:8px;">🧪 اختيار التحاليل</button>
                   <select id="vLabTestsSelect" class="dropdown-add-select" style="margin-bottom:8px;"></select>
                   <div class="highlight-toolbar" data-target="vLabTests">
                     <span class="hint" style="align-self:center; margin-left:4px;">حدّد كلمة وعلّم عليها:</span>
@@ -1177,6 +1179,7 @@ var n=localStorage.getItem('clinicName');if(n)document.title=n;}catch(e){}})();
                 <div class="field">
                   <label>الأشعة المطلوبة</label>
                   <div class="hint" style="margin-bottom:6px;">اكتب بحرية أو اختار من القايمة عشان تضاف كسطر جديد</div>
+                  <button type="button" class="btn btn-primary list-picker-btn" data-kind="radiology" data-target="rxRadiologyReq" style="margin-bottom:8px;">📋 اختيار الأشعة</button>
                   <select id="rxRadiologyReqSelect" class="dropdown-add-select"></select>
                   <textarea id="rxRadiologyReq" style="min-height:80px; margin-top:8px;" placeholder="الأشعة المطلوبة..."></textarea>
                 </div>
@@ -1184,6 +1187,7 @@ var n=localStorage.getItem('clinicName');if(n)document.title=n;}catch(e){}})();
                 <div class="field">
                   <label>التحاليل المطلوبة</label>
                   <div class="hint" style="margin-bottom:6px;">اكتب بحرية أو اختار من القايمة عشان تضاف كسطر جديد</div>
+                  <button type="button" class="btn btn-primary list-picker-btn" data-kind="labs" data-target="rxLabsReq" style="margin-bottom:8px;">🧪 اختيار التحاليل</button>
                   <select id="rxLabsReqSelect" class="dropdown-add-select"></select>
                   <textarea id="rxLabsReq" style="min-height:80px; margin-top:8px;" placeholder="التحاليل المطلوبة..."></textarea>
                 </div>
@@ -2765,6 +2769,199 @@ $('openMedPickerBtn').onclick = ()=>{
   renderMedPicker_();
   ov.style.display = 'flex';
 };
+
+/* ---------- نافذة اختيار الأشعة والتحاليل (نفس فكرة الأدوية): قوائم بألوان، دوسة تختار ودوسة تشيل ---------- */
+const LP_CFG = {
+  radiology: {
+    title: '📋 اختيار الأشعة', listKey: 'radiology', getList: () => RADIOLOGY_LIST, noun: 'الأشعة',
+    cats: ['أشعة عادية', 'مقطعية', 'رنين', 'أخرى'],
+    colors: { 'أشعة عادية': '#007AFF', 'مقطعية': '#34C759', 'رنين': '#AF52DE', 'أخرى': '#8E8E93' },
+    guess: {
+      'أشعة عادية': ['اشعه عاديه','اشعة عادية','x-ray','xray','x ray','اشعه سينيه','اشعة سينية'],
+      'مقطعية': ['مقطعيه','مقطعية','ct ','ct-','(ct)','سي تي','ct scan'],
+      'رنين': ['رنين','mri','ام ار اي']
+    }
+  },
+  labs: {
+    title: '🧪 اختيار التحاليل', listKey: 'labs', getList: () => LABS_LIST, noun: 'التحاليل',
+    cats: ['تحاليل عامة', 'تحاليل عمليات', 'تحاليل روماتيزم', 'أخرى'],
+    colors: { 'تحاليل عامة': '#FF3B30', 'تحاليل عمليات': '#FF9500', 'تحاليل روماتيزم': '#5856D6', 'أخرى': '#8E8E93' },
+    guess: {
+      'تحاليل عمليات': ['pt','ptt','inr','تجلط','فصيله','فصيلة','hbs','hcv','hiv','فيروس','قبل العمل','عمليات','وظائف تجلط'],
+      'تحاليل روماتيزم': ['rf','crp','esr','ccp','ana','يوريك','uric','روماتويد','روماتيزم','ترسيب','anti','hla','dsdna'],
+      'تحاليل عامة': ['cbc','صوره دم','صورة دم','سكر','glucose','وظائف كبد','وظائف كلي','وظايف','كرياتينين','يوريا','بول','دهون','كوليسترول','فيتامين','كالسيوم','vitamin','hba1c','تراكمي']
+    }
+  }
+};
+const LP_EXTRA = ['#30B0C7','#C9A800','#AF52DE','#FF3B30','#A2845E','#007AFF'];
+const LP = { kind: null, target: null, edit: false, sel: null, form: null, query: '' };
+function lpCfg_(){ return LP_CFG[LP.kind]; }
+function lpCatMap_(){ try{ return JSON.parse(localStorage.getItem(LP.kind + 'Cats') || '{}') || {}; }catch(_){ return {}; } }
+function lpCatMapSave_(m){ try{ localStorage.setItem(LP.kind + 'Cats', JSON.stringify(m)); }catch(_){} }
+function lpCats_(){
+  let l; try{ l = JSON.parse(localStorage.getItem(LP.kind + 'CatsList') || 'null'); }catch(_){ l = null; }
+  if(!Array.isArray(l) || !l.length) l = lpCfg_().cats.slice();
+  l = l.filter(x => x && x !== 'أخرى'); l.push('أخرى');
+  return l;
+}
+function lpCatsSave_(l){ try{ localStorage.setItem(LP.kind + 'CatsList', JSON.stringify(l.filter(x => x !== 'أخرى'))); }catch(_){} }
+function lpColor_(cat){
+  const c = lpCfg_().colors[cat]; if(c) return c;
+  let h = 0; for(const ch of String(cat)) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  return LP_EXTRA[h % LP_EXTRA.length];
+}
+function lpNorm_(x){ return ' ' + medNorm_(x) + ' '; }
+function lpCatOf_(name){
+  const cats = lpCats_();
+  const saved = lpCatMap_()[name];
+  if(saved && cats.includes(saved)) return saved;
+  const n = lpNorm_(name), g = lpCfg_().guess;
+  for(const cat of Object.keys(g)){
+    if(cats.includes(cat) && g[cat].some(k => n.includes(medNorm_(k)))) return cat;
+  }
+  return 'أخرى';
+}
+function lpGetLines_(id){ const el = $(id); const t = el.isContentEditable ? (el.innerText || '') : (el.value || ''); return t.split('\n').map(x => x.trim()).filter(Boolean); }
+function lpSetLines_(id, lines){ const el = $(id); const t = lines.join('\n'); if(el.isContentEditable) setEditableValue(id, t); else el.value = t; }
+function lpToggle_(name){
+  const lines = lpGetLines_(LP.target); const i = lines.indexOf(name);
+  if(i >= 0) lines.splice(i, 1); else lines.push(name);
+  lpSetLines_(LP.target, lines);
+}
+function lpEnsure_(){
+  let ov = $('lpOverlay'); if(ov) return ov;
+  const st = document.createElement('style');
+  st.textContent = `
+    #lpOverlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:300;align-items:flex-end;justify-content:center;}
+    #lpPanel{background:var(--card,#fff);width:100%;max-width:720px;max-height:92vh;border-radius:18px 18px 0 0;display:flex;flex-direction:column;overflow:hidden;}
+    @media (min-width:760px){#lpOverlay{align-items:center;} #lpPanel{border-radius:18px;max-height:86vh;}}
+    #lpHead{padding:12px 14px;border-bottom:1px solid var(--line,#ddd);display:flex;flex-direction:column;gap:8px;}
+    #lpBody{padding:10px 14px 16px;overflow:auto;}
+    .lp-row{display:flex;flex-wrap:wrap;gap:8px;}
+    .lp-cat{--mc:#8E8E93;margin-bottom:12px;padding:9px 11px;border-radius:14px;border-inline-start:5px solid var(--mc);background:color-mix(in srgb,var(--mc) 9%,transparent);}
+    .lp-cat h3{margin:0 0 6px;font-size:14px;display:flex;align-items:center;gap:8px;color:color-mix(in srgb,var(--mc) 75%,var(--ink,#222));}
+    .lp-chip{border:1px solid var(--line,#ccc);background:var(--inp,#f4f4f4);color:inherit;border-radius:12px;padding:9px 13px;font-size:14px;cursor:pointer;font-family:inherit;}
+    .lp-cat .lp-chip{background:color-mix(in srgb,var(--mc) 16%,var(--card,#fff));border-color:color-mix(in srgb,var(--mc) 45%,transparent);}
+    .lp-cat .lp-chip.on{background:var(--mc);border-color:var(--mc);color:#fff;font-weight:700;}
+    .lp-chip.mv{outline:2px dashed #FF9500;}
+    .lp-act{padding:7px 11px;font-size:13px;}
+    #lpJump{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;}
+    #lpJump:empty{display:none;}
+    .lp-jump{flex:0 0 auto;border:1px solid color-mix(in srgb,var(--mc) 55%,transparent);background:color-mix(in srgb,var(--mc) 16%,var(--card,#fff));color:color-mix(in srgb,var(--mc) 80%,var(--ink,#222));border-radius:999px;padding:6px 12px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;}
+    .lp-jump:active{background:var(--mc);color:#fff;}
+    .lp-cat.flash{animation:lpFlash .9s ease;}
+    @keyframes lpFlash{0%{box-shadow:0 0 0 3px var(--mc);}100%{box-shadow:0 0 0 0 transparent;}}
+    .lp-form{display:grid;gap:8px;grid-template-columns:1fr;}
+    .lp-form input,.lp-form select{padding:9px 10px;border-radius:9px;border:1px solid var(--line,#ccc);font-family:inherit;font-size:14px;background:var(--inp,#fff);color:inherit;width:100%;box-sizing:border-box;}
+  `;
+  document.head.appendChild(st);
+  ov = document.createElement('div'); ov.id = 'lpOverlay';
+  ov.innerHTML = `
+    <div id="lpPanel">
+      <div id="lpHead">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+          <b style="font-size:16px;"><span id="lpTitle"></span> <span id="lpCount" style="font-weight:400;font-size:13px;opacity:.7;"></span></b>
+          <div style="display:flex;gap:6px;">
+            <button type="button" class="btn btn-ghost" id="lpEditBtn" style="padding:6px 10px;font-size:12px;">✎ تعديل</button>
+            <button type="button" class="btn btn-primary" id="lpDoneBtn" style="padding:6px 14px;">تم</button>
+          </div>
+        </div>
+        <input type="text" id="lpSearch" placeholder="ابحث..." autocomplete="off">
+        <div id="lpJump"></div>
+        <div id="lpBar" style="display:none;"></div>
+      </div>
+      <div id="lpBody"></div>
+    </div>`;
+  document.body.appendChild(ov);
+  ov.addEventListener('click', e => { if(e.target === ov) lpClose_(); });
+  $('lpDoneBtn').onclick = lpClose_;
+  $('lpSearch').addEventListener('input', e => { LP.query = e.target.value; lpRender_(); });
+  $('lpEditBtn').onclick = ()=>{ LP.edit = !LP.edit; LP.sel = null; LP.form = null; $('lpEditBtn').textContent = LP.edit ? '✔ خلصت التعديل' : '✎ تعديل'; lpRender_(); };
+  return ov;
+}
+function lpClose_(){ const ov = $('lpOverlay'); if(ov) ov.style.display = 'none'; }
+async function lpRefresh_(){ try{ await tryFetchListsRemote(true); }catch(_){} lpRender_(); }
+function lpRender_(){
+  const cfg = lpCfg_(), body = $('lpBody'), bar = $('lpBar');
+  const q = medNorm_(LP.query), cats = lpCats_();
+  const selected = new Set(lpGetLines_(LP.target));
+  $('lpCount').textContent = '(' + selected.size + ' مختار)';
+  const groups = {}; cats.forEach(c => groups[c] = []);
+  cfg.getList().forEach(name => { if(!q || medNorm_(name).includes(q)) groups[lpCatOf_(name)].push(name); });
+  const showCats = LP.edit ? cats : cats.filter(c => groups[c].length);
+  body.innerHTML = showCats.map(c => `
+    <div class="lp-cat" data-cat="${escapeHtml(c)}" style="--mc:${lpColor_(c)}"><h3>${escapeHtml(c)} <span style="font-weight:400;opacity:.6;font-size:12px;">(${groups[c].length})</span>${LP.edit && c !== 'أخرى' ? `<button type="button" class="btn btn-outline-red lp-act lp-delcat" data-cat="${escapeHtml(c)}" style="padding:2px 8px;font-size:11px;">🗑 حذف القائمة</button>` : ''}</h3>
+      <div class="lp-row">${groups[c].map(n => `<button type="button" class="lp-chip${selected.has(n) ? ' on' : ''}${LP.sel === n ? ' mv' : ''}" data-name="${escapeHtml(n)}">${selected.has(n) && !LP.edit ? '✓ ' : ''}${escapeHtml(n)}</button>`).join('') || '<span class="hint">فاضية</span>'}</div>
+    </div>`).join('') || '<div class="no-visits">لا يوجد عناصر</div>';
+  const jump = $('lpJump');
+  jump.innerHTML = showCats.map(c => `<button type="button" class="lp-jump" data-cat="${escapeHtml(c)}" style="--mc:${lpColor_(c)}">${escapeHtml(c)}</button>`).join('');
+  jump.querySelectorAll('.lp-jump').forEach(b => b.onclick = ()=>{
+    const el = Array.from(body.querySelectorAll('.lp-cat')).find(x => x.dataset.cat === b.dataset.cat); if(!el) return;
+    body.scrollTo({ top: el.offsetTop - body.offsetTop - 4, behavior: 'smooth' });
+    el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash');
+  });
+  if(!LP.edit){ bar.style.display = 'none'; bar.innerHTML = ''; }
+  else{
+    bar.style.display = '';
+    let h = `<div class="lp-row" style="margin-bottom:8px;"><button type="button" class="btn btn-ghost lp-act" id="lpAddCat">➕ إضافة قائمة</button><button type="button" class="btn btn-ghost lp-act" id="lpAddItem">➕ إضافة</button></div>`;
+    if(LP.form){
+      const f = LP.form;
+      h += `<div class="lp-form"><input id="lpfName" placeholder="الاسم" value="${escapeHtml(f.name || '')}">
+        <select id="lpfCat">${cats.map(c => `<option value="${escapeHtml(c)}"${c === f.cat ? ' selected' : ''}>${escapeHtml(c)}</option>`).join('')}</select>
+        <button type="button" class="btn btn-primary" id="lpfSave">${f.old ? 'حفظ التعديل' : 'إضافة'}</button>
+        <button type="button" class="btn btn-ghost" id="lpfCancel">إلغاء</button></div>`;
+    }else if(LP.sel){
+      h += `<div class="hint" style="margin-bottom:6px;">«${escapeHtml(LP.sel)}» — اختار إجراء:</div>
+        <div class="lp-row" style="margin-bottom:6px;"><button type="button" class="btn btn-ghost lp-act" id="lpEdit">✏️ تعديل</button><button type="button" class="btn btn-outline-red lp-act" id="lpDel">🗑 حذف</button></div>
+        <div class="hint" style="margin-bottom:4px;">أو انقله إلى قائمة:</div>
+        <div class="lp-row">${cats.map(c => `<button type="button" class="lp-chip lp-moveto" data-cat="${escapeHtml(c)}">${escapeHtml(c)}</button>`).join('')}</div>`;
+    }else{ h += '<div class="hint">اضغط على أي عنصر لتعديله أو حذفه أو نقله لقائمة تانية</div>'; }
+    bar.innerHTML = h;
+    $('lpAddCat').onclick = ()=>{
+      const name = (prompt('اسم القائمة الجديدة:') || '').trim(); if(!name) return;
+      const l = lpCats_(); if(l.includes(name)){ showToast('القائمة دي موجودة', true); return; }
+      l.splice(l.length - 1, 0, name); lpCatsSave_(l); lpRender_();
+    };
+    $('lpAddItem').onclick = ()=>{ LP.sel = null; LP.form = { cat: cats[0] }; lpRender_(); };
+    if($('lpEdit')) $('lpEdit').onclick = ()=>{ LP.form = { old: LP.sel, name: LP.sel, cat: lpCatOf_(LP.sel) }; lpRender_(); };
+    if($('lpDel')) $('lpDel').onclick = async ()=>{
+      const name = LP.sel; if(!confirm('حذف "' + name + '" من القايمة؟')) return;
+      const r = await mgrBridgeCall('deleteSimpleListItem', { listKey: cfg.listKey, value: name });
+      if(r && r.error){ showToast(r.error, true); return; }
+      const mp = lpCatMap_(); delete mp[name]; lpCatMapSave_(mp);
+      LP.sel = null; showToast('اتحذف ✓'); await lpRefresh_();
+    };
+    bar.querySelectorAll('.lp-moveto').forEach(b => b.onclick = ()=>{ const mp = lpCatMap_(); mp[LP.sel] = b.dataset.cat; lpCatMapSave_(mp); LP.sel = null; lpRender_(); });
+    if($('lpfCancel')) $('lpfCancel').onclick = ()=>{ LP.form = null; lpRender_(); };
+    if($('lpfSave')) $('lpfSave').onclick = async ()=>{
+      const f = LP.form, name = $('lpfName').value.trim(), cat = $('lpfCat').value;
+      if(!name){ showToast('اكتب الاسم', true); return; }
+      const r = f.old ? await mgrBridgeCall('updateSimpleListItem', { listKey: cfg.listKey, oldValue: f.old, newValue: name })
+                      : await mgrBridgeCall('addSimpleListItem', { listKey: cfg.listKey, value: name });
+      if(r && r.error){ showToast(r.error, true); return; }
+      const mp = lpCatMap_(); if(f.old && f.old !== name) delete mp[f.old]; mp[name] = cat; lpCatMapSave_(mp);
+      LP.form = null; LP.sel = null; showToast(f.old ? 'اتعدّل ✓' : 'اتضاف ✓'); await lpRefresh_();
+    };
+    body.querySelectorAll('.lp-delcat').forEach(b => b.onclick = ()=>{
+      const c = b.dataset.cat;
+      if(!confirm('حذف قائمة "' + c + '"؟ اللي فيها هيتنقل لـ "أخرى" ومش هيتحذف.')) return;
+      lpCatsSave_(lpCats_().filter(x => x !== c));
+      const mp = lpCatMap_(); Object.keys(mp).forEach(k => { if(mp[k] === c) delete mp[k]; }); lpCatMapSave_(mp);
+      lpRender_();
+    });
+  }
+  body.querySelectorAll('.lp-chip').forEach(ch => ch.onclick = ()=>{
+    const name = ch.dataset.name;
+    if(LP.edit){ LP.form = null; LP.sel = name; lpRender_(); }
+    else{ const top = body.scrollTop; lpToggle_(name); lpRender_(); body.scrollTop = top; }
+  });
+}
+document.querySelectorAll('.list-picker-btn').forEach(btn => btn.onclick = ()=>{
+  LP.kind = btn.dataset.kind; LP.target = btn.dataset.target; LP.edit = false; LP.sel = null; LP.form = null; LP.query = '';
+  const ov = lpEnsure_();
+  $('lpTitle').textContent = lpCfg_().title; $('lpSearch').value = ''; $('lpEditBtn').textContent = '✎ تعديل';
+  lpRender_(); ov.style.display = 'flex';
+});
 
 function renderPresetRxList(){
   const box = $('presetRxList');
