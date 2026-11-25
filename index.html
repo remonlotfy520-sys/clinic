@@ -884,11 +884,12 @@ var n=localStorage.getItem('clinicName');if(n)document.title=n;}catch(e){}})();
 
         <div class="exam-card" id="chronicDiseasesCard">
           <h2>التاريخ المرضي</h2>
-          <div class="field">
-            <label>إضافة مرض من القايمة</label>
-            <select id="chronicDiseaseSelect" class="dropdown-add-select"></select>
-          </div>
+          <div id="chronicIconGrid" class="chr-grid"></div>
           <div id="chronicDiseasesRows" style="margin-top:10px;"></div>
+          <div style="display:flex; gap:8px; margin-top:8px;">
+            <input type="text" id="chronicOther" placeholder="مرض تاني مش في القايمة..." style="flex:1; padding:9px 10px; border-radius:9px; border:1px solid var(--line); font-family:inherit; font-size:14px; background:var(--inp); color:var(--inputink);">
+            <button type="button" class="btn btn-ghost" id="chronicOtherAdd" style="padding:6px 14px;">+ إضافة</button>
+          </div>
         </div>
 
         <div class="exam-card" id="bookApptCard" style="display:none;">
@@ -3119,34 +3120,84 @@ function renderServiceSelect(){
 }
 
 /* ---------- التاريخ المرضي (الأمراض المزمنة) ---------- */
-function populateChronicDiseaseSelect(){
-  const select = $('chronicDiseaseSelect');
-  select.innerHTML = `<option value="">— اختر مرض من القايمة —</option>` + CHRONIC_DISEASES_LIST.map(d => `<option value="${escapeHtml(d)}">${escapeHtml(d)}</option>`).join('');
-  select.onchange = ()=>{
-    if(!select.value) return;
-    addChronicDiseaseRow(select.value);
-    select.value = '';
-  };
+const CHRONIC_ICONS = {'ضغط':'🩺','سكر':'🍬','قلب':'❤️','روماتويد':'🦴','حساسية':'🤧','كلى':'🫘','كبد':'🟤'};
+const CHRONIC_COLORS = {'ضغط':'#FF3B30','سكر':'#FF9500','قلب':'#FF2D55','روماتويد':'#5856D6','حساسية':'#30B0C7','كلى':'#007AFF','كبد':'#A2845E'};
+const CHRONIC_EXTRA = ['#34C759','#AF52DE','#C9A800','#30B0C7','#FF3B30','#5856D6'];
+let CHRONIC_SEL = [];
+function chronicColor_(name){
+  if(CHRONIC_COLORS[name]) return CHRONIC_COLORS[name];
+  let h = 0; for(const ch of String(name)) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  return CHRONIC_EXTRA[h % CHRONIC_EXTRA.length];
 }
-function addChronicDiseaseRow(value){
-  const box = $('chronicDiseasesRows');
-  const row = document.createElement('div');
-  row.style.cssText = 'display:flex; gap:8px; margin-bottom:8px;';
-  row.innerHTML = `
-    <input type="text" class="chronic-disease-input" value="${escapeHtml(value)}" placeholder="اسم المرض... (تقدر تضيف تفاصيل زي 'من 10 سنين')" style="flex:1; padding:9px 10px; border-radius:9px; border:1px solid var(--line); font-family:'Tajawal'; font-size:13.5px;">
-    <button type="button" class="btn btn-outline-red chronic-disease-remove" style="padding:6px 12px;">✕</button>
-  `;
-  row.querySelector('.chronic-disease-remove').addEventListener('click', ()=> row.remove());
-  box.appendChild(row);
+function chronicIcon_(name){ return CHRONIC_ICONS[name] || '💊'; }
+function chronicSyncComments_(){
+  document.querySelectorAll('#chronicDiseasesRows .chr-comment').forEach(inp => {
+    const it = CHRONIC_SEL.find(x => x.name === inp.dataset.name);
+    if(it) it.comment = inp.value.trim();
+  });
 }
+function chronicParse_(str){
+  const t = String(str || '').trim();
+  const i = t.indexOf(':');
+  if(i > 0) return { name: t.slice(0, i).trim(), comment: t.slice(i + 1).trim() };
+  const known = CHRONIC_DISEASES_LIST.find(n => t === n || t.startsWith(n + ' '));
+  if(known) return { name: known, comment: t.slice(known.length).trim() };
+  return { name: t, comment: '' };
+}
+function renderChronicUI_(){
+  const grid = $('chronicIconGrid'), rows = $('chronicDiseasesRows');
+  if(!grid || !rows) return;
+  const names = CHRONIC_DISEASES_LIST.slice();
+  CHRONIC_SEL.forEach(x => { if(!names.includes(x.name)) names.push(x.name); });
+  grid.innerHTML = names.map(n => {
+    const on = CHRONIC_SEL.some(x => x.name === n);
+    return `<button type="button" class="chr-chip${on ? ' on' : ''}" data-name="${escapeHtml(n)}" style="--c:${chronicColor_(n)}"><span class="chr-ic">${chronicIcon_(n)}</span><span>${escapeHtml(n)}</span></button>`;
+  }).join('');
+  grid.querySelectorAll('.chr-chip').forEach(b => b.onclick = ()=>{
+    chronicSyncComments_();
+    const n = b.dataset.name;
+    const i = CHRONIC_SEL.findIndex(x => x.name === n);
+    if(i >= 0) CHRONIC_SEL.splice(i, 1); else CHRONIC_SEL.push({ name: n, comment: '' });
+    renderChronicUI_();
+  });
+  rows.innerHTML = CHRONIC_SEL.map(x => `
+    <div class="chr-row" style="--c:${chronicColor_(x.name)}">
+      <b>${chronicIcon_(x.name)} ${escapeHtml(x.name)}</b>
+      <input type="text" class="chr-comment" data-name="${escapeHtml(x.name)}" value="${escapeHtml(x.comment || '')}" placeholder="تعليق (مثلاً: من 10 سنين، تحت العلاج)">
+    </div>`).join('');
+}
+function populateChronicDiseaseSelect(){ renderChronicUI_(); }
 function renderChronicDiseaseRows(diseases){
-  const box = $('chronicDiseasesRows');
-  box.innerHTML = '';
-  (diseases || []).forEach(d => addChronicDiseaseRow(d));
+  CHRONIC_SEL = (diseases || []).map(chronicParse_).filter(x => x.name);
+  renderChronicUI_();
 }
 function getChronicDiseasesFromForm(){
-  return Array.from(document.querySelectorAll('.chronic-disease-input')).map(inp => inp.value.trim()).filter(Boolean);
+  chronicSyncComments_();
+  return CHRONIC_SEL.map(x => x.comment ? x.name + ': ' + x.comment : x.name);
 }
+(function initChronicUI(){
+  const st = document.createElement('style');
+  st.textContent = `
+    .chr-grid{display:flex; flex-wrap:wrap; gap:8px;}
+    .chr-chip{--c:#8E8E93; display:inline-flex; align-items:center; gap:7px; padding:9px 14px; border-radius:14px; border:1px solid var(--line); background:var(--inp); color:var(--muted); font-family:inherit; font-size:14px; cursor:pointer; transition:background .15s,border-color .15s;}
+    .chr-chip .chr-ic{font-size:18px; filter:grayscale(1); opacity:.55; transition:filter .15s,opacity .15s;}
+    .chr-chip.on{background:color-mix(in srgb,var(--c) 16%,var(--card)); border-color:var(--c); color:color-mix(in srgb,var(--c) 70%,var(--ink)); font-weight:700;}
+    .chr-chip.on .chr-ic{filter:none; opacity:1;}
+    .chr-row{--c:#8E8E93; display:flex; align-items:center; gap:10px; margin-bottom:8px; padding:8px 10px; border-radius:12px; border-inline-start:5px solid var(--c); background:color-mix(in srgb,var(--c) 9%,transparent);}
+    .chr-row b{flex:0 0 auto; font-size:14px; color:color-mix(in srgb,var(--c) 70%,var(--ink));}
+    .chr-row input{flex:1; min-width:0; padding:8px 10px; border-radius:9px; border:1px solid color-mix(in srgb,var(--c) 40%,transparent); background:var(--card); font-family:inherit; font-size:14px; color:var(--inputink);}
+  `;
+  document.head.appendChild(st);
+  const add = ()=>{
+    const inp = $('chronicOther'); const v = inp.value.trim(); if(!v) return;
+    chronicSyncComments_();
+    if(!CHRONIC_SEL.some(x => x.name === v)) CHRONIC_SEL.push({ name: v, comment: '' });
+    inp.value = ''; renderChronicUI_();
+  };
+  $('chronicOtherAdd').onclick = add;
+  $('chronicOther').addEventListener('keydown', e => { if(e.key === 'Enter'){ e.preventDefault(); add(); } });
+  renderChronicUI_();
+})();
 
 initCollapsible('bookApptHeader', 'bookApptContent');
 initCollapsible('kashfRadLabsHeader', 'kashfRadLabsContent');
