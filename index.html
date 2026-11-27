@@ -9772,48 +9772,56 @@ function opSecRefresh_(){
 
 /* ---------- صفحة المتابعة للمريض: لينك/QR خاص بكل مريض + تايم لاين أسبوعي + أدوية + استفسارات ---------- */
 const FU_TPL_DEFAULT = [
-  { name: 'عام', phases: [{ name: 'المتابعة', from: 1, to: 12, text: '' }] },
-  { name: 'تطويل', phases: [{ name: 'مرحلة التركيب', from: 1, to: 2, text: '' }, { name: 'مرحلة التطويل', from: 3, to: 12, text: '' }, { name: 'مرحلة التثبيت', from: 13, to: 24, text: '' }] }
+  { name: 'عام', weeks: [{ text: '', meds: [] }] },
+  { name: 'تطويل', weeks: [{ text: '', meds: [] }] }
 ];
-function fuTpls_(){ try{ const l = JSON.parse(localStorage.getItem('fuTemplates') || 'null'); if(Array.isArray(l) && l.length) return l; }catch(_){} return JSON.parse(JSON.stringify(FU_TPL_DEFAULT)); }
+function fuTplWeeks_(t){
+  if(Array.isArray(t.weeks)) return t.weeks.map(w => ({ title: w.title || '', text: w.text || '', meds: (w.meds || []).map(m => ({ name: m.name || '', instructions: m.instructions || '' })) }));
+  const out = []; /* قوالب قديمة بمراحل: تتحول لأسابيع */
+  (t.phases || []).forEach(p => { for(let i = +p.from; i <= +p.to; i++) out[i - 1] = { text: p.text || '', meds: [] }; });
+  return Array.from(out, w => w || { text: '', meds: [] });
+}
+function fuTpls_(){ try{ const l = JSON.parse(localStorage.getItem('fuTemplates') || 'null'); if(Array.isArray(l) && l.length) return l.map(t => ({ name: t.name, weeks: fuTplWeeks_(t) })); }catch(_){} return JSON.parse(JSON.stringify(FU_TPL_DEFAULT)); }
 function fuTplsSave_(l){ try{ localStorage.setItem('fuTemplates', JSON.stringify(l)); }catch(_){} listsSchedulePush_(); }
 let FU = null, fuUnsub = null, fuGlobalUnsub = null, fuPrevUnread = null;
 function fuLink_(t){ return new URL('followup.html', location.href).href + '?t=' + t; }
 function fuNewToken_(){ const a = new Uint8Array(12); crypto.getRandomValues(a); return Array.from(a, b => b.toString(36).padStart(2, '0')).join(''); }
-function fuClean_(arr){ return (arr || []).map(x => ({ name: String(x.name || '').trim(), from: Math.max(1, parseInt(x.from) || 1), to: Math.max(1, parseInt(x.to) || parseInt(x.from) || 1), text: String(x.text || '').trim() }))
-  .map(x => ({ ...x, to: Math.max(x.from, x.to) })).filter(x => x.name || x.text).sort((a, b) => a.from - b.from); }
 function fuCloseChat_(){ if(fuUnsub){ try{ fuUnsub(); }catch(_){} fuUnsub = null; } }
 function closeFu_(){ fuCloseChat_(); $('fuModal').style.display = 'none'; FU = null; }
 async function openFu_(pid, tab){
   if(!pid || String(pid).startsWith('temp_')){ showToast('احفظ بيانات المريض الأول', true); return; }
   if(navigator.onLine === false){ showToast('صفحة المتابعة محتاجة نت', true); return; }
   const p = (allPatients || []).find(x => String(x.id) === String(pid)) || {};
-  FU = { pid: String(pid), name: p.Name || '', phone: p.Phone || '', token: null, data: null, phases: [], weeks: {}, openW: 0, rxCache: null, title: '', start: '', note: '', tab: tab || 'page' };
+  FU = { pid: String(pid), name: p.Name || '', phone: p.Phone || '', token: null, data: null, weeks: [], openW: 0, rxCache: null, title: '', start: '', note: '', tab: tab || 'page' };
   $('fuModal').style.display = 'flex'; $('fuWho').textContent = FU.name; $('fuTabs').innerHTML = ''; $('fuBody').innerHTML = '<div class="no-visits">جاري التحميل...</div>';
   try{
     const snap = await getDocs(query(collection(db, 'followups'), where('patientId', '==', FU.pid), limit(1)));
     if(!snap.empty){
       const d = snap.docs[0], x = d.data();
-      FU.token = d.id; FU.data = x; FU.phases = (x.phases || []).map(y => ({ ...y })); FU.weeks = fuWeeksFrom_(x);
+      FU.token = d.id; FU.data = x; FU.weeks = fuWeeksFrom_(x);
       FU.title = x.title || ''; FU.start = x.startDate || ''; FU.note = x.note || '';
     }else{
       const t = fuTpls_()[0];
-      FU.title = t.name; FU.phases = t.phases.map(y => ({ ...y })); FU.start = new Date().toISOString().slice(0, 10);
+      FU.title = t.name; FU.weeks = fuTplWeeks_(t); FU.start = new Date().toISOString().slice(0, 10);
     }
   }catch(e){ showToast('تعذر التحميل - جرب تاني', true); closeFu_(); return; }
   renderFu_();
 }
 function fuWeeksFrom_(x){
-  const w = {};
-  if(x.weeks && typeof x.weeks === 'object'){
-    Object.keys(x.weeks).forEach(k => { const v = x.weeks[k] || {}; w[k] = { text: v.text || '', meds: (v.meds || []).map(m => ({ name: m.name || '', instructions: m.instructions || '' })) }; });
-  }else if(Array.isArray(x.meds) && x.meds.length){ /* صفحات قديمة: نفس الأدوية على كل الأسابيع */
-    const total = (x.phases || []).reduce((m, p) => Math.max(m, +p.to || 0), 0);
-    for(let i = 1; i <= total; i++) w[i] = { text: '', meds: x.meds.map(m => ({ name: m.name || '', instructions: m.instructions || '' })) };
+  const cp = m => (m || []).map(y => ({ name: y.name || '', instructions: y.instructions || '' }));
+  const map = (x.weeks && typeof x.weeks === 'object') ? x.weeks : null;
+  const phases = x.phases || [];
+  let n = +x.total || 0;
+  if(map) n = Math.max(n, ...Object.keys(map).map(Number), 0);
+  phases.forEach(p => { n = Math.max(n, +p.to || 0); });
+  const out = [];
+  for(let i = 1; i <= n; i++){
+    const v = map && map[i], ph = phases.find(p => i >= +p.from && i <= +p.to);
+    out.push({ title: (v && v.title) || '', text: (v && v.text) || (ph && ph.text) || '', meds: v && v.meds ? cp(v.meds) : cp(map ? [] : x.meds) });
   }
-  return w;
+  return out;
 }
-function fuTotal_(){ return fuClean_(FU.phases).reduce((m, p) => Math.max(m, p.to), 0); }
+function fuTotal_(){ return FU.weeks.length; }
 async function fuRxMeds_(){
   if(FU.rxCache) return FU.rxCache;
   const snap = await getDocs(query(collection(db, 'patients', FU.pid, 'history'), orderBy('CreatedAt', 'desc')));
@@ -9829,10 +9837,10 @@ function fuGrab_(){
   if(g('fuTitle') !== null) FU.title = g('fuTitle');
   if(g('fuStart') !== null) FU.start = g('fuStart');
   if(g('fuNote') !== null) FU.note = g('fuNote');
-  document.querySelectorAll('#fuBody .fu-ph').forEach(r => { const i = +r.dataset.i; if(FU.phases[i]) FU.phases[i] = { name: r.querySelector('.n').value, from: r.querySelector('.f').value, to: r.querySelector('.t').value, text: r.querySelector('.x').value }; });
   document.querySelectorAll('#fuBody .fu-wk').forEach(box => {
-    const w = box.dataset.w;
-    FU.weeks[w] = {
+    const i = +box.dataset.w - 1; if(!FU.weeks[i]) return;
+    FU.weeks[i] = {
+      title: box.querySelector('.wt').value,
       text: box.querySelector('.wx').value,
       meds: Array.from(box.querySelectorAll('.fu-md')).map(r => ({ name: r.querySelector('.n').value, instructions: r.querySelector('.x').value }))
     };
@@ -9872,32 +9880,23 @@ function renderFu_(){
       <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap;"><button type="button" class="btn btn-ghost" id="fuTplSave">💾 حفظ المراحل كقالب</button><button type="button" class="btn btn-ghost" id="fuTplDel">🗑 حذف قالب</button></div></div>
     <div class="field"><label>عنوان المتابعة</label><input type="text" id="fuTitle" value="${escapeHtml(FU.title)}" placeholder="مثلاً: متابعة التطويل"></div>
     <div class="field"><label>تاريخ بداية المتابعة (الأسبوع 1)</label><input type="date" id="fuStart" value="${escapeHtml(FU.start)}"></div>
-    <h2 style="font-size:15px;margin:14px 0 6px;">🗓 المراحل (كل مرحلة بأسابيعها وتعليماتها)</h2>
-    ${FU.phases.map((x, i) => `<div class="fu-ph opsec-box" data-i="${i}">
-      <div style="display:flex;gap:6px;align-items:center;"><input class="n" type="text" value="${escapeHtml(x.name || '')}" placeholder="اسم المرحلة" style="${inp}flex:1;">
-        <button type="button" class="btn btn-outline-red" data-delph="${i}" style="padding:6px 10px;">✕</button></div>
-      <div style="display:flex;gap:8px;align-items:center;margin:6px 0;">من أسبوع <input class="f" type="number" min="1" value="${escapeHtml(String(x.from || 1))}" style="${inp}width:70px;"> إلى <input class="t" type="number" min="1" value="${escapeHtml(String(x.to || x.from || 1))}" style="${inp}width:70px;"></div>
-      <textarea class="x" placeholder="تعليمات عامة للمرحلة (اختياري - بتظهر بس في الأسبوع اللي مفيهوش تعليمات خاصة)..." style="${inp}min-height:70px;">${escapeHtml(x.text || '')}</textarea></div>`).join('')}
-    <button type="button" class="btn btn-ghost" id="fuAddPh">+ مرحلة</button>
-    <h2 style="font-size:15px;margin:16px 0 6px;">📅 الأسابيع (كل أسبوع ليه تعليماته وأدويته)</h2>
-    ${(()=>{ const total = fuTotal_(); if(!total) return '<div class="hint">أضف مرحلة بأسابيعها وهتظهر هنا الأسابيع.</div>';
-      let out = '';
-      for(let w = 1; w <= total; w++){
-        const d = FU.weeks[w] || { text: '', meds: [] }, ph = fuClean_(FU.phases).find(x => w >= x.from && w <= x.to);
-        out += `<details class="fu-wk opsec-box" data-w="${w}" ${FU.openW === w ? 'open' : ''}>
-          <summary style="cursor:pointer;font-weight:700;">الأسبوع ${w}${ph && ph.name ? ' · ' + escapeHtml(ph.name) : ''} <span style="font-weight:400;color:var(--muted);font-size:12px;">${d.text ? '📌' : ''}${(d.meds || []).length ? ' 💊' + d.meds.length : ''}</span></summary>
-          <textarea class="wx" placeholder="تعليمات الأسبوع ${w}..." style="${inp}min-height:70px;margin-top:8px;">${escapeHtml(d.text || '')}</textarea>
-          <div style="margin-top:8px;font-weight:700;font-size:13px;">💊 أدوية الأسبوع ${w}</div>
-          ${(d.meds || []).map((x, i) => `<div class="fu-md" style="display:flex;gap:6px;align-items:flex-start;margin-top:6px;">
-            <div style="flex:1;"><input class="n" type="text" value="${escapeHtml(x.name || '')}" placeholder="اسم الدواء" style="${inp}margin-bottom:4px;"><input class="x" type="text" value="${escapeHtml(x.instructions || '')}" placeholder="الجرعة / التعليمات" style="${inp}"></div>
-            <button type="button" class="btn btn-outline-red" data-delmd="${w}:${i}" style="padding:6px 10px;">✕</button></div>`).join('')}
-          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;">
-            <button type="button" class="btn btn-ghost" data-pull="${w}">🔄 سحب الأدوية من آخر روشتة</button>
-            <button type="button" class="btn btn-ghost" data-addmd="${w}">+ دواء</button>
-            ${w > 1 ? `<button type="button" class="btn btn-ghost" data-copyprev="${w}">📋 نسخ من الأسبوع ${w - 1}</button>` : ''}</div>
-        </details>`;
-      }
-      return out; })()}
+    <h2 style="font-size:15px;margin:14px 0 6px;">📅 الأسابيع (ضيف أسبوع بأسبوع، وكل أسبوع ليه تعليماته وأدويته)</h2>
+    ${FU.weeks.map((d, k) => { const w = k + 1;
+      return `<details class="fu-wk opsec-box" data-w="${w}" ${FU.openW === w ? 'open' : ''}>
+        <summary style="cursor:pointer;font-weight:700;">الأسبوع ${w}${d.title ? ' · ' + escapeHtml(d.title) : ''} <span style="font-weight:400;color:var(--muted);font-size:12px;">${d.text ? '📌' : ''}${(d.meds || []).length ? ' 💊' + d.meds.length : ''}</span></summary>
+        <input class="wt" type="text" value="${escapeHtml(d.title || '')}" placeholder="اسم الأسبوع (اختياري) مثلاً: العملية، رفع الغرز، تركيب الجهاز" style="${inp}margin-top:8px;">
+        <textarea class="wx" placeholder="تعليمات الأسبوع ${w}..." style="${inp}min-height:70px;margin-top:8px;">${escapeHtml(d.text || '')}</textarea>
+        <div style="margin-top:8px;font-weight:700;font-size:13px;">💊 أدوية الأسبوع ${w}</div>
+        ${(d.meds || []).map((x, i) => `<div class="fu-md" style="display:flex;gap:6px;align-items:flex-start;margin-top:6px;">
+          <div style="flex:1;"><input class="n" type="text" value="${escapeHtml(x.name || '')}" placeholder="اسم الدواء" style="${inp}margin-bottom:4px;"><input class="x" type="text" value="${escapeHtml(x.instructions || '')}" placeholder="الجرعة / التعليمات" style="${inp}"></div>
+          <button type="button" class="btn btn-outline-red" data-delmd="${w}:${i}" style="padding:6px 10px;">✕</button></div>`).join('')}
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;">
+          <button type="button" class="btn btn-ghost" data-pull="${w}">🔄 سحب الأدوية من آخر روشتة</button>
+          <button type="button" class="btn btn-ghost" data-addmd="${w}">+ دواء</button>
+          ${w > 1 ? `<button type="button" class="btn btn-ghost" data-copyprev="${w}">📋 نسخ من الأسبوع ${w - 1}</button>` : ''}
+          <button type="button" class="btn btn-outline-red" data-delwk="${w}">🗑 حذف الأسبوع</button></div>
+      </details>`; }).join('')}
+    <button type="button" class="btn btn-ghost" id="fuAddWk" style="width:100%;">➕ إضافة أسبوع ${FU.weeks.length + 1}</button>
     <div class="field" style="margin-top:14px;"><label>ملاحظات عامة للمريض (اختياري)</label><textarea id="fuNote" style="min-height:60px;">${escapeHtml(FU.note)}</textarea></div>
     <button type="button" class="btn btn-primary" id="fuSave" style="width:100%;margin-top:6px;">${exists ? '💾 حفظ التعديلات' : '✅ إنشاء صفحة المتابعة'}</button>`;
   $('fuBody').innerHTML = h;
@@ -9917,13 +9916,14 @@ function renderFu_(){
   }
   B('fuTplLoad').onclick = ()=>{
     const i = B('fuTplSel').value; if(i === '') return;
-    fuGrab_(); const t = fuTpls_()[+i]; FU.phases = t.phases.map(y => ({ ...y })); FU.title = t.name; renderFu_();
+    if(FU.weeks.some(w => w.text || (w.meds || []).length) && !confirm('تحميل القالب هيستبدل الأسابيع الحالية. تكمل؟')) return;
+    fuGrab_(); const t = fuTpls_()[+i]; FU.weeks = fuTplWeeks_(t); FU.title = t.name; FU.openW = 0; renderFu_();
   };
   B('fuTplSave').onclick = ()=>{
-    fuGrab_(); const ph = fuClean_(FU.phases); if(!ph.length){ showToast('مفيش مراحل تتحفظ', true); return; }
+    fuGrab_(); if(!FU.weeks.length){ showToast('مفيش أسابيع تتحفظ', true); return; }
     const name = (prompt('اسم القالب:', FU.title || '') || '').trim(); if(!name) return;
-    const l = fuTpls_(), i = l.findIndex(t => t.name === name);
-    if(i >= 0){ if(!confirm('فيه قالب بنفس الاسم. استبداله؟')) return; l[i] = { name, phases: ph }; } else l.push({ name, phases: ph });
+    const l = fuTpls_(), i = l.findIndex(t => t.name === name), weeks = fuTplWeeks_({ weeks: FU.weeks });
+    if(i >= 0){ if(!confirm('فيه قالب بنفس الاسم. استبداله؟')) return; l[i] = { name, weeks }; } else l.push({ name, weeks });
     fuTplsSave_(l); showToast('اتحفظ القالب ✓'); renderFu_();
   };
   B('fuTplDel').onclick = ()=>{
@@ -9932,15 +9932,18 @@ function renderFu_(){
     if(!confirm('حذف قالب «' + l[+i].name + '»؟ (الصفحات اللي اتعملت بيه مش هتتأثر)')) return;
     l.splice(+i, 1); fuTplsSave_(l); fuGrab_(); renderFu_();
   };
-  B('fuAddPh').onclick = ()=>{ fuGrab_(); const last = FU.phases[FU.phases.length - 1]; const nf = last ? (parseInt(last.to) || 0) + 1 : 1; FU.phases.push({ name: '', from: nf, to: nf, text: '' }); renderFu_(); };
-  document.querySelectorAll('#fuBody [data-delph]').forEach(b => b.onclick = ()=>{ fuGrab_(); FU.phases.splice(+b.dataset.delph, 1); renderFu_(); });
+  B('fuAddWk').onclick = ()=>{ fuGrab_(); FU.weeks.push({ title: '', text: '', meds: [] }); FU.openW = FU.weeks.length; renderFu_(); };
+  document.querySelectorAll('#fuBody [data-delwk]').forEach(b => b.onclick = ()=>{
+    const w = +b.dataset.delwk; if(!confirm('حذف الأسبوع ' + w + '؟ الأسابيع اللي بعده هتتقدم رقم.')) return;
+    fuGrab_(); FU.weeks.splice(w - 1, 1); FU.openW = 0; renderFu_();
+  });
   document.querySelectorAll('#fuBody .fu-wk').forEach(d => d.addEventListener('toggle', ()=>{ if(d.open) FU.openW = +d.dataset.w; else if(FU.openW === +d.dataset.w) FU.openW = 0; }));
-  const wk = w => (FU.weeks[w] = FU.weeks[w] || { text: '', meds: [] });
+  const wk = w => FU.weeks[w - 1];
   document.querySelectorAll('#fuBody [data-addmd]').forEach(b => b.onclick = ()=>{ fuGrab_(); const w = +b.dataset.addmd; wk(w).meds.push({ name: '', instructions: '' }); FU.openW = w; renderFu_(); });
   document.querySelectorAll('#fuBody [data-delmd]').forEach(b => b.onclick = ()=>{ fuGrab_(); const [w, i] = b.dataset.delmd.split(':').map(Number); wk(w).meds.splice(i, 1); FU.openW = w; renderFu_(); });
   document.querySelectorAll('#fuBody [data-copyprev]').forEach(b => b.onclick = ()=>{
     fuGrab_(); const w = +b.dataset.copyprev, pv = wk(w - 1);
-    wk(w).text = pv.text; wk(w).meds = pv.meds.map(m => ({ ...m })); FU.openW = w; renderFu_(); showToast('اتنسخ من الأسبوع ' + (w - 1));
+    wk(w).text = pv.text; wk(w).title = pv.title || ''; wk(w).meds = pv.meds.map(m => ({ ...m })); FU.openW = w; renderFu_(); showToast('اتنسخ من الأسبوع ' + (w - 1));
   });
   document.querySelectorAll('#fuBody [data-pull]').forEach(b => b.onclick = async ()=>{
     fuGrab_(); const w = +b.dataset.pull; b.disabled = true;
@@ -9956,27 +9959,25 @@ function renderFu_(){
 }
 async function fuSave_(){
   fuGrab_();
-  const phases = fuClean_(FU.phases);
-  if(!phases.length){ showToast('أضف مرحلة واحدة على الأقل', true); return; }
+  if(!FU.weeks.length){ showToast('أضف أسبوع واحد على الأقل', true); return; }
   if(!FU.start){ showToast('حدد تاريخ البداية', true); return; }
-  const total = phases.reduce((m, p) => Math.max(m, p.to), 0), weeks = {};
-  for(let w = 1; w <= total; w++){
-    const d = FU.weeks[w]; if(!d) continue;
-    const text = String(d.text || '').trim(), meds = (d.meds || []).map(m => ({ name: String(m.name || '').trim(), instructions: String(m.instructions || '').trim() })).filter(m => m.name);
-    if(text || meds.length) weeks[w] = { text, meds };
-  }
+  const weeks = {};
+  FU.weeks.forEach((d, k) => {
+    weeks[k + 1] = { title: String(d.title || '').trim(), text: String(d.text || '').trim(), meds: (d.meds || []).map(m => ({ name: String(m.name || '').trim(), instructions: String(m.instructions || '').trim() })).filter(m => m.name) };
+  });
+  const total = FU.weeks.length;
   const btn = $('fuSave'); btn.disabled = true; const orig = btn.textContent; btn.textContent = 'جاري الحفظ...';
   try{
     let msgUrl = (FU.data && FU.data.msgUrl) || '';
     if(!msgUrl){ try{ const s = await getDoc(doc(db, 'settings', 'secretary')); msgUrl = (s.exists() && s.data().scriptUrl) || ''; }catch(_){} }
-    const data = { patientId: FU.pid, name: FU.name, title: String(FU.title || '').trim(), startDate: FU.start, phases, weeks, meds: [], note: String(FU.note || '').trim(), msgUrl, updatedAt: serverTimestamp() };
+    const data = { patientId: FU.pid, name: FU.name, title: String(FU.title || '').trim(), startDate: FU.start, total, phases: [], weeks, meds: [], note: String(FU.note || '').trim(), msgUrl, updatedAt: serverTimestamp() };
     if(FU.token){ await updateDoc(doc(db, 'followups', FU.token), data); Object.assign(FU.data, data); }
     else{
       const t = fuNewToken_();
       await setDoc(doc(db, 'followups', t), { ...data, active: true, unread: 0, createdAt: serverTimestamp() });
       FU.token = t; FU.data = { ...data, active: true, unread: 0 };
     }
-    FU.phases = phases; FU.weeks = fuWeeksFrom_({ weeks });
+    FU.weeks = fuWeeksFrom_({ weeks, total });
     showToast('اتحفظت صفحة المتابعة ✓');
     if(!msgUrl) showToast('تنبيه: الاستفسارات مش هتشتغل قبل ما تفعّل السكرتارية (📱 السكرتارية) وتعيد الحفظ', true);
     renderFu_();
