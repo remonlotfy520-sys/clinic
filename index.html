@@ -1418,6 +1418,10 @@ var n=localStorage.getItem('clinicName');if(n)document.title=n;}catch(e){}})();
       <input type="date" id="caseDate">
     </div>
     <div class="field">
+      <label>التشخيص</label>
+      <input type="text" id="caseDiagnosis" placeholder="التشخيص...">
+    </div>
+    <div class="field">
       <label>ملاحظة قصيرة</label>
       <textarea id="caseNote" style="min-height:80px;" placeholder="ملاحظة قصيرة عن الحالة..."></textarea>
     </div>
@@ -1456,6 +1460,10 @@ var n=localStorage.getItem('clinicName');if(n)document.title=n;}catch(e){}})();
       <div class="field">
         <label>التاريخ</label>
         <input type="date" id="caseEditDate">
+      </div>
+      <div class="field">
+        <label>التشخيص</label>
+        <input type="text" id="caseEditDiagnosis">
       </div>
       <div class="field">
         <label>ملاحظة قصيرة</label>
@@ -1995,7 +2003,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-auth.js";
 import {
   getFirestore, collection, collectionGroup, doc, addDoc, updateDoc, deleteDoc, setDoc, Timestamp,
-  getDoc, getDocs, query, orderBy, serverTimestamp, where, onSnapshot, writeBatch
+  getDoc, getDocs, query, orderBy, limit, serverTimestamp, where, onSnapshot, writeBatch
 } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore.js";
 
 const $ = id => document.getElementById(id);
@@ -9580,23 +9588,64 @@ function opSecColor_(n){
   let h = 0; for(const ch of String(n)) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
   return OPSEC_EXTRA[h % OPSEC_EXTRA.length];
 }
-function opSecOf_(id){ const s = opSecMap_()[String(id).trim()]; return (s && opSecList_().includes(s)) ? s : ''; }
+function opSecsOf_(id){
+  let v = opSecMap_()[String(id).trim()];
+  if(!v) return [];
+  if(!Array.isArray(v)) v = [v];
+  const l = opSecList_(); return v.filter(x => l.includes(x));
+}
 function opSecItems_(){
   return [
     ...(currentCases || []).map(c => ({ id: String(c.id).trim(), name: c.Name || '—', kind: 'case' })),
     ...(allPatients || []).filter(p => p.HasOperation).map(p => ({ id: String(p.id).trim(), name: p.Name || '—', kind: 'patient' }))
   ];
 }
-function opSecAssign_(id, sec){
+function opSecToggle_(id, sec, on){
   const m = opSecMap_(); id = String(id).trim();
-  if(sec) m[id] = sec; else delete m[id];
+  let cur = opSecsOf_(id);
+  cur = cur.filter(x => x !== sec); if(on) cur.push(sec);
+  if(cur.length) m[id] = cur; else delete m[id];
   opSecMapSave_(m); opSecRefresh_();
+}
+/* التشخيص + آخر عملية لمرضى العمليات (بيتحمّلوا مرة ويتخزنوا في الذاكرة) */
+const OPSEC_INFO = {}; let opInfoBusy = false;
+function opDiagFromNotes_(t){
+  const m = String(t || '').match(/Diagnosis\s*:?([\s\S]*?)(?:\n\s*Decision\s*:|$)/i);
+  return m ? m[1].replace(/\s+/g, ' ').trim() : '';
+}
+async function opInfoLoad_(){
+  if(opInfoBusy || navigator.onLine === false) return;
+  const ids = (allPatients || []).filter(p => p.HasOperation).map(p => String(p.id).trim()).filter(id => !(id in OPSEC_INFO));
+  if(!ids.length) return;
+  opInfoBusy = true;
+  try{
+    for(let i = 0; i < ids.length; i += 5){
+      await Promise.all(ids.slice(i, i + 5).map(async id => {
+        try{
+          const [v, o] = await Promise.all([
+            getDocs(query(collection(db, 'patients', id, 'visits'), orderBy('VisitDate', 'desc'), limit(1))),
+            getDocs(query(collection(db, 'patients', id, 'operations'), orderBy('OperationDate', 'desc'), limit(1)))
+          ]);
+          const vd = v.docs[0] ? v.docs[0].data() : null, od = o.docs[0] ? o.docs[0].data() : null;
+          OPSEC_INFO[id] = { diag: vd ? opDiagFromNotes_(vd.VisitNotes) : '', op: od ? (od.OperationName || '') : '' };
+        }catch(_){}
+      }));
+      opSecRefresh_();
+    }
+  }catch(_){}
+  opInfoBusy = false;
+}
+function opDiagLine_(id){
+  const c = (currentCases || []).find(x => String(x.id).trim() === id);
+  if(c) return c.Diagnosis || '';
+  const i = OPSEC_INFO[id]; if(!i) return '';
+  return [i.diag, i.op].filter(Boolean).join(' · ');
 }
 function opSecBar_(){
   const bar = $('opSecBar'), panel = $('opSecPanel'); if(!bar || !panel) return;
   const list = opSecList_(), items = opSecItems_();
-  const cnt = n => items.filter(i => opSecOf_(i.id) === n).length;
-  const none = items.filter(i => !opSecOf_(i.id)).length;
+  const cnt = n => items.filter(i => opSecsOf_(i.id).includes(n)).length;
+  const none = items.filter(i => !opSecsOf_(i.id).length).length;
   const chip = (key, label, n, color) => `<button type="button" class="opsec-chip${OPSEC_CUR === key ? ' on' : ''}" data-key="${escapeHtml(key)}" style="--c:${color}">${escapeHtml(label)} <span>${n}</span></button>`;
   bar.innerHTML = chip('__all', 'الكل', items.length, '#8E8E93')
     + list.map(n => chip(n, n, cnt(n), opSecColor_(n))).join('')
@@ -9613,15 +9662,15 @@ function opSecBar_(){
       + `<div style="display:flex;gap:8px;margin-top:8px;"><input type="text" id="opSecNew" placeholder="اسم قسم جديد..." style="flex:1;padding:9px 10px;border-radius:9px;border:1px solid var(--line);font-family:inherit;font-size:14px;background:var(--inp);color:var(--inputink);"><button type="button" class="btn btn-primary" id="opSecAddBtn">+ إضافة قسم</button></div></div>`;
   }
   if(list.includes(OPSEC_CUR)){
-    const opts = items.filter(i => opSecOf_(i.id) !== OPSEC_CUR);
+    const opts = items.filter(i => !opSecsOf_(i.id).includes(OPSEC_CUR));
     html += `<div class="opsec-box" style="--c:${opSecColor_(OPSEC_CUR)}"><b>➕ أضف حالة لقسم ${escapeHtml(OPSEC_CUR)}</b>
       <select id="opSecAddSel" class="dropdown-add-select" style="margin-top:6px;"><option value="">اختار حالة أو مريض...</option>`
-      + opts.map(i => `<option value="${escapeHtml(i.id)}">${i.kind === 'case' ? '🩹' : '🦴'} ${escapeHtml(i.name)}${opSecOf_(i.id) ? ' (في ' + escapeHtml(opSecOf_(i.id)) + ')' : ''}</option>`).join('')
+      + opts.map(i => `<option value="${escapeHtml(i.id)}">${i.kind === 'case' ? '🩹' : '🦴'} ${escapeHtml(i.name)}${opSecsOf_(i.id).length ? ' (في ' + escapeHtml(opSecsOf_(i.id).join('، ')) + ')' : ''}</option>`).join('')
       + `</select></div>`;
   }
   panel.innerHTML = html;
   const addSel = $('opSecAddSel');
-  if(addSel) addSel.onchange = ()=>{ if(addSel.value) opSecAssign_(addSel.value, OPSEC_CUR); };
+  if(addSel) addSel.onchange = ()=>{ if(addSel.value) opSecToggle_(addSel.value, OPSEC_CUR, true); };
   const addBtn = $('opSecAddBtn');
   if(addBtn) addBtn.onclick = ()=>{
     const v = $('opSecNew').value.trim(); if(!v) return;
@@ -9633,14 +9682,14 @@ function opSecBar_(){
     if(b.dataset.act === 'del'){
       if(!confirm('حذف قسم «' + old + '»؟ الحالات اللي فيه هترجع غير مصنّفة (مش هتتمسح).')) return;
       l.splice(i, 1); opSecListSave_(l);
-      const m = opSecMap_(); Object.keys(m).forEach(k => { if(m[k] === old) delete m[k]; }); opSecMapSave_(m);
+      const m = opSecMap_(); Object.keys(m).forEach(k => { const a = (Array.isArray(m[k]) ? m[k] : [m[k]]).filter(x => x !== old); if(a.length) m[k] = a; else delete m[k]; }); opSecMapSave_(m);
       if(OPSEC_CUR === old) OPSEC_CUR = '__all';
     }else{
       const nn = (prompt('الاسم الجديد للقسم:', old) || '').trim();
       if(!nn || nn === old) return;
       if(l.includes(nn)){ showToast('القسم موجود', true); return; }
       l[i] = nn; opSecListSave_(l);
-      const m = opSecMap_(); Object.keys(m).forEach(k => { if(m[k] === old) m[k] = nn; }); opSecMapSave_(m);
+      const m = opSecMap_(); Object.keys(m).forEach(k => { m[k] = (Array.isArray(m[k]) ? m[k] : [m[k]]).map(x => x === old ? nn : x); }); opSecMapSave_(m);
       if(OPSEC_CUR === old) OPSEC_CUR = nn;
     }
     opSecRefresh_();
@@ -9653,16 +9702,29 @@ function opSecRefresh_(){
   const list = opSecList_();
   if(OPSEC_CUR !== '__all' && OPSEC_CUR !== '__none' && !list.includes(OPSEC_CUR)) OPSEC_CUR = '__all';
   opSecRows_().forEach(row => {
-    const id = row.dataset.id, cur = opSecOf_(id);
-    row.querySelectorAll('.op-sec-sel').forEach(x => x.remove());
-    const sel = document.createElement('select');
-    sel.className = 'op-sec-sel';
-    sel.innerHTML = '<option value="">غير مصنّف</option>' + list.map(n => `<option value="${escapeHtml(n)}"${n === cur ? ' selected' : ''}>${escapeHtml(n)}</option>`).join('');
-    sel.style.cssText = 'margin-inline-start:auto;padding:5px 8px;border-radius:9px;font-family:inherit;font-size:12px;border:1px solid ' + (cur ? opSecColor_(cur) : 'var(--line)') + ';background:' + (cur ? 'color-mix(in srgb,' + opSecColor_(cur) + ' 14%,var(--card))' : 'var(--inp)') + ';color:var(--inputink);max-width:46%;';
-    sel.onclick = e => e.stopPropagation();
-    sel.onchange = e => { e.stopPropagation(); opSecAssign_(id, sel.value); };
-    row.appendChild(sel);
-    const show = OPSEC_CUR === '__all' || (OPSEC_CUR === '__none' ? !cur : cur === OPSEC_CUR);
+    const id = String(row.dataset.id).trim(), cur = opSecsOf_(id);
+    row.querySelectorAll('.op-sec-chips, .op-diag').forEach(x => x.remove());
+    const meta = row.querySelector('.pmeta');
+    const dl = opDiagLine_(id);
+    if(meta && dl){
+      const d = document.createElement('div');
+      d.className = 'op-diag';
+      d.style.cssText = 'font-size:13px;color:var(--ink);margin-top:2px;';
+      d.textContent = '🩺 ' + dl;
+      meta.parentNode.insertBefore(d, meta.nextSibling);
+    }
+    const box = document.createElement('div');
+    box.className = 'op-sec-chips';
+    box.style.cssText = 'flex-basis:100%;width:100%;display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;';
+    box.innerHTML = list.map(n => `<button type="button" class="op-sec-mini${cur.includes(n) ? ' on' : ''}" data-n="${escapeHtml(n)}" style="--c:${opSecColor_(n)}">${escapeHtml(n)}</button>`).join('');
+    box.onclick = e => {
+      e.stopPropagation();
+      const b = e.target.closest('.op-sec-mini'); if(!b) return;
+      opSecToggle_(id, b.dataset.n, !b.classList.contains('on'));
+    };
+    row.style.flexWrap = 'wrap';
+    row.appendChild(box);
+    const show = OPSEC_CUR === '__all' || (OPSEC_CUR === '__none' ? !cur.length : cur.includes(OPSEC_CUR));
     row.classList.toggle('opsec-hide', !show);
   });
   opSecBar_();
@@ -9671,6 +9733,8 @@ function opSecRefresh_(){
   const st = document.createElement('style');
   st.textContent = `
     .opsec-hide{display:none !important;}
+    .op-sec-mini{--c:#8E8E93;padding:3px 10px;border-radius:10px;border:1px solid var(--line);background:var(--inp);color:var(--muted);font-family:inherit;font-size:12px;cursor:pointer;}
+    .op-sec-mini.on{background:color-mix(in srgb,var(--c) 18%,var(--card));border-color:var(--c);color:color-mix(in srgb,var(--c) 70%,var(--ink));font-weight:700;}
     .opsec-bar{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;}
     .opsec-chip{--c:#8E8E93;padding:8px 14px;border-radius:14px;border:1px solid var(--line);background:var(--inp);color:var(--muted);font-family:inherit;font-size:14px;cursor:pointer;}
     .opsec-chip span{opacity:.7;font-size:12px;margin-inline-start:3px;}
@@ -9680,7 +9744,7 @@ function opSecRefresh_(){
     .opsec-edit-row span{flex:1;font-weight:700;}
   `;
   document.head.appendChild(st);
-  const re = ()=>{ clearTimeout(opsecTimer); opsecTimer = setTimeout(opSecRefresh_, 60); };
+  const re = ()=>{ clearTimeout(opsecTimer); opsecTimer = setTimeout(()=>{ opSecRefresh_(); opInfoLoad_(); }, 60); };
   const mo = new MutationObserver(re);
   ['operationCasesList', 'operationsPatientsList'].forEach(id => { const el = $(id); if(el) mo.observe(el, { childList: true }); });
 })();
@@ -11486,7 +11550,7 @@ let currentCases = [];
 $('newOperationCaseBtn').onclick = ()=>{
   $('caseName').value = '';
   $('caseDate').value = new Date().toISOString().slice(0,10);
-  $('caseNote').value = '';
+  $('caseNote').value = ''; $('caseDiagnosis').value = '';
   $('caseGoogleDocLink').value = '';
   $('caseGoogleDocPreviewBox').innerHTML = '';
   setCollapsibleState('caseGoogleDocHeader', 'caseGoogleDocContent', false);
@@ -11504,6 +11568,7 @@ $('saveOperationCaseBtn').onclick = async ()=>{
   const data = {
     Name: name,
     CaseDate: date,
+    Diagnosis: $('caseDiagnosis').value.trim(),
     Note: $('caseNote').value.trim(),
     Location: $('caseLocationSelect').value || '',
     GoogleDocLink: $('caseGoogleDocLink').value.trim()
@@ -11529,6 +11594,7 @@ function openOperationCaseDetail(caseObj){
   $('caseDetailTitle').textContent = '🩹 ' + (caseObj.Name || '');
   $('caseDetailInfo').innerHTML = `
     <div class="visit-notes"><b class="visit-label">التاريخ:</b> ${escapeHtml(String(caseObj.CaseDate || '').slice(0,10))}</div>
+    ${caseObj.Diagnosis ? `<div class="visit-notes"><b class="visit-label">التشخيص:</b> ${escapeHtml(caseObj.Diagnosis)}</div>` : ''}
     ${caseObj.Location ? `<div class="visit-notes"><b class="visit-label">المكان:</b> ${escapeHtml(caseObj.Location)}</div>` : ''}
     ${caseObj.Note ? `<div class="visit-notes"><b class="visit-label">ملاحظة:</b> ${escapeHtml(caseObj.Note)}</div>` : ''}
     ${caseObj.GoogleDocLink ? `<div class="visit-notes"><b class="visit-label">جوجل دوك:</b> <button type="button" class="btn btn-ghost" id="caseDetailPreviewBtn" style="padding:4px 10px; font-size:12.5px;">🔍 بريفيو</button></div>` : ''}
@@ -11560,6 +11626,7 @@ $('editOperationCaseBtn').onclick = ()=>{
   if(!c) return;
   $('caseEditName').value = c.Name || '';
   $('caseEditDate').value = String(c.CaseDate || '').slice(0,10);
+  $('caseEditDiagnosis').value = c.Diagnosis || '';
   $('caseEditNote').value = c.Note || '';
   $('caseEditGoogleDocLink').value = c.GoogleDocLink || '';
   const locations = getOperationCaseLocations();
@@ -11596,6 +11663,7 @@ $('saveCaseEditBtn').onclick = async ()=>{
   const data = {
     Name: name,
     CaseDate: date,
+    Diagnosis: $('caseEditDiagnosis').value.trim(),
     Note: $('caseEditNote').value.trim(),
     Location: $('caseEditLocationSelect').value || '',
     GoogleDocLink: $('caseEditGoogleDocLink').value.trim()
