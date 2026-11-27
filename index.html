@@ -768,6 +768,8 @@ var n=localStorage.getItem('clinicName');if(n)document.title=n;}catch(e){}})();
       <h2 style="margin:0;">العمليات</h2>
       <button class="btn btn-ghost" id="closeOperationsViewBtn">✕ إغلاق</button>
     </div>
+    <div id="opSecBar" class="opsec-bar"></div>
+    <div id="opSecPanel"></div>
     <h2 style="margin:0 0 10px; font-size:15px;">حالات مستقلة</h2>
     <div id="operationCasesList" style="background:var(--inp); border:1px solid var(--line); border-radius:10px; padding:8px; margin-bottom:20px;"></div>
     <h2 style="margin:0 0 10px; font-size:15px;">مرضى ليهم عملية في ملفهم</h2>
@@ -2570,7 +2572,7 @@ $('addMedicineRowBtn').onclick = ()=>{
 };
 
 /* ---------- مزامنة قوائم الأدوية/الأشعة/التحاليل بين الأجهزة (Firestore: settings/lists) ---------- */
-const LISTS_SYNC_KEYS = ['medCats','medCatsList','radiologyCats','radiologyCatsList','labsCats','labsCatsList'];
+const LISTS_SYNC_KEYS = ['medCats','medCatsList','radiologyCats','radiologyCatsList','labsCats','labsCatsList','opSecList','opSecMap'];
 let listsSyncTimer = null, listsToastShown = false;
 function listsLocalSnapshot_(){ const o = {}; LISTS_SYNC_KEYS.forEach(k => { const v = localStorage.getItem(k); if(v !== null) o[k] = v; }); return o; }
 function listsPush_(){
@@ -9564,6 +9566,125 @@ $('viewOperationPatientsBtn').onclick = async ()=>{
     }
   }catch(_){}
 };
+/* ---------- أقسام العمليات (Trauma / Deformities / Hand / Arthroplasty): تعديل + نقل الحالات + إضافة من select ---------- */
+const OPSEC_DEFAULT = ['Trauma', 'Deformities', 'Hand', 'Arthroplasty'];
+const OPSEC_COLORS = { 'Trauma':'#FF3B30', 'Deformities':'#AF52DE', 'Hand':'#FF9500', 'Arthroplasty':'#007AFF' };
+const OPSEC_EXTRA = ['#34C759','#30B0C7','#C9A800','#5856D6','#A2845E','#FF2D55'];
+let OPSEC_CUR = '__all', OPSEC_EDIT = false, opsecTimer = null;
+function opSecList_(){ let l; try{ l = JSON.parse(localStorage.getItem('opSecList') || 'null'); }catch(_){ l = null; } return Array.isArray(l) ? l : OPSEC_DEFAULT.slice(); }
+function opSecListSave_(l){ try{ localStorage.setItem('opSecList', JSON.stringify(l)); }catch(_){} listsSchedulePush_(); }
+function opSecMap_(){ try{ return JSON.parse(localStorage.getItem('opSecMap') || '{}') || {}; }catch(_){ return {}; } }
+function opSecMapSave_(m){ try{ localStorage.setItem('opSecMap', JSON.stringify(m)); }catch(_){} listsSchedulePush_(); }
+function opSecColor_(n){
+  if(OPSEC_COLORS[n]) return OPSEC_COLORS[n];
+  let h = 0; for(const ch of String(n)) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  return OPSEC_EXTRA[h % OPSEC_EXTRA.length];
+}
+function opSecOf_(id){ const s = opSecMap_()[String(id).trim()]; return (s && opSecList_().includes(s)) ? s : ''; }
+function opSecItems_(){
+  return [
+    ...(currentCases || []).map(c => ({ id: String(c.id).trim(), name: c.Name || '—', kind: 'case' })),
+    ...(allPatients || []).filter(p => p.HasOperation).map(p => ({ id: String(p.id).trim(), name: p.Name || '—', kind: 'patient' }))
+  ];
+}
+function opSecAssign_(id, sec){
+  const m = opSecMap_(); id = String(id).trim();
+  if(sec) m[id] = sec; else delete m[id];
+  opSecMapSave_(m); opSecRefresh_();
+}
+function opSecBar_(){
+  const bar = $('opSecBar'), panel = $('opSecPanel'); if(!bar || !panel) return;
+  const list = opSecList_(), items = opSecItems_();
+  const cnt = n => items.filter(i => opSecOf_(i.id) === n).length;
+  const none = items.filter(i => !opSecOf_(i.id)).length;
+  const chip = (key, label, n, color) => `<button type="button" class="opsec-chip${OPSEC_CUR === key ? ' on' : ''}" data-key="${escapeHtml(key)}" style="--c:${color}">${escapeHtml(label)} <span>${n}</span></button>`;
+  bar.innerHTML = chip('__all', 'الكل', items.length, '#8E8E93')
+    + list.map(n => chip(n, n, cnt(n), opSecColor_(n))).join('')
+    + chip('__none', 'غير مصنّف', none, '#8E8E93')
+    + `<button type="button" class="opsec-chip opsec-gear${OPSEC_EDIT ? ' on' : ''}" id="opSecGear" style="--c:#8E8E93">⚙️ الأقسام</button>`;
+  bar.querySelectorAll('.opsec-chip[data-key]').forEach(b => b.onclick = ()=>{ OPSEC_CUR = b.dataset.key; opSecRefresh_(); });
+  $('opSecGear').onclick = ()=>{ OPSEC_EDIT = !OPSEC_EDIT; opSecBar_(); };
+  let html = '';
+  if(OPSEC_EDIT){
+    html += `<div class="opsec-box"><b>تعديل الأقسام</b>` + list.map((n, i) => `
+      <div class="opsec-edit-row" style="--c:${opSecColor_(n)}"><span>${escapeHtml(n)}</span>
+        <button type="button" class="btn btn-ghost" data-act="ren" data-i="${i}">✏️ تعديل</button>
+        <button type="button" class="btn btn-ghost" data-act="del" data-i="${i}">🗑 حذف</button></div>`).join('')
+      + `<div style="display:flex;gap:8px;margin-top:8px;"><input type="text" id="opSecNew" placeholder="اسم قسم جديد..." style="flex:1;padding:9px 10px;border-radius:9px;border:1px solid var(--line);font-family:inherit;font-size:14px;background:var(--inp);color:var(--inputink);"><button type="button" class="btn btn-primary" id="opSecAddBtn">+ إضافة قسم</button></div></div>`;
+  }
+  if(list.includes(OPSEC_CUR)){
+    const opts = items.filter(i => opSecOf_(i.id) !== OPSEC_CUR);
+    html += `<div class="opsec-box" style="--c:${opSecColor_(OPSEC_CUR)}"><b>➕ أضف حالة لقسم ${escapeHtml(OPSEC_CUR)}</b>
+      <select id="opSecAddSel" class="dropdown-add-select" style="margin-top:6px;"><option value="">اختار حالة أو مريض...</option>`
+      + opts.map(i => `<option value="${escapeHtml(i.id)}">${i.kind === 'case' ? '🩹' : '🦴'} ${escapeHtml(i.name)}${opSecOf_(i.id) ? ' (في ' + escapeHtml(opSecOf_(i.id)) + ')' : ''}</option>`).join('')
+      + `</select></div>`;
+  }
+  panel.innerHTML = html;
+  const addSel = $('opSecAddSel');
+  if(addSel) addSel.onchange = ()=>{ if(addSel.value) opSecAssign_(addSel.value, OPSEC_CUR); };
+  const addBtn = $('opSecAddBtn');
+  if(addBtn) addBtn.onclick = ()=>{
+    const v = $('opSecNew').value.trim(); if(!v) return;
+    const l = opSecList_(); if(l.includes(v)){ showToast('القسم موجود', true); return; }
+    l.push(v); opSecListSave_(l); opSecRefresh_();
+  };
+  panel.querySelectorAll('[data-act]').forEach(b => b.onclick = ()=>{
+    const l = opSecList_(), i = +b.dataset.i, old = l[i];
+    if(b.dataset.act === 'del'){
+      if(!confirm('حذف قسم «' + old + '»؟ الحالات اللي فيه هترجع غير مصنّفة (مش هتتمسح).')) return;
+      l.splice(i, 1); opSecListSave_(l);
+      const m = opSecMap_(); Object.keys(m).forEach(k => { if(m[k] === old) delete m[k]; }); opSecMapSave_(m);
+      if(OPSEC_CUR === old) OPSEC_CUR = '__all';
+    }else{
+      const nn = (prompt('الاسم الجديد للقسم:', old) || '').trim();
+      if(!nn || nn === old) return;
+      if(l.includes(nn)){ showToast('القسم موجود', true); return; }
+      l[i] = nn; opSecListSave_(l);
+      const m = opSecMap_(); Object.keys(m).forEach(k => { if(m[k] === old) m[k] = nn; }); opSecMapSave_(m);
+      if(OPSEC_CUR === old) OPSEC_CUR = nn;
+    }
+    opSecRefresh_();
+  });
+}
+function opSecRows_(){
+  return [...document.querySelectorAll('#operationCasesList .patient-row[data-id], #operationsPatientsList .patient-row[data-id]')];
+}
+function opSecRefresh_(){
+  const list = opSecList_();
+  if(OPSEC_CUR !== '__all' && OPSEC_CUR !== '__none' && !list.includes(OPSEC_CUR)) OPSEC_CUR = '__all';
+  opSecRows_().forEach(row => {
+    const id = row.dataset.id, cur = opSecOf_(id);
+    row.querySelectorAll('.op-sec-sel').forEach(x => x.remove());
+    const sel = document.createElement('select');
+    sel.className = 'op-sec-sel';
+    sel.innerHTML = '<option value="">غير مصنّف</option>' + list.map(n => `<option value="${escapeHtml(n)}"${n === cur ? ' selected' : ''}>${escapeHtml(n)}</option>`).join('');
+    sel.style.cssText = 'margin-inline-start:auto;padding:5px 8px;border-radius:9px;font-family:inherit;font-size:12px;border:1px solid ' + (cur ? opSecColor_(cur) : 'var(--line)') + ';background:' + (cur ? 'color-mix(in srgb,' + opSecColor_(cur) + ' 14%,var(--card))' : 'var(--inp)') + ';color:var(--inputink);max-width:46%;';
+    sel.onclick = e => e.stopPropagation();
+    sel.onchange = e => { e.stopPropagation(); opSecAssign_(id, sel.value); };
+    row.appendChild(sel);
+    const show = OPSEC_CUR === '__all' || (OPSEC_CUR === '__none' ? !cur : cur === OPSEC_CUR);
+    row.classList.toggle('opsec-hide', !show);
+  });
+  opSecBar_();
+}
+(function initOpSec(){
+  const st = document.createElement('style');
+  st.textContent = `
+    .opsec-hide{display:none !important;}
+    .opsec-bar{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;}
+    .opsec-chip{--c:#8E8E93;padding:8px 14px;border-radius:14px;border:1px solid var(--line);background:var(--inp);color:var(--muted);font-family:inherit;font-size:14px;cursor:pointer;}
+    .opsec-chip span{opacity:.7;font-size:12px;margin-inline-start:3px;}
+    .opsec-chip.on{background:color-mix(in srgb,var(--c) 18%,var(--card));border-color:var(--c);color:color-mix(in srgb,var(--c) 70%,var(--ink));font-weight:700;}
+    .opsec-box{--c:#8E8E93;border:1px solid var(--line);border-inline-start:5px solid var(--c);border-radius:12px;padding:10px;margin-bottom:12px;background:color-mix(in srgb,var(--c) 7%,transparent);}
+    .opsec-edit-row{display:flex;align-items:center;gap:8px;margin-top:8px;padding:6px 8px;border-radius:10px;border-inline-start:5px solid var(--c);background:color-mix(in srgb,var(--c) 10%,transparent);}
+    .opsec-edit-row span{flex:1;font-weight:700;}
+  `;
+  document.head.appendChild(st);
+  const re = ()=>{ clearTimeout(opsecTimer); opsecTimer = setTimeout(opSecRefresh_, 60); };
+  const mo = new MutationObserver(re);
+  ['operationCasesList', 'operationsPatientsList'].forEach(id => { const el = $(id); if(el) mo.observe(el, { childList: true }); });
+})();
+
 $('closeOperationsViewBtn').onclick = ()=>{
   $('operationsPatientsView').style.display = 'none';
   $('listView').style.display = 'block';
