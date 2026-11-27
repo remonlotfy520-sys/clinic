@@ -49,6 +49,12 @@
   .node.past .ball i::after{ content:'✓'; position:absolute; right:-2px; top:-2px; width:20px; height:20px; border-radius:50%; background:#34C759; color:#fff; font-size:12px; line-height:20px; text-align:center; border:2px solid #fff; }
   .node.past .ball{ position:absolute; }
   .node.cur .ball{ animation:pulse 1.8s infinite; }
+  .node.fut{ --c:#aab3b8; }
+  .node.fut .ball{ filter:grayscale(1); opacity:.75; }
+  .node.fut .lab{ opacity:.6; }
+  .node.fut .dot{ background:#aab3b8; border-color:#c9d0d3; }
+  .locked{ text-align:center; padding:18px 6px; color:var(--muted); }
+  .locked .lk{ font-size:34px; }
   @keyframes pulse{ 0%{ box-shadow:0 0 0 0 rgba(255,149,0,.55);} 70%{ box-shadow:0 0 0 12px rgba(255,149,0,0);} 100%{ box-shadow:0 0 0 0 rgba(255,149,0,0);} }
   .detail{ border-right:6px solid var(--c,#1f7a6a); }
   .detail .dh{ font-family:'Cairo',sans-serif; font-weight:800; font-size:18px; }
@@ -132,12 +138,17 @@ function detailHtml(w){
   const { phases, total, start, cur } = calc();
   const ph = phaseOf(phases, w), c = COLORS[(w - 1) % COLORS.length];
   const ws = start ? new Date(start.getTime() + (w - 1) * 7 * DAY) : null, we = ws ? new Date(ws.getTime() + 6 * DAY) : null;
-  const meds = (D.meds || []).filter(m => m && m.name);
+  if(start && w > cur){
+    return `<div class="card detail" style="--c:#aab3b8"><div class="dh">الأسبوع ${w}${ph && ph.name ? ' — ' + esc(ph.name) : ''}</div>
+      <div class="locked"><div class="lk">🔒</div><div><b>الأسبوع ده لسه مجاش</b></div><div>هتظهر تعليماته وأدويته يوم ${ws ? esc(fmt(ws)) : 'بدايته'}.</div></div></div>`;
+  }
+  const wd = (D.weeks && D.weeks[w]) || null;
+  const meds = ((wd && wd.meds) ? wd.meds : (D.meds || [])).filter(m => m && m.name);
   return `<div class="card detail" style="--c:${c}">
     <div class="dh">الأسبوع ${w}${ph && ph.name ? ' — ' + esc(ph.name) : ''}</div>
     <div class="ds">${ws ? esc(fmt(ws)) + ' – ' + esc(fmt(we)) : ''}${start && w === cur ? ' · 📍 إحنا هنا دلوقتي' : ''}${start && w < cur ? ' · ✓ خلص' : ''}</div>
     <h3>📌 التعليمات</h3>
-    <div class="txt">${esc(ph && ph.text ? ph.text : 'مفيش تعليمات إضافية للأسبوع ده.')}</div>
+    <div class="txt">${esc((wd && wd.text) ? wd.text : (ph && ph.text ? ph.text : 'مفيش تعليمات إضافية للأسبوع ده.'))}</div>
     <h3>💊 الأدوية</h3>
     ${meds.length ? meds.map(m => `<div class="med"><b>${esc(m.name)}</b>${m.instructions ? `<span>${esc(m.instructions)}</span>` : ''}</div>`).join('') : `<div class="empty" style="padding:6px;">مفيش أدوية مسجلة دلوقتي.</div>`}
   </div>`;
@@ -169,7 +180,7 @@ function render(){
     for(let w = 1; w <= total; w++){
       const ph = phaseOf(phases, w), c = COLORS[(w - 1) % COLORS.length], up = w % 2 === 1;
       const ws = start ? new Date(start.getTime() + (w - 1) * 7 * DAY) : null;
-      const cls = (up ? 'up' : 'dn') + (start ? (w < cur ? ' past' : (w === cur ? ' cur' : '')) : '');
+      const cls = (up ? 'up' : 'dn') + (start ? (w < cur ? ' past' : (w === cur ? ' cur' : ' fut')) : '');
       html += `<div class="node ${cls}" data-w="${w}" style="--c:${c}"><div class="stem"></div><div class="dot"></div>
         <div class="ball"><i>${String(w).padStart(2, '0')}</i></div>
         <div class="lab"><b>${esc(ph && ph.name ? ph.name : 'أسبوع ' + w)}</b>${ws ? '<br>' + esc(fmt(ws)) : ''}</div></div>`;
