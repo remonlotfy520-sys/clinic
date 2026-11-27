@@ -9817,7 +9817,7 @@ function fuWeeksFrom_(x){
   const out = [];
   for(let i = 1; i <= n; i++){
     const v = map && map[i], ph = phases.find(p => i >= +p.from && i <= +p.to);
-    out.push({ title: (v && v.title) || '', text: (v && v.text) || (ph && ph.text) || '', meds: v && v.meds ? cp(v.meds) : cp(map ? [] : x.meds) });
+    out.push({ title: (v && v.title) || '', text: (v && v.text) || (ph && ph.text) || '', meds: v && v.meds ? cp(v.meds) : cp(map || i > 1 ? [] : x.meds) });
   }
   return out;
 }
@@ -9896,7 +9896,9 @@ function renderFu_(){
           ${w > 1 ? `<button type="button" class="btn btn-ghost" data-copyprev="${w}">📋 نسخ من الأسبوع ${w - 1}</button>` : ''}
           <button type="button" class="btn btn-outline-red" data-delwk="${w}">🗑 حذف الأسبوع</button></div>
       </details>`; }).join('')}
-    <button type="button" class="btn btn-ghost" id="fuAddWk" style="width:100%;">➕ إضافة أسبوع ${FU.weeks.length + 1}</button>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button type="button" class="btn btn-ghost" id="fuAddWk" style="flex:1;">➕ أسبوع ${FU.weeks.length + 1} (فاضي)</button>
+      ${FU.weeks.length ? `<button type="button" class="btn btn-primary" id="fuAddWkCarry" style="flex:1;">➕ أسبوع ${FU.weeks.length + 1} + كمّل أدوية الأسبوع ${FU.weeks.length}</button>` : ''}</div>
     <div class="field" style="margin-top:14px;"><label>ملاحظات عامة للمريض (اختياري)</label><textarea id="fuNote" style="min-height:60px;">${escapeHtml(FU.note)}</textarea></div>
     <button type="button" class="btn btn-primary" id="fuSave" style="width:100%;margin-top:6px;">${exists ? '💾 حفظ التعديلات' : '✅ إنشاء صفحة المتابعة'}</button>`;
   $('fuBody').innerHTML = h;
@@ -9933,6 +9935,13 @@ function renderFu_(){
     l.splice(+i, 1); fuTplsSave_(l); fuGrab_(); renderFu_();
   };
   B('fuAddWk').onclick = ()=>{ fuGrab_(); FU.weeks.push({ title: '', text: '', meds: [] }); FU.openW = FU.weeks.length; renderFu_(); };
+  const carry = $('fuAddWkCarry');
+  if(carry) carry.onclick = ()=>{
+    fuGrab_(); const prev = FU.weeks[FU.weeks.length - 1];
+    FU.weeks.push({ title: '', text: '', meds: (prev.meds || []).filter(m => String(m.name || '').trim()).map(m => ({ ...m })) });
+    FU.openW = FU.weeks.length; renderFu_();
+    showToast('اتكملت أدوية الأسبوع ' + (FU.weeks.length - 1) + ' على الأسبوع الجديد');
+  };
   document.querySelectorAll('#fuBody [data-delwk]').forEach(b => b.onclick = ()=>{
     const w = +b.dataset.delwk; if(!confirm('حذف الأسبوع ' + w + '؟ الأسابيع اللي بعده هتتقدم رقم.')) return;
     fuGrab_(); FU.weeks.splice(w - 1, 1); FU.openW = 0; renderFu_();
@@ -9940,7 +9949,14 @@ function renderFu_(){
   document.querySelectorAll('#fuBody .fu-wk').forEach(d => d.addEventListener('toggle', ()=>{ if(d.open) FU.openW = +d.dataset.w; else if(FU.openW === +d.dataset.w) FU.openW = 0; }));
   const wk = w => FU.weeks[w - 1];
   document.querySelectorAll('#fuBody [data-addmd]').forEach(b => b.onclick = ()=>{ fuGrab_(); const w = +b.dataset.addmd; wk(w).meds.push({ name: '', instructions: '' }); FU.openW = w; renderFu_(); });
-  document.querySelectorAll('#fuBody [data-delmd]').forEach(b => b.onclick = ()=>{ fuGrab_(); const [w, i] = b.dataset.delmd.split(':').map(Number); wk(w).meds.splice(i, 1); FU.openW = w; renderFu_(); });
+  document.querySelectorAll('#fuBody [data-delmd]').forEach(b => b.onclick = ()=>{ fuGrab_(); const [w, i] = b.dataset.delmd.split(':').map(Number);
+    const nm = medNorm_((wk(w).meds[i] || {}).name || '');
+    wk(w).meds.splice(i, 1);
+    let later = 0;
+    if(nm){ for(let k = w + 1; k <= FU.weeks.length; k++){ const before = FU.weeks[k - 1].meds.length; FU.weeks[k - 1].meds = FU.weeks[k - 1].meds.filter(m => medNorm_(m.name) !== nm); later += before - FU.weeks[k - 1].meds.length; } }
+    FU.openW = w; renderFu_();
+    if(later) showToast('اتشال الدواء من الأسبوع ' + w + ' ومن ' + later + ' أسبوع بعده (كأن المريض وقفه)');
+  });
   document.querySelectorAll('#fuBody [data-copyprev]').forEach(b => b.onclick = ()=>{
     fuGrab_(); const w = +b.dataset.copyprev, pv = wk(w - 1);
     wk(w).text = pv.text; wk(w).title = pv.title || ''; wk(w).meds = pv.meds.map(m => ({ ...m })); FU.openW = w; renderFu_(); showToast('اتنسخ من الأسبوع ' + (w - 1));
