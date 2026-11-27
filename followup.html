@@ -11,7 +11,7 @@
   *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
   body{ margin:0; background:var(--bg); color:var(--ink); font-family:'Tajawal','Cairo',system-ui,sans-serif; font-size:16px; line-height:1.7; padding-bottom:96px; }
   .wrap{ max-width:640px; margin:0 auto; padding:0 14px; }
-  header{ background:linear-gradient(135deg,#1f7a6a,#2b9a86); color:#fff; padding:22px 14px 56px; }
+  header{ position:relative; background:linear-gradient(135deg,#1f7a6a,#2b9a86); color:#fff; padding:22px 14px 56px; }
   header .wrap{ padding:0; }
   header small{ opacity:.85; font-size:13px; display:block; }
   header h1{ margin:2px 0 0; font-family:'Cairo',sans-serif; font-size:23px; }
@@ -87,6 +87,7 @@
 </head>
 <body>
 <header><div class="wrap">
+  <button id="backBtn" type="button" style="display:none;position:absolute;top:14px;left:14px;border:0;background:rgba(255,255,255,.22);color:#fff;border-radius:20px;padding:6px 14px;font-family:'Cairo',sans-serif;font-size:14px;cursor:pointer;">رجوع للعيادة ←</button>
   <small>د. ريمون لطفي — جراحة العظام</small>
   <h1>صفحة المتابعة</h1>
   <div class="pname" id="pname"></div>
@@ -116,7 +117,12 @@ const app = initializeApp({
 const db = getFirestore(app);
 const $ = id => document.getElementById(id);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const token = new URLSearchParams(location.search).get('t') || '';
+const qs = new URLSearchParams(location.search);
+const token = qs.get('t') || '';
+if(qs.get('preview') === '1'){ /* معاينة من البرنامج: زرار رجوع (المريض العادي مبيشوفوش) */
+  const bb = document.getElementById('backBtn'); bb.style.display = '';
+  bb.onclick = ()=>{ if(history.length > 1) history.back(); else location.href = 'index.html'; };
+}
 const DAY = 86400000;
 let D = null, msgs = [], chatOpen = false, seen = 0;
 
