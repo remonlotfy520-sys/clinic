@@ -679,6 +679,7 @@ var n=localStorage.getItem('clinicName');if(n)document.title=n;}catch(e){}})();
         <button class="dropdown-item" id="importCasesFromDriveBtn">📂 استيراد حالات من فولدر درايف</button>
         <button class="dropdown-item" id="openDrawStudioBtn">📐 رسم وقياس</button>
         <button class="dropdown-item" id="viewOperationPatientsBtn">🩺 حالات عمليات</button>
+        <button class="dropdown-item" id="fuInboxBtn">🔗 صفحات المتابعة / استفسارات <span id="fuBadge" style="display:none; background:var(--red); color:#fff; border-radius:10px; padding:0 7px; font-size:12px; margin-right:6px;"></span></button>
         <button class="dropdown-item" id="viewStatsBtn">📊 إحصائيات</button>
         <button class="dropdown-item" id="viewMessagesBtn">💬 رسائل</button>
       </div>
@@ -831,7 +832,10 @@ var n=localStorage.getItem('clinicName');if(n)document.title=n;}catch(e){}})();
     <div class="card">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px;">
         <h2 id="folderTitle" style="margin:0;">ملف جديد</h2>
-        <button class="btn btn-ghost" id="backToListBtn">← رجوع للقايمة</button>
+        <div style="display:flex; gap:8px;">
+          <button class="btn btn-ghost" id="fuOpenBtn">🔗 صفحة المتابعة</button>
+          <button class="btn btn-ghost" id="backToListBtn">← رجوع للقايمة</button>
+        </div>
       </div>
 
       <div class="tabs">
@@ -1402,6 +1406,23 @@ var n=localStorage.getItem('clinicName');if(n)document.title=n;}catch(e){}})();
       <button class="btn btn-primary" id="downloadHistoryPdfBtn">تحميل PDF</button>
       <button class="btn btn-ghost" id="printHistoryBtn">🖨 طباعة</button>
     </div>
+  </div>
+</div>
+
+<div id="fuModal" style="display:none; position:fixed; inset:0; background:rgba(31,74,64,.45); z-index:210; align-items:center; justify-content:center; padding:12px;">
+  <div class="card" style="max-width:600px; width:100%; max-height:90vh; overflow-y:auto; position:relative;">
+    <button id="fuClose" class="btn btn-ghost" style="position:absolute; top:14px; left:14px; padding:6px 12px;">✕</button>
+    <h2 style="margin:0 0 4px;">🔗 صفحة المتابعة</h2>
+    <div id="fuWho" class="hint" style="margin-bottom:10px;"></div>
+    <div id="fuTabs" style="display:flex; gap:8px; margin-bottom:12px;"></div>
+    <div id="fuBody"></div>
+  </div>
+</div>
+<div id="fuInboxModal" style="display:none; position:fixed; inset:0; background:rgba(31,74,64,.45); z-index:205; align-items:center; justify-content:center; padding:12px;">
+  <div class="card" style="max-width:520px; width:100%; max-height:85vh; overflow-y:auto; position:relative;">
+    <button id="fuInboxClose" class="btn btn-ghost" style="position:absolute; top:14px; left:14px; padding:6px 12px;">✕</button>
+    <h2 style="margin:0 0 12px;">🔗 صفحات المتابعة والاستفسارات</h2>
+    <div id="fuInboxList"></div>
   </div>
 </div>
 
@@ -2580,7 +2601,7 @@ $('addMedicineRowBtn').onclick = ()=>{
 };
 
 /* ---------- مزامنة قوائم الأدوية/الأشعة/التحاليل بين الأجهزة (Firestore: settings/lists) ---------- */
-const LISTS_SYNC_KEYS = ['medCats','medCatsList','radiologyCats','radiologyCatsList','labsCats','labsCatsList','opSecList','opSecMap'];
+const LISTS_SYNC_KEYS = ['medCats','medCatsList','radiologyCats','radiologyCatsList','labsCats','labsCatsList','opSecList','opSecMap','fuTemplates'];
 let listsSyncTimer = null, listsToastShown = false;
 function listsLocalSnapshot_(){ const o = {}; LISTS_SYNC_KEYS.forEach(k => { const v = localStorage.getItem(k); if(v !== null) o[k] = v; }); return o; }
 function listsPush_(){
@@ -9748,6 +9769,217 @@ function opSecRefresh_(){
   const mo = new MutationObserver(re);
   ['operationCasesList', 'operationsPatientsList'].forEach(id => { const el = $(id); if(el) mo.observe(el, { childList: true }); });
 })();
+
+/* ---------- صفحة المتابعة للمريض: لينك/QR خاص بكل مريض + تايم لاين أسبوعي + أدوية + استفسارات ---------- */
+const FU_TPL_DEFAULT = [
+  { name: 'عام', phases: [{ name: 'المتابعة', from: 1, to: 12, text: '' }] },
+  { name: 'تطويل', phases: [{ name: 'مرحلة التركيب', from: 1, to: 2, text: '' }, { name: 'مرحلة التطويل', from: 3, to: 12, text: '' }, { name: 'مرحلة التثبيت', from: 13, to: 24, text: '' }] }
+];
+function fuTpls_(){ try{ const l = JSON.parse(localStorage.getItem('fuTemplates') || 'null'); if(Array.isArray(l) && l.length) return l; }catch(_){} return JSON.parse(JSON.stringify(FU_TPL_DEFAULT)); }
+function fuTplsSave_(l){ try{ localStorage.setItem('fuTemplates', JSON.stringify(l)); }catch(_){} listsSchedulePush_(); }
+let FU = null, fuUnsub = null, fuGlobalUnsub = null, fuPrevUnread = null;
+function fuLink_(t){ return new URL('followup.html', location.href).href + '?t=' + t; }
+function fuNewToken_(){ const a = new Uint8Array(12); crypto.getRandomValues(a); return Array.from(a, b => b.toString(36).padStart(2, '0')).join(''); }
+function fuClean_(arr){ return (arr || []).map(x => ({ name: String(x.name || '').trim(), from: Math.max(1, parseInt(x.from) || 1), to: Math.max(1, parseInt(x.to) || parseInt(x.from) || 1), text: String(x.text || '').trim() }))
+  .map(x => ({ ...x, to: Math.max(x.from, x.to) })).filter(x => x.name || x.text).sort((a, b) => a.from - b.from); }
+function fuCloseChat_(){ if(fuUnsub){ try{ fuUnsub(); }catch(_){} fuUnsub = null; } }
+function closeFu_(){ fuCloseChat_(); $('fuModal').style.display = 'none'; FU = null; }
+async function openFu_(pid, tab){
+  if(!pid || String(pid).startsWith('temp_')){ showToast('احفظ بيانات المريض الأول', true); return; }
+  if(navigator.onLine === false){ showToast('صفحة المتابعة محتاجة نت', true); return; }
+  const p = (allPatients || []).find(x => String(x.id) === String(pid)) || {};
+  FU = { pid: String(pid), name: p.Name || '', phone: p.Phone || '', token: null, data: null, phases: [], meds: [], title: '', start: '', note: '', tab: tab || 'page' };
+  $('fuModal').style.display = 'flex'; $('fuWho').textContent = FU.name; $('fuTabs').innerHTML = ''; $('fuBody').innerHTML = '<div class="no-visits">جاري التحميل...</div>';
+  try{
+    const snap = await getDocs(query(collection(db, 'followups'), where('patientId', '==', FU.pid), limit(1)));
+    if(!snap.empty){
+      const d = snap.docs[0], x = d.data();
+      FU.token = d.id; FU.data = x; FU.phases = (x.phases || []).map(y => ({ ...y })); FU.meds = (x.meds || []).map(y => ({ ...y }));
+      FU.title = x.title || ''; FU.start = x.startDate || ''; FU.note = x.note || '';
+    }else{
+      const t = fuTpls_()[0];
+      FU.title = t.name; FU.phases = t.phases.map(y => ({ ...y })); FU.start = new Date().toISOString().slice(0, 10);
+      await fuPullMeds_(true);
+    }
+  }catch(e){ showToast('تعذر التحميل - جرب تاني', true); closeFu_(); return; }
+  renderFu_();
+}
+async function fuPullMeds_(silent){
+  try{
+    const snap = await getDocs(query(collection(db, 'patients', FU.pid, 'history'), orderBy('CreatedAt', 'desc')));
+    const h = snap.docs.map(d => d.data()).find(x => x.Type === 'rx');
+    if(!h){ if(!silent) showToast('مفيش روشتة محفوظة للمريض ده', true); return; }
+    let rx = null; try{ rx = JSON.parse(h.Content || 'null'); }catch(_){}
+    FU.meds = ((rx && rx.medicines) || []).filter(m => m && m.name).map(m => ({ name: m.name, instructions: m.instructions || '' }));
+    if(!silent) showToast(FU.meds.length ? 'اتسحبت الأدوية من آخر روشتة' : 'الروشتة مفيهاش أدوية', !FU.meds.length);
+  }catch(_){ if(!silent) showToast('تعذر سحب الروشتة', true); }
+}
+function fuGrab_(){
+  if(!FU || FU.tab !== 'page') return;
+  const g = id => { const e = $(id); return e ? e.value : null; };
+  if(g('fuTitle') !== null) FU.title = g('fuTitle');
+  if(g('fuStart') !== null) FU.start = g('fuStart');
+  if(g('fuNote') !== null) FU.note = g('fuNote');
+  document.querySelectorAll('#fuBody .fu-ph').forEach(r => { const i = +r.dataset.i; if(FU.phases[i]) FU.phases[i] = { name: r.querySelector('.n').value, from: r.querySelector('.f').value, to: r.querySelector('.t').value, text: r.querySelector('.x').value }; });
+  document.querySelectorAll('#fuBody .fu-md').forEach(r => { const i = +r.dataset.i; if(FU.meds[i]) FU.meds[i] = { name: r.querySelector('.n').value, instructions: r.querySelector('.x').value }; });
+}
+function fuWaLink_(){
+  let ph = String(FU.phone || '').replace(/\D/g, '');
+  if(ph.startsWith('00')) ph = ph.slice(2); else if(ph.startsWith('0')) ph = '20' + ph.slice(1);
+  const msg = 'أهلاً ' + FU.name + '، ده رابط صفحة المتابعة الخاصة بيك من د. ريمون لطفي:\n' + fuLink_(FU.token);
+  return 'https://wa.me/' + ph + '?text=' + encodeURIComponent(msg);
+}
+function renderFu_(){
+  if(!FU) return;
+  const exists = !!FU.token;
+  $('fuTabs').innerHTML = `<button type="button" class="btn ${FU.tab === 'page' ? 'btn-primary' : 'btn-ghost'}" data-t="page">📄 الصفحة</button>`
+    + (exists ? `<button type="button" class="btn ${FU.tab === 'chat' ? 'btn-primary' : 'btn-ghost'}" data-t="chat">💬 الاستفسارات${FU.data && FU.data.unread ? ' (' + FU.data.unread + ')' : ''}</button>` : '');
+  $('fuTabs').querySelectorAll('[data-t]').forEach(b => b.onclick = ()=>{ fuGrab_(); FU.tab = b.dataset.t; fuCloseChat_(); renderFu_(); });
+  if(FU.tab === 'chat' && exists) return renderFuChat_();
+  const tpls = fuTpls_();
+  const inp = 'width:100%;padding:8px 10px;border-radius:9px;border:1px solid var(--line);font-family:inherit;font-size:14px;background:var(--inp);color:var(--inputink);';
+  let h = '';
+  if(exists){
+    const active = FU.data.active !== false;
+    h += `<div class="opsec-box" style="--c:${active ? '#34C759' : '#FF3B30'}">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;"><b>${active ? '🟢 الصفحة شغالة' : '🔴 الصفحة موقوفة'}</b>
+        <button type="button" class="btn ${active ? 'btn-outline-red' : 'btn-primary'}" id="fuToggle" style="padding:6px 12px;">${active ? 'إيقاف اللينك' : 'تفعيل'}</button></div>
+      <div style="display:flex;gap:6px;margin-top:8px;"><input type="text" readonly id="fuLinkInp" value="${escapeHtml(fuLink_(FU.token))}" style="${inp}direction:ltr;"><button type="button" class="btn btn-ghost" id="fuCopy">نسخ</button></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;align-items:center;">
+        <a class="btn btn-ghost" href="${escapeHtml(fuWaLink_())}" target="_blank" rel="noopener">📲 واتساب</a>
+        <a class="btn btn-ghost" href="${escapeHtml(fuLink_(FU.token))}" target="_blank" rel="noopener">👁 معاينة</a>
+        <button type="button" class="btn btn-ghost" id="fuQrPrint">🖨 طباعة QR</button></div>
+      <div style="text-align:center;margin-top:10px;"><img id="fuQr" alt="QR" width="160" height="160" src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(fuLink_(FU.token))}" style="background:#fff;padding:6px;border-radius:10px;border:1px solid var(--line);"></div></div>`;
+  }
+  h += `<div class="field"><label>نوع المتابعة (القالب)</label><div style="display:flex;gap:6px;">
+      <select id="fuTplSel" class="dropdown-add-select" style="flex:1;"><option value="">اختار قالب وحمّله...</option>${tpls.map((t, i) => `<option value="${i}">${escapeHtml(t.name)}</option>`).join('')}</select>
+      <button type="button" class="btn btn-ghost" id="fuTplLoad">تحميل</button></div>
+      <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap;"><button type="button" class="btn btn-ghost" id="fuTplSave">💾 حفظ المراحل كقالب</button><button type="button" class="btn btn-ghost" id="fuTplDel">🗑 حذف قالب</button></div></div>
+    <div class="field"><label>عنوان المتابعة</label><input type="text" id="fuTitle" value="${escapeHtml(FU.title)}" placeholder="مثلاً: متابعة التطويل"></div>
+    <div class="field"><label>تاريخ بداية المتابعة (الأسبوع 1)</label><input type="date" id="fuStart" value="${escapeHtml(FU.start)}"></div>
+    <h2 style="font-size:15px;margin:14px 0 6px;">🗓 المراحل (كل مرحلة بأسابيعها وتعليماتها)</h2>
+    ${FU.phases.map((x, i) => `<div class="fu-ph opsec-box" data-i="${i}">
+      <div style="display:flex;gap:6px;align-items:center;"><input class="n" type="text" value="${escapeHtml(x.name || '')}" placeholder="اسم المرحلة" style="${inp}flex:1;">
+        <button type="button" class="btn btn-outline-red" data-delph="${i}" style="padding:6px 10px;">✕</button></div>
+      <div style="display:flex;gap:8px;align-items:center;margin:6px 0;">من أسبوع <input class="f" type="number" min="1" value="${escapeHtml(String(x.from || 1))}" style="${inp}width:70px;"> إلى <input class="t" type="number" min="1" value="${escapeHtml(String(x.to || x.from || 1))}" style="${inp}width:70px;"></div>
+      <textarea class="x" placeholder="تعليمات المرحلة دي للمريض (بتظهر في كل أسبوع منها)..." style="${inp}min-height:70px;">${escapeHtml(x.text || '')}</textarea></div>`).join('')}
+    <button type="button" class="btn btn-ghost" id="fuAddPh">+ مرحلة</button>
+    <h2 style="font-size:15px;margin:16px 0 6px;">💊 الأدوية اللي ماشي عليها</h2>
+    ${FU.meds.map((x, i) => `<div class="fu-md" data-i="${i}" style="display:flex;gap:6px;align-items:flex-start;margin-bottom:6px;">
+      <div style="flex:1;"><input class="n" type="text" value="${escapeHtml(x.name || '')}" placeholder="اسم الدواء" style="${inp}margin-bottom:4px;"><input class="x" type="text" value="${escapeHtml(x.instructions || '')}" placeholder="الجرعة / التعليمات" style="${inp}"></div>
+      <button type="button" class="btn btn-outline-red" data-delmd="${i}" style="padding:6px 10px;">✕</button></div>`).join('')}
+    <div style="display:flex;gap:6px;flex-wrap:wrap;"><button type="button" class="btn btn-ghost" id="fuPullMeds">🔄 سحب من آخر روشتة</button><button type="button" class="btn btn-ghost" id="fuAddMd">+ دواء</button></div>
+    <div class="field" style="margin-top:14px;"><label>ملاحظات عامة للمريض (اختياري)</label><textarea id="fuNote" style="min-height:60px;">${escapeHtml(FU.note)}</textarea></div>
+    <button type="button" class="btn btn-primary" id="fuSave" style="width:100%;margin-top:6px;">${exists ? '💾 حفظ التعديلات' : '✅ إنشاء صفحة المتابعة'}</button>`;
+  $('fuBody').innerHTML = h;
+  const B = id => $(id);
+  if(exists){
+    B('fuCopy').onclick = async ()=>{ try{ await navigator.clipboard.writeText(fuLink_(FU.token)); showToast('اتنسخ اللينك ✓'); }catch(_){ B('fuLinkInp').select(); document.execCommand('copy'); showToast('اتنسخ اللينك ✓'); } };
+    B('fuToggle').onclick = async ()=>{
+      const on = FU.data.active === false;
+      if(!on && !confirm('إيقاف اللينك؟ المريض مش هيقدر يفتح الصفحة لحد ما تفعّلها تاني.')) return;
+      try{ await updateDoc(doc(db, 'followups', FU.token), { active: on, updatedAt: serverTimestamp() }); FU.data.active = on; fuGrab_(); renderFu_(); showToast(on ? 'اتفعّل اللينك' : 'اتوقف اللينك'); }catch(_){ showToast('تعذر التعديل', true); }
+    };
+    B('fuQrPrint').onclick = ()=>{
+      const w = window.open('', '_blank'); if(!w) return;
+      w.document.write(`<html dir="rtl"><body style="font-family:sans-serif;text-align:center;padding:30px"><h2>صفحة متابعة: ${escapeHtml(FU.name)}</h2><p>د. ريمون لطفي</p><img src="https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(fuLink_(FU.token))}" width="320"><p>امسح الكود لفتح صفحة المتابعة</p><script>setTimeout(()=>print(),700)<\/script></body></html>`);
+      w.document.close();
+    };
+  }
+  B('fuTplLoad').onclick = ()=>{
+    const i = B('fuTplSel').value; if(i === '') return;
+    fuGrab_(); const t = fuTpls_()[+i]; FU.phases = t.phases.map(y => ({ ...y })); FU.title = t.name; renderFu_();
+  };
+  B('fuTplSave').onclick = ()=>{
+    fuGrab_(); const ph = fuClean_(FU.phases); if(!ph.length){ showToast('مفيش مراحل تتحفظ', true); return; }
+    const name = (prompt('اسم القالب:', FU.title || '') || '').trim(); if(!name) return;
+    const l = fuTpls_(), i = l.findIndex(t => t.name === name);
+    if(i >= 0){ if(!confirm('فيه قالب بنفس الاسم. استبداله؟')) return; l[i] = { name, phases: ph }; } else l.push({ name, phases: ph });
+    fuTplsSave_(l); showToast('اتحفظ القالب ✓'); renderFu_();
+  };
+  B('fuTplDel').onclick = ()=>{
+    const i = B('fuTplSel').value; if(i === ''){ showToast('اختار القالب الأول من القايمة', true); return; }
+    const l = fuTpls_(); if(l.length <= 1){ showToast('لازم يفضل قالب واحد على الأقل', true); return; }
+    if(!confirm('حذف قالب «' + l[+i].name + '»؟ (الصفحات اللي اتعملت بيه مش هتتأثر)')) return;
+    l.splice(+i, 1); fuTplsSave_(l); fuGrab_(); renderFu_();
+  };
+  B('fuAddPh').onclick = ()=>{ fuGrab_(); const last = FU.phases[FU.phases.length - 1]; const nf = last ? (parseInt(last.to) || 0) + 1 : 1; FU.phases.push({ name: '', from: nf, to: nf, text: '' }); renderFu_(); };
+  document.querySelectorAll('#fuBody [data-delph]').forEach(b => b.onclick = ()=>{ fuGrab_(); FU.phases.splice(+b.dataset.delph, 1); renderFu_(); });
+  B('fuAddMd').onclick = ()=>{ fuGrab_(); FU.meds.push({ name: '', instructions: '' }); renderFu_(); };
+  document.querySelectorAll('#fuBody [data-delmd]').forEach(b => b.onclick = ()=>{ fuGrab_(); FU.meds.splice(+b.dataset.delmd, 1); renderFu_(); });
+  B('fuPullMeds').onclick = async ()=>{ fuGrab_(); await fuPullMeds_(false); renderFu_(); };
+  B('fuSave').onclick = fuSave_;
+}
+async function fuSave_(){
+  fuGrab_();
+  const phases = fuClean_(FU.phases);
+  if(!phases.length){ showToast('أضف مرحلة واحدة على الأقل', true); return; }
+  if(!FU.start){ showToast('حدد تاريخ البداية', true); return; }
+  const meds = FU.meds.map(m => ({ name: String(m.name || '').trim(), instructions: String(m.instructions || '').trim() })).filter(m => m.name);
+  const btn = $('fuSave'); btn.disabled = true; const orig = btn.textContent; btn.textContent = 'جاري الحفظ...';
+  try{
+    let msgUrl = (FU.data && FU.data.msgUrl) || '';
+    if(!msgUrl){ try{ const s = await getDoc(doc(db, 'settings', 'secretary')); msgUrl = (s.exists() && s.data().scriptUrl) || ''; }catch(_){} }
+    const data = { patientId: FU.pid, name: FU.name, title: String(FU.title || '').trim(), startDate: FU.start, phases, meds, note: String(FU.note || '').trim(), msgUrl, updatedAt: serverTimestamp() };
+    if(FU.token){ await updateDoc(doc(db, 'followups', FU.token), data); Object.assign(FU.data, data); }
+    else{
+      const t = fuNewToken_();
+      await setDoc(doc(db, 'followups', t), { ...data, active: true, unread: 0, createdAt: serverTimestamp() });
+      FU.token = t; FU.data = { ...data, active: true, unread: 0 };
+    }
+    FU.phases = phases; FU.meds = meds;
+    showToast('اتحفظت صفحة المتابعة ✓');
+    if(!msgUrl) showToast('تنبيه: الاستفسارات مش هتشتغل قبل ما تفعّل السكرتارية (📱 السكرتارية) وتعيد الحفظ', true);
+    renderFu_();
+  }catch(e){ showToast('تعذر الحفظ (راجع قواعد Firestore لـ followups)', true); btn.disabled = false; btn.textContent = orig; }
+}
+function renderFuChat_(){
+  $('fuBody').innerHTML = `<div id="fuMsgs" style="height:46vh;overflow-y:auto;background:var(--inp);border:1px solid var(--line);border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:8px;"></div>
+    <div style="display:flex;gap:8px;margin-top:8px;"><textarea id="fuReply" placeholder="اكتب ردك للمريض..." style="flex:1;min-height:46px;padding:9px 10px;border-radius:12px;border:1px solid var(--line);font-family:inherit;font-size:14px;background:var(--card);color:var(--inputink);"></textarea><button type="button" class="btn btn-primary" id="fuReplyBtn">إرسال</button></div>`;
+  const tok = FU.token;
+  fuUnsub = onSnapshot(query(collection(db, 'followups', tok, 'messages'), orderBy('at')), snap => {
+    const box = $('fuMsgs'); if(!box || !FU || FU.token !== tok) return;
+    const ms = snap.docs.map(d => d.data());
+    box.innerHTML = ms.length ? ms.map(m => `<div style="max-width:84%;padding:8px 12px;border-radius:14px;white-space:pre-wrap;${m.from === 'doctor' ? 'align-self:flex-start;background:var(--teal);color:#fff;' : 'align-self:flex-end;background:var(--card);border:1px solid var(--line);'}">${escapeHtml(m.text)}<div style="font-size:11px;opacity:.65;margin-top:2px;">${m.from === 'doctor' ? 'أنت' : escapeHtml(FU.name)}${m.at && m.at.toDate ? ' · ' + m.at.toDate().toLocaleString('ar-EG', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }) : ''}</div></div>`).join('')
+      : '<div class="no-visits">مفيش استفسارات لسه</div>';
+    box.scrollTop = box.scrollHeight;
+    if(ms.length && ms[ms.length - 1].from === 'patient'){ updateDoc(doc(db, 'followups', tok), { unread: 0 }).catch(()=>{}); if(FU.data) FU.data.unread = 0; }
+  }, ()=>{});
+  updateDoc(doc(db, 'followups', tok), { unread: 0 }).catch(()=>{});
+  $('fuReplyBtn').onclick = async ()=>{
+    const t = $('fuReply').value.trim(); if(!t) return;
+    const b = $('fuReplyBtn'); b.disabled = true;
+    try{ await addDoc(collection(db, 'followups', tok, 'messages'), { from: 'doctor', text: t.slice(0, 1000), at: serverTimestamp() }); $('fuReply').value = ''; }
+    catch(_){ showToast('تعذر الإرسال', true); }
+    b.disabled = false;
+  };
+}
+$('fuOpenBtn').onclick = ()=> openFu_(currentPatientId);
+$('fuClose').onclick = closeFu_;
+$('fuInboxClose').onclick = ()=>{ $('fuInboxModal').style.display = 'none'; };
+$('fuInboxBtn').onclick = async ()=>{
+  $('mainMenuDropdown').classList.remove('open');
+  $('fuInboxModal').style.display = 'flex'; $('fuInboxList').innerHTML = '<div class="no-visits">جاري التحميل...</div>';
+  try{
+    const snap = await getDocs(collection(db, 'followups'));
+    const rows = snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => (b.unread || 0) - (a.unread || 0) || ((b.lastMsgAt && b.lastMsgAt.seconds) || 0) - ((a.lastMsgAt && a.lastMsgAt.seconds) || 0));
+    $('fuInboxList').innerHTML = rows.length ? rows.map(r => `<div class="patient-row" data-pid="${escapeHtml(r.patientId || '')}" data-chat="${r.unread || r.lastMsgText ? 1 : 0}">
+      <div class="pname">${r.unread ? '🔴 ' : ''}${escapeHtml(r.name || '—')}${r.unread ? ' (' + r.unread + ')' : ''}${r.active === false ? ' · موقوفة' : ''}</div>
+      <div class="pmeta">${r.lastMsgText ? '💬 ' + escapeHtml(r.lastMsgText) : escapeHtml(r.title || '')}</div></div>`).join('') : '<div class="no-visits">لسه معملتش صفحات متابعة. افتح ملف مريض واضغط «🔗 صفحة المتابعة».</div>';
+    $('fuInboxList').querySelectorAll('.patient-row').forEach(el => el.onclick = ()=>{ $('fuInboxModal').style.display = 'none'; openFu_(el.dataset.pid, el.dataset.chat === '1' ? 'chat' : 'page'); });
+  }catch(_){ $('fuInboxList').innerHTML = '<div class="no-visits">تعذر التحميل (راجع قواعد Firestore)</div>'; }
+};
+onAuthStateChanged(auth, u => {
+  if(!u || fuGlobalUnsub) return;
+  try{
+    fuGlobalUnsub = onSnapshot(query(collection(db, 'followups'), where('unread', '>', 0)), snap => {
+      const rows = snap.docs.map(d => d.data()), n = rows.reduce((a, r) => a + (r.unread || 0), 0), b = $('fuBadge');
+      if(b){ b.textContent = n; b.style.display = n ? '' : 'none'; }
+      if(fuPrevUnread !== null && n > fuPrevUnread && rows.length) showToast('💬 استفسار جديد من ' + (rows[0].name || 'مريض'));
+      fuPrevUnread = n;
+    }, ()=>{});
+  }catch(_){}
+});
 
 $('closeOperationsViewBtn').onclick = ()=>{
   $('operationsPatientsView').style.display = 'none';
