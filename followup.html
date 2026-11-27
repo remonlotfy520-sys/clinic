@@ -147,7 +147,7 @@ function detailHtml(w){
   const { phases, total, start, cur } = calc();
   const ph = phaseOf(phases, w), c = COLORS[(w - 1) % COLORS.length];
   const ws = start ? new Date(start.getTime() + (w - 1) * 7 * DAY) : null, we = ws ? new Date(ws.getTime() + 6 * DAY) : null;
-  if(start && w > cur){
+  if(start && w > cur && !D.showFuture){
     return `<div class="card detail" style="--c:#aab3b8"><div class="dh">الأسبوع ${w}${wTitle(w) ? ' — ' + esc(wTitle(w)) : ''}</div>
       <div class="locked"><div class="lk">🔒</div><div><b>الأسبوع ده لسه مجاش</b></div><div>هتظهر تعليماته وأدويته يوم ${ws ? esc(fmt(ws)) : 'بدايته'}.</div></div></div>`;
   }
@@ -155,7 +155,7 @@ function detailHtml(w){
   const meds = ((wd && wd.meds) ? wd.meds : (D.meds || [])).filter(m => m && m.name);
   return `<div class="card detail" style="--c:${c}">
     <div class="dh">الأسبوع ${w}${wTitle(w) ? ' — ' + esc(wTitle(w)) : ''}</div>
-    <div class="ds">${ws ? esc(fmt(ws)) + ' – ' + esc(fmt(we)) : ''}${start && w === cur ? ' · 📍 إحنا هنا دلوقتي' : ''}${start && w < cur ? ' · ✓ خلص' : ''}</div>
+    <div class="ds">${ws ? esc(fmt(ws)) + ' – ' + esc(fmt(we)) : ''}${start && w === cur ? ' · 📍 إحنا هنا دلوقتي' : ''}${start && w < cur ? ' · ✓ خلص' : ''}${start && w > cur ? ' · لسه ما جاش' : ''}</div>
     <h3>📌 التعليمات</h3>
     <div class="txt">${esc((wd && wd.text) ? wd.text : (ph && ph.text ? ph.text : 'مفيش تعليمات إضافية للأسبوع ده.'))}</div>
     <h3>💊 الأدوية</h3>
