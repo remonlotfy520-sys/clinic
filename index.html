@@ -9842,14 +9842,14 @@ async function openFu_(pid, tab){
   if(!pid || String(pid).startsWith('temp_')){ showToast('احفظ بيانات المريض الأول', true); return; }
   if(navigator.onLine === false){ showToast('صفحة المتابعة محتاجة نت', true); return; }
   const p = (allPatients || []).find(x => String(x.id) === String(pid)) || {};
-  FU = { pid: String(pid), name: p.Name || '', phone: p.Phone || '', token: null, data: null, weeks: [], openW: 0, rxCache: null, title: '', start: '', note: '', tab: tab || 'page' };
+  FU = { pid: String(pid), name: p.Name || '', phone: p.Phone || '', token: null, data: null, weeks: [], showFuture: false, openW: 0, rxCache: null, title: '', start: '', note: '', tab: tab || 'page' };
   $('fuModal').style.display = 'flex'; $('fuWho').textContent = FU.name; $('fuTabs').innerHTML = ''; $('fuBody').innerHTML = '<div class="no-visits">جاري التحميل...</div>';
   try{
     const snap = await getDocs(query(collection(db, 'followups'), where('patientId', '==', FU.pid), limit(1)));
     if(!snap.empty){
       const d = snap.docs[0], x = d.data();
       FU.token = d.id; FU.data = x; FU.weeks = fuItemsFrom_(x);
-      FU.title = x.title || ''; FU.start = x.startDate || ''; FU.note = x.note || '';
+      FU.title = x.title || ''; FU.start = x.startDate || ''; FU.note = x.note || ''; FU.showFuture = x.showFuture === true;
     }else{
       FU.title = 'متابعة'; FU.weeks = []; FU.start = new Date().toISOString().slice(0, 10);
     }
@@ -9892,6 +9892,7 @@ function fuGrab_(){
   if(g('fuTitle') !== null) FU.title = g('fuTitle');
   if(g('fuStart') !== null) FU.start = g('fuStart');
   if(g('fuNote') !== null) FU.note = g('fuNote');
+  if($('fuShowFuture')) FU.showFuture = $('fuShowFuture').checked;
   document.querySelectorAll('#fuBody .fu-wk').forEach(box => {
     const i = +box.dataset.w - 1; if(!FU.weeks[i]) return;
     FU.weeks[i] = {
@@ -9933,6 +9934,7 @@ function renderFu_(){
   }
   h += `    <div class="field"><label>عنوان المتابعة</label><input type="text" id="fuTitle" value="${escapeHtml(FU.title)}" placeholder="مثلاً: متابعة التطويل"></div>
     <div class="field"><label>تاريخ بداية المتابعة (الأسبوع 1)</label><input type="date" id="fuStart" value="${escapeHtml(FU.start)}"></div>
+    <label style="display:flex;align-items:center;gap:8px;margin:6px 0 4px;cursor:pointer;"><input type="checkbox" id="fuShowFuture" ${FU.showFuture ? 'checked' : ''} style="width:20px;height:20px;"> <span>👁 إظهار تعليمات وأدوية الأسابيع القادمة للمريض <span class="hint" style="display:block;">(لو مش متعلّم: الأسابيع القادمة تفضل رمادية ومقفولة لحد ميعادها)</span></span></label>
     <h2 style="font-size:15px;margin:14px 0 6px;">📅 المتابعات (كل متابعة ليها مدة بالأسابيع، وبتظهر للمريض أسبوع بأسبوع)</h2>
     ${FU.weeks.map((d, k) => { const w = k + 1, a = FU.weeks.slice(0, k).reduce((m, x) => m + (parseInt(x.dur) || 1), 0) + 1, z = a + (parseInt(d.dur) || 1) - 1;
       return `<details class="fu-wk opsec-box" data-w="${w}" ${FU.openW === w ? 'open' : ''}>
@@ -10076,7 +10078,7 @@ async function fuSave_(){
   try{
     let msgUrl = (FU.data && FU.data.msgUrl) || '';
     if(!msgUrl){ try{ const s = await getDoc(doc(db, 'settings', 'secretary')); msgUrl = (s.exists() && s.data().scriptUrl) || ''; }catch(_){} }
-    const data = { patientId: FU.pid, name: FU.name, title: String(FU.title || '').trim(), startDate: FU.start, total, phases: [], items, weeks, meds: [], note: String(FU.note || '').trim(), msgUrl, updatedAt: serverTimestamp() };
+    const data = { patientId: FU.pid, name: FU.name, title: String(FU.title || '').trim(), startDate: FU.start, showFuture: !!FU.showFuture, total, phases: [], items, weeks, meds: [], note: String(FU.note || '').trim(), msgUrl, updatedAt: serverTimestamp() };
     if(FU.token){ await updateDoc(doc(db, 'followups', FU.token), data); Object.assign(FU.data, data); }
     else{
       const t = fuNewToken_();
