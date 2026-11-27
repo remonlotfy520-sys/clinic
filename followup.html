@@ -24,19 +24,36 @@
   .bar{ height:10px; border-radius:6px; background:var(--teal-soft); overflow:hidden; margin:10px 0 4px; }
   .bar i{ display:block; height:100%; background:var(--teal); border-radius:6px; }
   .txt{ white-space:pre-wrap; }
-  .phase{ margin:20px 4px 6px; font-family:'Cairo',sans-serif; font-weight:800; color:var(--teal); font-size:16px; display:flex; align-items:center; gap:8px; }
-  .phase::after{ content:''; flex:1; height:1px; background:var(--line); }
-  .tl{ position:relative; margin-right:10px; padding-right:22px; border-right:3px solid var(--line); }
-  .wk{ position:relative; background:var(--card); border:1px solid var(--line); border-radius:14px; padding:10px 14px; margin-bottom:10px; cursor:pointer; }
-  .wk::before{ content:''; position:absolute; right:-33px; top:16px; width:15px; height:15px; border-radius:50%; background:#fff; border:3px solid var(--line); }
-  .wk .h{ display:flex; justify-content:space-between; align-items:center; gap:8px; font-weight:700; }
-  .wk .h span{ font-weight:400; font-size:13px; color:var(--muted); }
-  .wk .b{ display:none; margin-top:6px; color:#2b4741; }
-  .wk.open .b{ display:block; }
-  .wk.past{ opacity:.65; }
-  .wk.past::before{ background:var(--teal); border-color:var(--teal); }
-  .wk.cur{ border-color:var(--teal); box-shadow:0 0 0 3px var(--teal-soft); }
-  .wk.cur::before{ background:var(--amber); border-color:var(--amber); }
+  .chips{ display:flex; gap:8px; overflow-x:auto; padding:4px 2px 10px; scrollbar-width:none; }
+  .chips::-webkit-scrollbar{ display:none; }
+  .pchip{ flex:0 0 auto; border:1px solid var(--line); background:#fff; border-radius:20px; padding:5px 14px; font-family:'Cairo',sans-serif; font-size:13px; font-weight:700; color:var(--muted); cursor:pointer; }
+  .pchip.on{ background:var(--teal); border-color:var(--teal); color:#fff; }
+  .tlwrap{ background:linear-gradient(180deg,#fff,#eef3f2); border:1px solid var(--line); border-radius:18px; margin-top:6px; overflow-x:auto; overflow-y:hidden; -webkit-overflow-scrolling:touch; scrollbar-width:thin; }
+  .track{ position:relative; display:flex; flex-direction:row; width:max-content; padding:0 18px; direction:rtl; }
+  .track::before{ content:''; position:absolute; left:0; right:0; top:164px; height:3px; background:#2f3d46; border-radius:2px; }
+  .node{ --c:#8E8E93; position:relative; width:92px; height:328px; flex:0 0 auto; cursor:pointer; user-select:none; }
+  .node .dot{ position:absolute; left:50%; top:157px; transform:translateX(-50%); width:16px; height:16px; border-radius:50%; background:#2f3d46; border:3px solid var(--c); z-index:2; }
+  .node .stem{ position:absolute; left:50%; width:2px; background:#2f3d46; transform:translateX(-50%); }
+  .node.up .stem{ top:78px; height:80px; }
+  .node.dn .stem{ top:172px; height:80px; }
+  .node .ball{ position:absolute; left:50%; transform:translateX(-50%); width:64px; height:64px; border-radius:50%; background:#fff; border:5px solid #323f48; box-shadow:0 3px 8px rgba(0,0,0,.25); display:flex; align-items:center; justify-content:center; z-index:2; transition:transform .15s; }
+  .node.up .ball{ top:14px; }
+  .node.dn .ball{ bottom:14px; }
+  .node .ball i{ font-style:normal; width:48px; height:48px; border-radius:50%; background:var(--c); color:#fff; font-family:'Cairo',sans-serif; font-weight:800; font-size:20px; display:flex; align-items:center; justify-content:center; }
+  .node .lab{ position:absolute; left:4px; right:4px; text-align:center; font-size:11px; line-height:1.35; color:var(--muted); }
+  .node .lab b{ display:inline-block; background:#323f48; color:#fff; border-radius:4px; padding:0 6px; font-size:11px; margin-bottom:2px; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .node.up .lab{ top:84px; }
+  .node.dn .lab{ top:204px; }
+  .node.sel .ball{ transform:translateX(-50%) scale(1.14); }
+  .node.sel .dot{ background:var(--c); }
+  .node.past .ball i::after{ content:'✓'; position:absolute; right:-2px; top:-2px; width:20px; height:20px; border-radius:50%; background:#34C759; color:#fff; font-size:12px; line-height:20px; text-align:center; border:2px solid #fff; }
+  .node.past .ball{ position:absolute; }
+  .node.cur .ball{ animation:pulse 1.8s infinite; }
+  @keyframes pulse{ 0%{ box-shadow:0 0 0 0 rgba(255,149,0,.55);} 70%{ box-shadow:0 0 0 12px rgba(255,149,0,0);} 100%{ box-shadow:0 0 0 0 rgba(255,149,0,0);} }
+  .detail{ border-right:6px solid var(--c,#1f7a6a); }
+  .detail .dh{ font-family:'Cairo',sans-serif; font-weight:800; font-size:18px; }
+  .detail .ds{ color:var(--muted); font-size:13px; margin-bottom:8px; }
+  .detail h3{ font-family:'Cairo',sans-serif; font-size:15px; margin:14px 0 4px; }
   .med{ padding:10px 0; border-bottom:1px solid var(--line); }
   .med:last-child{ border:0; }
   .med b{ display:block; }
@@ -101,68 +118,74 @@ function fmt(d){ return d.toLocaleDateString('ar-EG', { day:'numeric', month:'lo
 function parseDate(s){ const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s || ''); return m ? new Date(+m[1], +m[2] - 1, +m[3]) : null; }
 function phaseOf(phases, w){ return phases.find(p => w >= p.from && w <= p.to) || null; }
 
-function render(){
-  if(!D){ return; }
-  $('pname').textContent = D.name || '';
+const COLORS = ['#a24fc0','#ff9f1a','#19b3cf','#43b05c','#ff6a3d','#e8579a'];
+let selW = 0;
+function calc(){
   const phases = (D.phases || []).map(p => ({ name: p.name || '', from: +p.from || 1, to: +p.to || +p.from || 1, text: p.text || '' })).sort((a, b) => a.from - b.from);
   const total = phases.reduce((m, p) => Math.max(m, p.to), 0);
   const start = parseDate(D.startDate);
   const today = new Date(); today.setHours(0, 0, 0, 0);
-  let cur = 0;
-  if(start){ cur = Math.floor((today - start) / (7 * DAY)) + 1; }
-  let html = '';
-
-  if(start && total){
-    if(cur < 1){
-      html += `<div class="card lift now"><small>المتابعة هتبدأ يوم</small><div class="big">${esc(fmt(start))}</div></div>`;
-    }else if(cur > total){
-      html += `<div class="card lift now"><div class="big">✅ خلصت مدة المتابعة المحددة</div><small>لو في أي حاجة محتاج تسأل عنها ابعت استفسار للدكتور.</small></div>`;
-    }else{
-      const ph = phaseOf(phases, cur);
-      html += `<div class="card lift now"><small>${esc(D.title || 'المتابعة')}</small>
-        <div class="big">الأسبوع ${cur} من ${total}</div>
-        ${ph && ph.name ? `<div><b>المرحلة:</b> ${esc(ph.name)}</div>` : ''}
-        <div class="bar"><i style="width:${Math.round((cur - 1) / total * 100)}%"></i></div>
-        ${ph && ph.text ? `<h2 style="margin-top:12px;">📌 تعليمات الأسبوع ده</h2><div class="txt">${esc(ph.text)}</div>` : ''}</div>`;
-    }
-  }else{
-    html += `<div class="card lift now"><div class="big">${esc(D.title || 'متابعتك')}</div></div>`;
-  }
-
-  if(total){
-    html += `<div style="margin-top:8px;"></div>`;
-    let lastPhase = null, open = false;
-    for(let w = 1; w <= total; w++){
-      const ph = phaseOf(phases, w);
-      const key = ph ? ph.from + '|' + ph.name : '';
-      if(key !== lastPhase){
-        if(open) html += `</div>`;
-        html += `<div class="phase">${esc(ph && ph.name ? ph.name : 'المتابعة')}</div><div class="tl">`;
-        open = true; lastPhase = key;
-      }
-      const ws = start ? new Date(start.getTime() + (w - 1) * 7 * DAY) : null;
-      const we = ws ? new Date(ws.getTime() + 6 * DAY) : null;
-      const cls = (start ? (w < cur ? ' past' : (w === cur ? ' cur open' : '')) : '');
-      html += `<div class="wk${cls}" data-w="${w}"><div class="h"><div>${w < cur && start ? '✓ ' : ''}الأسبوع ${w}</div><span>${ws ? esc(fmt(ws)) + ' – ' + esc(fmt(we)) : ''}</span></div>
-        <div class="b txt">${esc(ph && ph.text ? ph.text : 'مفيش تعليمات إضافية للأسبوع ده.')}</div></div>`;
-    }
-    if(open) html += `</div>`;
-  }
-
+  const cur = start ? Math.floor((today - start) / (7 * DAY)) + 1 : 0;
+  return { phases, total, start, cur };
+}
+function detailHtml(w){
+  const { phases, total, start, cur } = calc();
+  const ph = phaseOf(phases, w), c = COLORS[(w - 1) % COLORS.length];
+  const ws = start ? new Date(start.getTime() + (w - 1) * 7 * DAY) : null, we = ws ? new Date(ws.getTime() + 6 * DAY) : null;
   const meds = (D.meds || []).filter(m => m && m.name);
-  html += `<div class="card"><h2>💊 الأدوية</h2>` + (meds.length
-    ? meds.map(m => `<div class="med"><b>${esc(m.name)}</b>${m.instructions ? `<span>${esc(m.instructions)}</span>` : ''}</div>`).join('')
-    : `<div class="empty" style="padding:10px;">مفيش أدوية مسجلة دلوقتي.</div>`) + `</div>`;
+  return `<div class="card detail" style="--c:${c}">
+    <div class="dh">الأسبوع ${w}${ph && ph.name ? ' — ' + esc(ph.name) : ''}</div>
+    <div class="ds">${ws ? esc(fmt(ws)) + ' – ' + esc(fmt(we)) : ''}${start && w === cur ? ' · 📍 إحنا هنا دلوقتي' : ''}${start && w < cur ? ' · ✓ خلص' : ''}</div>
+    <h3>📌 التعليمات</h3>
+    <div class="txt">${esc(ph && ph.text ? ph.text : 'مفيش تعليمات إضافية للأسبوع ده.')}</div>
+    <h3>💊 الأدوية</h3>
+    ${meds.length ? meds.map(m => `<div class="med"><b>${esc(m.name)}</b>${m.instructions ? `<span>${esc(m.instructions)}</span>` : ''}</div>`).join('') : `<div class="empty" style="padding:6px;">مفيش أدوية مسجلة دلوقتي.</div>`}
+  </div>`;
+}
+function selectWeek(w, scroll){
+  selW = w;
+  document.querySelectorAll('.node').forEach(n => n.classList.toggle('sel', +n.dataset.w === w));
+  const { phases } = calc(), ph = phaseOf(phases, w);
+  document.querySelectorAll('.pchip').forEach(c => c.classList.toggle('on', !!ph && c.dataset.k === ph.from + '|' + ph.name));
+  const box = $('detail'); if(box) box.innerHTML = detailHtml(w);
+  if(scroll){ const n = document.querySelector(`.node[data-w="${w}"]`); if(n) n.scrollIntoView({ inline:'center', block:'nearest', behavior:'smooth' }); }
+}
+function render(){
+  if(!D){ return; }
+  $('pname').textContent = D.name || '';
+  const { phases, total, start, cur } = calc();
+  let html = '';
+  if(!total){
+    html += `<div class="card lift now"><div class="big">${esc(D.title || 'متابعتك')}</div><small>لسه مفيش جدول متابعة. الدكتور هيضيفه قريب.</small></div>`;
+  }else{
+    let head;
+    if(start && cur < 1) head = `<small>المتابعة هتبدأ يوم</small><div class="big">${esc(fmt(start))}</div>`;
+    else if(start && cur > total) head = `<div class="big">✅ خلصت مدة المتابعة المحددة</div><small>لو في أي حاجة محتاج تسأل عنها ابعت استفسار للدكتور.</small>`;
+    else if(start) head = `<small>${esc(D.title || 'المتابعة')}</small><div class="big">الأسبوع ${cur} من ${total}</div><div class="bar"><i style="width:${Math.round((cur - 1) / total * 100)}%"></i></div>`;
+    else head = `<small>${esc(D.title || 'المتابعة')}</small><div class="big">${total} أسبوع</div>`;
+    html += `<div class="card lift now">${head}<small>دوس على أي رقم تحت علشان تشوف تعليمات الأسبوع والأدوية 👇</small></div>`;
+    html += `<div class="chips">` + phases.map(p => `<button type="button" class="pchip" data-k="${esc(p.from + '|' + p.name)}" data-from="${p.from}">${esc(p.name || 'المتابعة')}</button>`).join('') + `</div>`;
+    html += `<div class="tlwrap" id="tlwrap"><div class="track">`;
+    for(let w = 1; w <= total; w++){
+      const ph = phaseOf(phases, w), c = COLORS[(w - 1) % COLORS.length], up = w % 2 === 1;
+      const ws = start ? new Date(start.getTime() + (w - 1) * 7 * DAY) : null;
+      const cls = (up ? 'up' : 'dn') + (start ? (w < cur ? ' past' : (w === cur ? ' cur' : '')) : '');
+      html += `<div class="node ${cls}" data-w="${w}" style="--c:${c}"><div class="stem"></div><div class="dot"></div>
+        <div class="ball"><i>${String(w).padStart(2, '0')}</i></div>
+        <div class="lab"><b>${esc(ph && ph.name ? ph.name : 'أسبوع ' + w)}</b>${ws ? '<br>' + esc(fmt(ws)) : ''}</div></div>`;
+    }
+    html += `</div></div><div id="detail"></div>`;
+  }
   if(D.note){ html += `<div class="card"><h2>📝 ملاحظات</h2><div class="txt">${esc(D.note)}</div></div>`; }
   html += `<div class="note">الصفحة دي خاصة بيك ومتحدثة من الدكتور. متشاركش الرابط مع حد.</div>`;
-
   $('app').innerHTML = html;
-  $('app').querySelectorAll('.wk').forEach(el => el.onclick = ()=> el.classList.toggle('open'));
   $('askBtn').style.display = D.msgUrl ? '' : 'none';
-  if(!render.done){
-    render.done = true;
-    const c = $('app').querySelector('.wk.cur');
-    if(c) setTimeout(()=> c.scrollIntoView({ block:'center', behavior:'smooth' }), 300);
+  if(total){
+    document.querySelectorAll('.node').forEach(n => n.onclick = ()=> selectWeek(+n.dataset.w, false));
+    document.querySelectorAll('.pchip').forEach(c => c.onclick = ()=> selectWeek(+c.dataset.from, true));
+    const first = (start && cur >= 1 && cur <= total) ? cur : (selW && selW <= total ? selW : 1);
+    selectWeek(first, false);
+    if(!render.done){ render.done = true; setTimeout(()=>{ const n = document.querySelector(`.node[data-w="${first}"]`); if(n) n.scrollIntoView({ inline:'center', block:'nearest' }); }, 150); }
   }
 }
 
@@ -184,7 +207,7 @@ if(!/^[a-z0-9]{20,40}$/.test(token)){
   onSnapshot(doc(db, 'followups', token), snap => {
     if(!snap.exists()){ $('app').innerHTML = `<div class="card lift empty">الصفحة دي غير متاحة. اطلب من العيادة رابط جديد.</div>`; return; }
     D = snap.data(); render();
-  }, () => { $('app').innerHTML = `<div class="card lift empty">الصفحة دي غير متاحة أو اتوقفت. اطلب من العيادة رابط جديد.</div>`; });
+  }, (err) => { $('app').innerHTML = `<div class="card lift empty">الصفحة دي غير متاحة أو اتوقفت. اطلب من العيادة رابط جديد.<div style="font-size:11px;direction:ltr;margin-top:10px;opacity:.7;">${esc((err && err.code) || 'error')}</div></div>`; });
   onSnapshot(query(collection(db, 'followups', token, 'messages'), orderBy('at')), snap => {
     msgs = snap.docs.map(d => d.data()); renderMsgs();
   }, () => {});
