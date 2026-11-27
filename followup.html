@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>صفحة المتابعة - د. ريمون لطفي</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@500;700;800&family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{ --bg:#f3f6f5; --card:#fff; --ink:#16302b; --muted:#6b7f7a; --line:#dfe8e5; --teal:#1f7a6a; --teal-soft:#e3f3ef; --amber:#ff9500; --red:#e0453a; }
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body{ margin:0; background:var(--bg); color:var(--ink); font-family:'Tajawal','Cairo',system-ui,sans-serif; font-size:16px; line-height:1.7; padding-bottom:96px; }
+  .wrap{ max-width:640px; margin:0 auto; padding:0 14px; }
+  header{ background:linear-gradient(135deg,#1f7a6a,#2b9a86); color:#fff; padding:22px 14px 56px; }
+  header .wrap{ padding:0; }
+  header small{ opacity:.85; font-size:13px; display:block; }
+  header h1{ margin:2px 0 0; font-family:'Cairo',sans-serif; font-size:23px; }
+  header .pname{ margin-top:10px; font-size:17px; font-weight:700; }
+  .card{ background:var(--card); border:1px solid var(--line); border-radius:18px; padding:16px; margin-top:14px; box-shadow:0 1px 3px rgba(0,0,0,.04); }
+  .lift{ margin-top:-38px; }
+  h2{ font-family:'Cairo',sans-serif; font-size:17px; margin:0 0 10px; }
+  .now small{ color:var(--muted); }
+  .now .big{ font-family:'Cairo',sans-serif; font-size:21px; font-weight:800; color:var(--teal); }
+  .bar{ height:10px; border-radius:6px; background:var(--teal-soft); overflow:hidden; margin:10px 0 4px; }
+  .bar i{ display:block; height:100%; background:var(--teal); border-radius:6px; }
+  .txt{ white-space:pre-wrap; }
+  .phase{ margin:20px 4px 6px; font-family:'Cairo',sans-serif; font-weight:800; color:var(--teal); font-size:16px; display:flex; align-items:center; gap:8px; }
+  .phase::after{ content:''; flex:1; height:1px; background:var(--line); }
+  .tl{ position:relative; margin-right:10px; padding-right:22px; border-right:3px solid var(--line); }
+  .wk{ position:relative; background:var(--card); border:1px solid var(--line); border-radius:14px; padding:10px 14px; margin-bottom:10px; cursor:pointer; }
+  .wk::before{ content:''; position:absolute; right:-33px; top:16px; width:15px; height:15px; border-radius:50%; background:#fff; border:3px solid var(--line); }
+  .wk .h{ display:flex; justify-content:space-between; align-items:center; gap:8px; font-weight:700; }
+  .wk .h span{ font-weight:400; font-size:13px; color:var(--muted); }
+  .wk .b{ display:none; margin-top:6px; color:#2b4741; }
+  .wk.open .b{ display:block; }
+  .wk.past{ opacity:.65; }
+  .wk.past::before{ background:var(--teal); border-color:var(--teal); }
+  .wk.cur{ border-color:var(--teal); box-shadow:0 0 0 3px var(--teal-soft); }
+  .wk.cur::before{ background:var(--amber); border-color:var(--amber); }
+  .med{ padding:10px 0; border-bottom:1px solid var(--line); }
+  .med:last-child{ border:0; }
+  .med b{ display:block; }
+  .med span{ color:var(--muted); font-size:14px; }
+  .empty{ color:var(--muted); text-align:center; padding:30px 10px; }
+  #askBtn{ position:fixed; bottom:calc(16px + env(safe-area-inset-bottom)); left:50%; transform:translateX(-50%); z-index:20; background:var(--teal); color:#fff; border:0; border-radius:30px; padding:14px 26px; font-family:'Cairo',sans-serif; font-size:16px; font-weight:700; box-shadow:0 6px 18px rgba(31,122,106,.4); cursor:pointer; }
+  #askBtn b{ background:var(--red); border-radius:10px; padding:0 7px; margin-right:6px; font-size:13px; }
+  #chat{ position:fixed; inset:0; z-index:30; background:rgba(0,0,0,.4); display:none; align-items:flex-end; justify-content:center; }
+  #chat.on{ display:flex; }
+  #chat .sheet{ background:#fff; width:100%; max-width:640px; height:82vh; border-radius:22px 22px 0 0; display:flex; flex-direction:column; }
+  #chat .top{ display:flex; justify-content:space-between; align-items:center; padding:14px 16px; border-bottom:1px solid var(--line); font-family:'Cairo',sans-serif; font-weight:800; }
+  #chat .top button{ border:0; background:var(--bg); width:34px; height:34px; border-radius:50%; font-size:16px; cursor:pointer; }
+  #msgs{ flex:1; overflow-y:auto; padding:14px; display:flex; flex-direction:column; gap:8px; background:var(--bg); }
+  .m{ max-width:82%; padding:9px 13px; border-radius:16px; white-space:pre-wrap; word-break:break-word; }
+  .m small{ display:block; font-size:11px; opacity:.65; margin-top:3px; }
+  .m.me{ align-self:flex-start; background:var(--teal); color:#fff; border-bottom-right-radius:4px; }
+  .m.dr{ align-self:flex-end; background:#fff; border:1px solid var(--line); border-bottom-left-radius:4px; }
+  #send{ display:flex; gap:8px; padding:10px 12px calc(10px + env(safe-area-inset-bottom)); border-top:1px solid var(--line); }
+  #send textarea{ flex:1; resize:none; height:46px; border:1px solid var(--line); border-radius:14px; padding:10px 12px; font-family:inherit; font-size:16px; }
+  #send button{ border:0; background:var(--teal); color:#fff; border-radius:14px; padding:0 20px; font-family:'Cairo',sans-serif; font-weight:700; font-size:15px; cursor:pointer; }
+  #send button:disabled{ opacity:.5; }
+  #hint{ font-size:12px; color:var(--muted); padding:0 14px 6px; }
+  .note{ font-size:13px; color:var(--muted); text-align:center; margin:22px 10px 0; }
+</style>
+</head>
+<body>
+<header><div class="wrap">
+  <small>د. ريمون لطفي — جراحة العظام</small>
+  <h1>صفحة المتابعة</h1>
+  <div class="pname" id="pname"></div>
+</div></header>
+<div class="wrap" id="app"><div class="card lift empty">جاري التحميل...</div></div>
+
+<button id="askBtn" style="display:none;">💬 استفسار للدكتور</button>
+<div id="chat"><div class="sheet">
+  <div class="top"><span>💬 استفسار للدكتور</span><button id="chatClose">✕</button></div>
+  <div id="msgs"></div>
+  <div id="hint">اكتب سؤالك وهيرد عليك الدكتور هنا. في الحالات الطارئة اتصل بالعيادة أو روح أقرب طوارئ.</div>
+  <div id="send"><textarea id="txt" placeholder="اكتب استفسارك..." maxlength="1000"></textarea><button id="sendBtn">إرسال</button></div>
+</div></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-app.js";
+import { getFirestore, doc, collection, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore.js";
+
+const app = initializeApp({
+  apiKey: "AIzaSyApOfA6TvzUbYLd5IXF-sAVXCzv3s-TUsw",
+  authDomain: "clinic-remonlotfy.firebaseapp.com",
+  projectId: "clinic-remonlotfy",
+  storageBucket: "clinic-remonlotfy.firebasestorage.app",
+  messagingSenderId: "187649934520",
+  appId: "1:187649934520:web:52a1a5648ec6b51466204d"
+});
+const db = getFirestore(app);
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const token = new URLSearchParams(location.search).get('t') || '';
+const DAY = 86400000;
+let D = null, msgs = [], chatOpen = false, seen = 0;
+
+function fmt(d){ return d.toLocaleDateString('ar-EG', { day:'numeric', month:'long' }); }
+function parseDate(s){ const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s || ''); return m ? new Date(+m[1], +m[2] - 1, +m[3]) : null; }
+function phaseOf(phases, w){ return phases.find(p => w >= p.from && w <= p.to) || null; }
+
+function render(){
+  if(!D){ return; }
+  $('pname').textContent = D.name || '';
+  const phases = (D.phases || []).map(p => ({ name: p.name || '', from: +p.from || 1, to: +p.to || +p.from || 1, text: p.text || '' })).sort((a, b) => a.from - b.from);
+  const total = phases.reduce((m, p) => Math.max(m, p.to), 0);
+  const start = parseDate(D.startDate);
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  let cur = 0;
+  if(start){ cur = Math.floor((today - start) / (7 * DAY)) + 1; }
+  let html = '';
+
+  if(start && total){
+    if(cur < 1){
+      html += `<div class="card lift now"><small>المتابعة هتبدأ يوم</small><div class="big">${esc(fmt(start))}</div></div>`;
+    }else if(cur > total){
+      html += `<div class="card lift now"><div class="big">✅ خلصت مدة المتابعة المحددة</div><small>لو في أي حاجة محتاج تسأل عنها ابعت استفسار للدكتور.</small></div>`;
+    }else{
+      const ph = phaseOf(phases, cur);
+      html += `<div class="card lift now"><small>${esc(D.title || 'المتابعة')}</small>
+        <div class="big">الأسبوع ${cur} من ${total}</div>
+        ${ph && ph.name ? `<div><b>المرحلة:</b> ${esc(ph.name)}</div>` : ''}
+        <div class="bar"><i style="width:${Math.round((cur - 1) / total * 100)}%"></i></div>
+        ${ph && ph.text ? `<h2 style="margin-top:12px;">📌 تعليمات الأسبوع ده</h2><div class="txt">${esc(ph.text)}</div>` : ''}</div>`;
+    }
+  }else{
+    html += `<div class="card lift now"><div class="big">${esc(D.title || 'متابعتك')}</div></div>`;
+  }
+
+  if(total){
+    html += `<div style="margin-top:8px;"></div>`;
+    let lastPhase = null, open = false;
+    for(let w = 1; w <= total; w++){
+      const ph = phaseOf(phases, w);
+      const key = ph ? ph.from + '|' + ph.name : '';
+      if(key !== lastPhase){
+        if(open) html += `</div>`;
+        html += `<div class="phase">${esc(ph && ph.name ? ph.name : 'المتابعة')}</div><div class="tl">`;
+        open = true; lastPhase = key;
+      }
+      const ws = start ? new Date(start.getTime() + (w - 1) * 7 * DAY) : null;
+      const we = ws ? new Date(ws.getTime() + 6 * DAY) : null;
+      const cls = (start ? (w < cur ? ' past' : (w === cur ? ' cur open' : '')) : '');
+      html += `<div class="wk${cls}" data-w="${w}"><div class="h"><div>${w < cur && start ? '✓ ' : ''}الأسبوع ${w}</div><span>${ws ? esc(fmt(ws)) + ' – ' + esc(fmt(we)) : ''}</span></div>
+        <div class="b txt">${esc(ph && ph.text ? ph.text : 'مفيش تعليمات إضافية للأسبوع ده.')}</div></div>`;
+    }
+    if(open) html += `</div>`;
+  }
+
+  const meds = (D.meds || []).filter(m => m && m.name);
+  html += `<div class="card"><h2>💊 الأدوية</h2>` + (meds.length
+    ? meds.map(m => `<div class="med"><b>${esc(m.name)}</b>${m.instructions ? `<span>${esc(m.instructions)}</span>` : ''}</div>`).join('')
+    : `<div class="empty" style="padding:10px;">مفيش أدوية مسجلة دلوقتي.</div>`) + `</div>`;
+  if(D.note){ html += `<div class="card"><h2>📝 ملاحظات</h2><div class="txt">${esc(D.note)}</div></div>`; }
+  html += `<div class="note">الصفحة دي خاصة بيك ومتحدثة من الدكتور. متشاركش الرابط مع حد.</div>`;
+
+  $('app').innerHTML = html;
+  $('app').querySelectorAll('.wk').forEach(el => el.onclick = ()=> el.classList.toggle('open'));
+  $('askBtn').style.display = D.msgUrl ? '' : 'none';
+  if(!render.done){
+    render.done = true;
+    const c = $('app').querySelector('.wk.cur');
+    if(c) setTimeout(()=> c.scrollIntoView({ block:'center', behavior:'smooth' }), 300);
+  }
+}
+
+function renderMsgs(){
+  const box = $('msgs');
+  box.innerHTML = msgs.length ? msgs.map(m => `<div class="m ${m.from === 'doctor' ? 'dr' : 'me'}">${esc(m.text)}<small>${m.from === 'doctor' ? 'الدكتور' : 'أنت'}${m.at ? ' · ' + m.at.toDate().toLocaleString('ar-EG', { day:'numeric', month:'short', hour:'numeric', minute:'2-digit' }) : ''}</small></div>`).join('')
+    : `<div class="empty">ابعت أول استفسار ليك 👇</div>`;
+  box.scrollTop = box.scrollHeight;
+  const unseen = msgs.filter(m => m.from === 'doctor').length;
+  if(chatOpen){ seen = unseen; }
+  const n = Math.max(0, unseen - seen);
+  $('askBtn').innerHTML = '💬 استفسار للدكتور' + (n ? `<b>${n}</b>` : '');
+}
+
+if(!/^[a-z0-9]{20,40}$/.test(token)){
+  $('app').innerHTML = `<div class="card lift empty">الرابط غير صحيح. اطلب من العيادة رابط جديد.</div>`;
+}else{
+  try{ seen = +localStorage.getItem('fuSeen_' + token) || 0; }catch(_){}
+  onSnapshot(doc(db, 'followups', token), snap => {
+    if(!snap.exists()){ $('app').innerHTML = `<div class="card lift empty">الصفحة دي غير متاحة. اطلب من العيادة رابط جديد.</div>`; return; }
+    D = snap.data(); render();
+  }, () => { $('app').innerHTML = `<div class="card lift empty">الصفحة دي غير متاحة أو اتوقفت. اطلب من العيادة رابط جديد.</div>`; });
+  onSnapshot(query(collection(db, 'followups', token, 'messages'), orderBy('at')), snap => {
+    msgs = snap.docs.map(d => d.data()); renderMsgs();
+  }, () => {});
+}
+
+$('askBtn').onclick = ()=>{ chatOpen = true; $('chat').classList.add('on'); renderMsgs(); try{ localStorage.setItem('fuSeen_' + token, String(seen)); }catch(_){} setTimeout(()=> $('txt').focus(), 200); };
+$('chatClose').onclick = ()=>{ chatOpen = false; $('chat').classList.remove('on'); try{ localStorage.setItem('fuSeen_' + token, String(seen)); }catch(_){} };
+$('sendBtn').onclick = async ()=>{
+  const text = $('txt').value.trim();
+  if(!text || !D || !D.msgUrl) return;
+  const b = $('sendBtn'); b.disabled = true; b.textContent = '...';
+  try{
+    const r = await fetch(D.msgUrl, { method:'POST', body: JSON.stringify({ action:'fuMessage', token, text }) });
+    const j = await r.json();
+    if(j.error){ alert(j.error); } else { $('txt').value = ''; }
+  }catch(e){ alert('تعذر الإرسال، تأكد من النت وجرب تاني'); }
+  b.disabled = false; b.textContent = 'إرسال';
+};
+</script>
+</body>
+</html>
