@@ -1192,6 +1192,7 @@ var n=localStorage.getItem('clinicName');if(n)document.title=n;}catch(e){}})();
               <div class="collapsible-content" id="rxRecsContent">
                 <div class="field">
                   <label>التوصيات العامة</label>
+                  <button type="button" class="btn btn-primary list-picker-btn" data-kind="recs" data-target="rxRecommendations" style="margin-bottom:8px;">📌 اختيار التوصيات</button>
                   <select id="rxRecommendationsSelect" class="dropdown-add-select"></select>
                   <div style="display:flex; gap:8px; margin-top:8px;">
                     <input type="text" id="rxCustomRecommendation" placeholder="اكتب توصية جديدة مش موجودة في القايمة...">
@@ -2601,7 +2602,7 @@ $('addMedicineRowBtn').onclick = ()=>{
 };
 
 /* ---------- مزامنة قوائم الأدوية/الأشعة/التحاليل بين الأجهزة (Firestore: settings/lists) ---------- */
-const LISTS_SYNC_KEYS = ['medCats','medCatsList','radiologyCats','radiologyCatsList','labsCats','labsCatsList','opSecList','opSecMap','fuTemplates','fuWeekTpls'];
+const LISTS_SYNC_KEYS = ['medCats','medCatsList','radiologyCats','radiologyCatsList','labsCats','labsCatsList','opSecList','opSecMap','fuTemplates','fuWeekTpls','recsCats','recsCatsList'];
 let listsSyncTimer = null, listsToastShown = false;
 function listsLocalSnapshot_(){ const o = {}; LISTS_SYNC_KEYS.forEach(k => { const v = localStorage.getItem(k); if(v !== null) o[k] = v; }); return o; }
 function listsPush_(){
@@ -2659,13 +2660,16 @@ function medCatOf_(name){
   }
   return 'أخرى';
 }
+let MED_TARGET_ = null; /* لو متحدد: نافذة الأدوية بتشتغل على أسبوع في صفحة المتابعة بدل الروشتة */
 function currentMedList_(){
+  if(MED_TARGET_) return MED_TARGET_.get();
   return Array.from(document.querySelectorAll('.rx-med-select')).map((sel, i) => ({
     name: sel.value.trim(),
     instructions: (document.querySelector(`.rx-med-instructions[data-idx="${i}"]`) || {value:''}).value.trim()
   })).filter(m => m.name);
 }
 function applyMedList_(list){
+  if(MED_TARGET_){ MED_TARGET_.set(list); return; }
   medicineRowsVisibleCount = Math.min(MED_MAX, Math.max(1, list.length));
   buildMedicineRows();
   document.querySelectorAll('.rx-med-select').forEach((sel, i)=>{
@@ -2682,7 +2686,7 @@ function toggleMedFromPicker_(name){
   const med = MEDICINES_LIST.find(m => m.name === name) || {};
   list.push({ name, instructions: med.instructions || '' });
   applyMedList_(list);
-  if(med.diagnosis && !$('rxDiagnosis').value.trim()) $('rxDiagnosis').value = med.diagnosis;
+  if(!MED_TARGET_ && med.diagnosis && !$('rxDiagnosis').value.trim()) $('rxDiagnosis').value = med.diagnosis;
 }
 
 let medPickerEdit_ = false, medPickerSel_ = null, medPickerForm_ = null, medPickerQuery_ = '';
@@ -2746,7 +2750,10 @@ function ensureMedPicker_(){
   };
   return ov;
 }
-function closeMedPicker_(){ const ov = $('medPickerOverlay'); if(ov) ov.style.display = 'none'; }
+function closeMedPicker_(){
+  const ov = $('medPickerOverlay'); if(ov) ov.style.display = 'none';
+  if(MED_TARGET_){ const t = MED_TARGET_; MED_TARGET_ = null; try{ t.onDone && t.onDone(); }catch(_){} }
+}
 async function medRefresh_(){ try{ await tryFetchListsRemote(true); }catch(_){} renderMedPicker_(); }
 
 function renderMedPicker_(){
@@ -2850,14 +2857,16 @@ function renderMedPicker_(){
     else{ const top = body.scrollTop; toggleMedFromPicker_(name); renderMedPicker_(); body.scrollTop = top; }
   });
 }
-$('openMedPickerBtn').onclick = async ()=>{
+async function openMedPickerCore_(target){
+  MED_TARGET_ = target || null;
   await listsPullFast_();
   const ov = ensureMedPicker_();
   medPickerEdit_ = false; medPickerSel_ = null; medPickerForm_ = null; medPickerQuery_ = '';
   $('medPickerSearch').value = ''; $('medPickerEditBtn').textContent = '✎ تعديل';
   renderMedPicker_();
   ov.style.display = 'flex';
-};
+}
+$('openMedPickerBtn').onclick = ()=> openMedPickerCore_(null);
 
 /* ---------- نافذة اختيار الأشعة والتحاليل (نفس فكرة الأدوية): قوائم بألوان، دوسة تختار ودوسة تشيل ---------- */
 const LP_CFG = {
@@ -2880,6 +2889,16 @@ const LP_CFG = {
       'تحاليل روماتيزم': ['rf','crp','esr','ccp','ana','يوريك','uric','روماتويد','روماتيزم','ترسيب','anti','hla','dsdna'],
       'تحاليل عامة': ['cbc','صوره دم','صورة دم','سكر','glucose','وظائف كبد','وظائف كلي','وظايف','كرياتينين','يوريا','بول','دهون','كوليسترول','فيتامين','كالسيوم','vitamin','hba1c','تراكمي']
     }
+  }
+};
+LP_CFG.recs = {
+  title: '📌 اختيار التوصيات', listKey: 'recommendations', getList: () => RECOMMENDATIONS_LIST, noun: 'التوصيات', diag: true,
+  cats: ['توصيات عامة', 'توصيات التحميل', 'توصيات التغذية', 'توصيات الغيار', 'أخرى'], fallback: 'توصيات عامة',
+  colors: { 'توصيات عامة': '#007AFF', 'توصيات التحميل': '#FF9500', 'توصيات التغذية': '#34C759', 'توصيات الغيار': '#FF2D55', 'أخرى': '#8E8E93' },
+  guess: {
+    'توصيات التحميل': ['تحميل','حمل الوزن','وزن','عكاز','مشاية','مشي','سير','وقوف','تسلق','سلالم','نط'],
+    'توصيات التغذية': ['غذاء','غذائي','تغذية','اكل','أكل','بروتين','كالسيوم','لبن','فيتامين','ملح','سكر','سوائل','ماء','التدخين'],
+    'توصيات الغيار': ['غيار','جرح','غرز','تبليل','بلل','معقم','تعقيم','ضماد','شاش','استحمام']
   }
 };
 const LP_EXTRA = ['#30B0C7','#C9A800','#AF52DE','#FF3B30','#A2845E','#007AFF'];
@@ -2908,10 +2927,10 @@ function lpCatOf_(name){
   for(const cat of Object.keys(g)){
     if(cats.includes(cat) && g[cat].some(k => n.includes(medNorm_(k)))) return cat;
   }
-  return 'أخرى';
+  return lpCfg_().fallback || 'أخرى';
 }
-function lpGetLines_(id){ const el = $(id); const t = el.isContentEditable ? (el.innerText || '') : (el.value || ''); return t.split('\n').map(x => x.trim()).filter(Boolean); }
-function lpSetLines_(id, lines){ const el = $(id); const t = lines.join('\n'); if(el.isContentEditable) setEditableValue(id, t); else el.value = t; }
+function lpGetLines_(id){ const el = $(id); if(el.classList.contains('chips')) return getActiveChips(id); const t = el.isContentEditable ? (el.innerText || '') : (el.value || ''); return t.split('\n').map(x => x.trim()).filter(Boolean); }
+function lpSetLines_(id, lines){ const el = $(id); if(el.classList.contains('chips')){ el.innerHTML = ''; lines.forEach(v => addChipTag(id, v)); return; } const t = lines.join('\n'); if(el.isContentEditable) setEditableValue(id, t); else el.value = t; }
 function lpMatch_(line, name){ return line === name || line === 'Right ' + name || line === 'Left ' + name; }
 function lpAskSide_(name, isSel){
   return new Promise(res => {
@@ -3002,6 +3021,18 @@ function lpEnsure_(){
 }
 function lpClose_(){ const ov = $('lpOverlay'); if(ov) ov.style.display = 'none'; }
 async function lpRefresh_(){ try{ await tryFetchListsRemote(true); }catch(_){} lpRender_(); }
+function lpDiagHtml_(q){
+  if(LP.kind !== 'recs' || LP.edit || !DIAGNOSIS_RECS.length) return '';
+  const items = DIAGNOSIS_RECS.map((d, i) => ({ d, i })).filter(x => !q || medNorm_(x.d.diagnosis).includes(q));
+  if(!items.length) return '';
+  return `<div class="lp-cat" data-cat="__diag" style="--mc:#1f7a6a"><h3>🩺 توصيات جاهزة حسب التشخيص <span style="font-weight:400;opacity:.6;font-size:12px;">(${items.length})</span></h3>
+    <div class="hint" style="margin-bottom:6px;">اضغط على التشخيص وتتضاف كل توصياته مرة واحدة</div>
+    <div class="lp-row">${items.map(x => `<button type="button" class="lp-chip lp-dchip" data-i="${x.i}">${escapeHtml(x.d.diagnosis)} <small style="opacity:.7;">(${(x.d.recommendations || []).length})</small></button>`).join('')}</div></div>`;
+}
+function lpDiagJump_(){
+  if(LP.kind !== 'recs' || LP.edit || !DIAGNOSIS_RECS.length) return '';
+  return `<button type="button" class="lp-jump" data-cat="__diag" style="--mc:#1f7a6a">🩺 حسب التشخيص</button>`;
+}
 function lpRender_(){
   const cfg = lpCfg_(), body = $('lpBody'), bar = $('lpBar');
   const q = medNorm_(LP.query), cats = lpCats_();
@@ -3011,12 +3042,12 @@ function lpRender_(){
   const groups = {}; cats.forEach(c => groups[c] = []);
   cfg.getList().forEach(name => { if(!q || medNorm_(name).includes(q)) groups[lpCatOf_(name)].push(name); });
   const showCats = LP.edit ? cats : cats.filter(c => groups[c].length);
-  body.innerHTML = showCats.map(c => `
+  body.innerHTML = lpDiagHtml_(q) + showCats.map(c => `
     <div class="lp-cat" data-cat="${escapeHtml(c)}" style="--mc:${lpColor_(c)}"><h3>${escapeHtml(c)} <span style="font-weight:400;opacity:.6;font-size:12px;">(${groups[c].length})</span>${LP.edit && c !== 'أخرى' ? `<button type="button" class="btn btn-outline-red lp-act lp-delcat" data-cat="${escapeHtml(c)}" style="padding:2px 8px;font-size:11px;">🗑 حذف القائمة</button>` : ''}</h3>
       <div class="lp-row">${groups[c].map(n => `<button type="button" class="lp-chip${cnt(n) ? ' on' : ''}${LP.sel === n ? ' mv' : ''}" data-name="${escapeHtml(n)}">${cnt(n) && !LP.edit ? '✓ ' : ''}${escapeHtml(n)}${cnt(n) > 1 && !LP.edit ? ' ×' + cnt(n) : ''}</button>`).join('') || '<span class="hint">فاضية</span>'}</div>
     </div>`).join('') || '<div class="no-visits">لا يوجد عناصر</div>';
   const jump = $('lpJump');
-  jump.innerHTML = showCats.map(c => `<button type="button" class="lp-jump" data-cat="${escapeHtml(c)}" style="--mc:${lpColor_(c)}">${escapeHtml(c)}</button>`).join('');
+  jump.innerHTML = lpDiagJump_() + showCats.map(c => `<button type="button" class="lp-jump" data-cat="${escapeHtml(c)}" style="--mc:${lpColor_(c)}">${escapeHtml(c)}</button>`).join('');
   jump.querySelectorAll('.lp-jump').forEach(b => b.onclick = ()=>{
     const el = Array.from(body.querySelectorAll('.lp-cat')).find(x => x.dataset.cat === b.dataset.cat); if(!el) return;
     body.scrollTo({ top: el.offsetTop - body.offsetTop - 4, behavior: 'smooth' });
@@ -3072,7 +3103,16 @@ function lpRender_(){
       lpRender_();
     });
   }
-  body.querySelectorAll('.lp-chip').forEach(ch => ch.onclick = ()=>{
+  body.querySelectorAll('.lp-dchip').forEach(ch => ch.onclick = ()=>{
+    const e = DIAGNOSIS_RECS[+ch.dataset.i]; if(!e) return;
+    const lines = lpGetLines_(LP.target); let n = 0;
+    (e.recommendations || []).forEach(r => { if(r && !lines.includes(r)){ lines.push(r); n++; } });
+    lpSetLines_(LP.target, lines);
+    if(!$('rxDiagnosis').value.trim()) $('rxDiagnosis').value = e.diagnosis;
+    showToast(n ? 'اتضافت ' + n + ' توصية لـ «' + e.diagnosis + '»' : 'التوصيات دي مضافة بالفعل');
+    const top = body.scrollTop; lpRender_(); body.scrollTop = top;
+  });
+  body.querySelectorAll('.lp-chip:not(.lp-dchip)').forEach(ch => ch.onclick = ()=>{
     const name = ch.dataset.name;
     if(LP.edit){ LP.form = null; LP.sel = name; lpRender_(); }
     else{ const top = body.scrollTop; Promise.resolve(lpPick_(name)).then(()=>{ lpRender_(); body.scrollTop = top; }); }
@@ -9899,7 +9939,7 @@ function renderFu_(){
           <button type="button" class="btn btn-outline-red" data-delmd="${w}:${i}" style="padding:6px 10px;">✕</button></div>`).join('')}
         <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;">
           <button type="button" class="btn btn-ghost" data-pull="${w}">🔄 سحب الأدوية من آخر روشتة</button>
-          <button type="button" class="btn btn-ghost" data-addmd="${w}">+ دواء</button>
+          <button type="button" class="btn btn-primary" data-pickmd="${w}">💊 اختيار الأدوية</button>
           ${w > 1 ? `<button type="button" class="btn btn-ghost" data-copyprev="${w}">📋 نسخ من الأسبوع ${w - 1}</button>` : ''}
           <button type="button" class="btn btn-outline-red" data-delwk="${w}">🗑 حذف الأسبوع</button></div>
       </details>`; }).join('')}
@@ -9964,7 +10004,20 @@ function renderFu_(){
   });
   document.querySelectorAll('#fuBody .fu-wk').forEach(d => d.addEventListener('toggle', ()=>{ if(d.open) FU.openW = +d.dataset.w; else if(FU.openW === +d.dataset.w) FU.openW = 0; }));
   const wk = w => FU.weeks[w - 1];
-  document.querySelectorAll('#fuBody [data-addmd]').forEach(b => b.onclick = ()=>{ fuGrab_(); const w = +b.dataset.addmd; wk(w).meds.push({ name: '', instructions: '' }); FU.openW = w; renderFu_(); });
+  document.querySelectorAll('#fuBody [data-pickmd]').forEach(b => b.onclick = ()=>{
+    fuGrab_(); const w = +b.dataset.pickmd;
+    openMedPickerCore_({
+      get: ()=> wk(w).meds.filter(m => String(m.name || '').trim()).map(m => ({ name: m.name.trim(), instructions: m.instructions || '' })),
+      set: list => {
+        const prev = new Set(wk(w).meds.map(m => medNorm_(m.name))), now = new Set(list.map(m => medNorm_(m.name)));
+        const removed = [...prev].filter(n => n && !now.has(n));
+        wk(w).meds = list.map(m => ({ ...m }));
+        removed.forEach(n => { for(let k = w + 1; k <= FU.weeks.length; k++) FU.weeks[k - 1].meds = FU.weeks[k - 1].meds.filter(m => medNorm_(m.name) !== n); });
+        if(removed.length && w < FU.weeks.length) showToast('اتشال من الأسبوع ' + w + ' والأسابيع اللي بعده (كأن المريض وقفه)');
+      },
+      onDone: ()=>{ FU.openW = w; renderFu_(); }
+    });
+  });
   document.querySelectorAll('#fuBody [data-delmd]').forEach(b => b.onclick = ()=>{ fuGrab_(); const [w, i] = b.dataset.delmd.split(':').map(Number);
     const nm = medNorm_((wk(w).meds[i] || {}).name || '');
     wk(w).meds.splice(i, 1);
