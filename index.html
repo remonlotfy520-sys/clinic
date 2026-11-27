@@ -2601,7 +2601,7 @@ $('addMedicineRowBtn').onclick = ()=>{
 };
 
 /* ---------- مزامنة قوائم الأدوية/الأشعة/التحاليل بين الأجهزة (Firestore: settings/lists) ---------- */
-const LISTS_SYNC_KEYS = ['medCats','medCatsList','radiologyCats','radiologyCatsList','labsCats','labsCatsList','opSecList','opSecMap','fuTemplates'];
+const LISTS_SYNC_KEYS = ['medCats','medCatsList','radiologyCats','radiologyCatsList','labsCats','labsCatsList','opSecList','opSecMap','fuTemplates','fuWeekTpls'];
 let listsSyncTimer = null, listsToastShown = false;
 function listsLocalSnapshot_(){ const o = {}; LISTS_SYNC_KEYS.forEach(k => { const v = localStorage.getItem(k); if(v !== null) o[k] = v; }); return o; }
 function listsPush_(){
@@ -9782,6 +9782,12 @@ function fuTplWeeks_(t){
   return Array.from(out, w => w || { text: '', meds: [] });
 }
 function fuTpls_(){ try{ const l = JSON.parse(localStorage.getItem('fuTemplates') || 'null'); if(Array.isArray(l) && l.length) return l.map(t => ({ name: t.name, weeks: fuTplWeeks_(t) })); }catch(_){} return JSON.parse(JSON.stringify(FU_TPL_DEFAULT)); }
+const FU_WTPL_DEFAULT = ['تطويل الأسبوع الأول', 'أسبوع الغيار', 'أسبوع تطويل', 'أسبوع تكوين عظام'];
+function fuWTpls_(){
+  try{ const l = JSON.parse(localStorage.getItem('fuWeekTpls') || 'null'); if(Array.isArray(l)) return l.map(t => ({ name: t.name || '', text: t.text || '', meds: (t.meds || []).map(m => ({ name: m.name || '', instructions: m.instructions || '' })) })); }catch(_){}
+  return FU_WTPL_DEFAULT.map(n => ({ name: n, text: '', meds: [] }));
+}
+function fuWTplsSave_(l){ try{ localStorage.setItem('fuWeekTpls', JSON.stringify(l)); }catch(_){} listsSchedulePush_(); }
 function fuTplsSave_(l){ try{ localStorage.setItem('fuTemplates', JSON.stringify(l)); }catch(_){} listsSchedulePush_(); }
 let FU = null, fuUnsub = null, fuGlobalUnsub = null, fuPrevUnread = null;
 function fuLink_(t){ return new URL('followup.html', location.href).href + '?t=' + t; }
@@ -9801,8 +9807,7 @@ async function openFu_(pid, tab){
       FU.token = d.id; FU.data = x; FU.weeks = fuWeeksFrom_(x);
       FU.title = x.title || ''; FU.start = x.startDate || ''; FU.note = x.note || '';
     }else{
-      const t = fuTpls_()[0];
-      FU.title = t.name; FU.weeks = fuTplWeeks_(t); FU.start = new Date().toISOString().slice(0, 10);
+      FU.title = 'متابعة'; FU.weeks = []; FU.start = new Date().toISOString().slice(0, 10);
     }
   }catch(e){ showToast('تعذر التحميل - جرب تاني', true); closeFu_(); return; }
   renderFu_();
@@ -9859,7 +9864,8 @@ function renderFu_(){
     + (exists ? `<button type="button" class="btn ${FU.tab === 'chat' ? 'btn-primary' : 'btn-ghost'}" data-t="chat">💬 الاستفسارات${FU.data && FU.data.unread ? ' (' + FU.data.unread + ')' : ''}</button>` : '');
   $('fuTabs').querySelectorAll('[data-t]').forEach(b => b.onclick = ()=>{ fuGrab_(); FU.tab = b.dataset.t; fuCloseChat_(); renderFu_(); });
   if(FU.tab === 'chat' && exists) return renderFuChat_();
-  const tpls = fuTpls_();
+  const wtpls = fuWTpls_();
+  const tplOpts = '<option value="">📥 املأ من قالب أسبوع...</option>' + wtpls.map((t, i) => `<option value="${i}">${escapeHtml(t.name)}</option>`).join('');
   const inp = 'width:100%;padding:8px 10px;border-radius:9px;border:1px solid var(--line);font-family:inherit;font-size:14px;background:var(--inp);color:var(--inputink);';
   let h = '';
   if(exists){
@@ -9874,16 +9880,17 @@ function renderFu_(){
         <button type="button" class="btn btn-ghost" id="fuQrPrint">🖨 طباعة QR</button></div>
       <div style="text-align:center;margin-top:10px;"><img id="fuQr" alt="QR" width="160" height="160" src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(fuLink_(FU.token))}" style="background:#fff;padding:6px;border-radius:10px;border:1px solid var(--line);"></div></div>`;
   }
-  h += `<div class="field"><label>نوع المتابعة (القالب)</label><div style="display:flex;gap:6px;">
-      <select id="fuTplSel" class="dropdown-add-select" style="flex:1;"><option value="">اختار قالب وحمّله...</option>${tpls.map((t, i) => `<option value="${i}">${escapeHtml(t.name)}</option>`).join('')}</select>
-      <button type="button" class="btn btn-ghost" id="fuTplLoad">تحميل</button></div>
-      <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap;"><button type="button" class="btn btn-ghost" id="fuTplSave">💾 حفظ المراحل كقالب</button><button type="button" class="btn btn-ghost" id="fuTplDel">🗑 حذف قالب</button></div></div>
-    <div class="field"><label>عنوان المتابعة</label><input type="text" id="fuTitle" value="${escapeHtml(FU.title)}" placeholder="مثلاً: متابعة التطويل"></div>
+  h += `    <div class="field"><label>عنوان المتابعة</label><input type="text" id="fuTitle" value="${escapeHtml(FU.title)}" placeholder="مثلاً: متابعة التطويل"></div>
     <div class="field"><label>تاريخ بداية المتابعة (الأسبوع 1)</label><input type="date" id="fuStart" value="${escapeHtml(FU.start)}"></div>
     <h2 style="font-size:15px;margin:14px 0 6px;">📅 الأسابيع (ضيف أسبوع بأسبوع، وكل أسبوع ليه تعليماته وأدويته)</h2>
     ${FU.weeks.map((d, k) => { const w = k + 1;
       return `<details class="fu-wk opsec-box" data-w="${w}" ${FU.openW === w ? 'open' : ''}>
         <summary style="cursor:pointer;font-weight:700;">الأسبوع ${w}${d.title ? ' · ' + escapeHtml(d.title) : ''} <span style="font-weight:400;color:var(--muted);font-size:12px;">${d.text ? '📌' : ''}${(d.meds || []).length ? ' 💊' + d.meds.length : ''}</span></summary>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;">
+          <select class="dropdown-add-select wtpl" data-w="${w}" style="flex:1;min-width:150px;">${tplOpts}</select>
+          <button type="button" class="btn btn-ghost" data-wtpl-load="${w}">تحميل</button>
+          <button type="button" class="btn btn-ghost" data-wtpl-save="${w}">💾 حفظ كقالب</button>
+          <button type="button" class="btn btn-outline-red" data-wtpl-del="${w}" title="حذف القالب المختار">🗑</button></div>
         <input class="wt" type="text" value="${escapeHtml(d.title || '')}" placeholder="اسم الأسبوع (اختياري) مثلاً: العملية، رفع الغرز، تركيب الجهاز" style="${inp}margin-top:8px;">
         <textarea class="wx" placeholder="تعليمات الأسبوع ${w}..." style="${inp}min-height:70px;margin-top:8px;">${escapeHtml(d.text || '')}</textarea>
         <div style="margin-top:8px;font-weight:700;font-size:13px;">💊 أدوية الأسبوع ${w}</div>
@@ -9896,6 +9903,7 @@ function renderFu_(){
           ${w > 1 ? `<button type="button" class="btn btn-ghost" data-copyprev="${w}">📋 نسخ من الأسبوع ${w - 1}</button>` : ''}
           <button type="button" class="btn btn-outline-red" data-delwk="${w}">🗑 حذف الأسبوع</button></div>
       </details>`; }).join('')}
+    <div style="margin-bottom:8px;"><select id="fuAddFromTpl" class="dropdown-add-select" style="width:100%;"><option value="">➕ أضف أسبوع جديد من قالب...</option>${wtpls.map((t, i) => `<option value="${i}">${escapeHtml(t.name)}</option>`).join('')}</select></div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;">
       <button type="button" class="btn btn-ghost" id="fuAddWk" style="flex:1;">➕ أسبوع ${FU.weeks.length + 1} (فاضي)</button>
       ${FU.weeks.length ? `<button type="button" class="btn btn-primary" id="fuAddWkCarry" style="flex:1;">➕ أسبوع ${FU.weeks.length + 1} + كمّل أدوية الأسبوع ${FU.weeks.length}</button>` : ''}</div>
@@ -9916,23 +9924,31 @@ function renderFu_(){
       w.document.close();
     };
   }
-  B('fuTplLoad').onclick = ()=>{
-    const i = B('fuTplSel').value; if(i === '') return;
-    if(FU.weeks.some(w => w.text || (w.meds || []).length) && !confirm('تحميل القالب هيستبدل الأسابيع الحالية. تكمل؟')) return;
-    fuGrab_(); const t = fuTpls_()[+i]; FU.weeks = fuTplWeeks_(t); FU.title = t.name; FU.openW = 0; renderFu_();
-  };
-  B('fuTplSave').onclick = ()=>{
-    fuGrab_(); if(!FU.weeks.length){ showToast('مفيش أسابيع تتحفظ', true); return; }
-    const name = (prompt('اسم القالب:', FU.title || '') || '').trim(); if(!name) return;
-    const l = fuTpls_(), i = l.findIndex(t => t.name === name), weeks = fuTplWeeks_({ weeks: FU.weeks });
-    if(i >= 0){ if(!confirm('فيه قالب بنفس الاسم. استبداله؟')) return; l[i] = { name, weeks }; } else l.push({ name, weeks });
-    fuTplsSave_(l); showToast('اتحفظ القالب ✓'); renderFu_();
-  };
-  B('fuTplDel').onclick = ()=>{
-    const i = B('fuTplSel').value; if(i === ''){ showToast('اختار القالب الأول من القايمة', true); return; }
-    const l = fuTpls_(); if(l.length <= 1){ showToast('لازم يفضل قالب واحد على الأقل', true); return; }
-    if(!confirm('حذف قالب «' + l[+i].name + '»؟ (الصفحات اللي اتعملت بيه مش هتتأثر)')) return;
-    l.splice(+i, 1); fuTplsSave_(l); fuGrab_(); renderFu_();
+  const applyTpl = (t, w) => { const d = FU.weeks[w - 1]; d.title = t.name; d.text = t.text; d.meds = t.meds.map(m => ({ ...m })); };
+  document.querySelectorAll('#fuBody [data-wtpl-load]').forEach(b => b.onclick = ()=>{
+    const w = +b.dataset.wtplLoad, i = document.querySelector(`#fuBody .wtpl[data-w="${w}"]`).value;
+    if(i === ''){ showToast('اختار قالب من القايمة الأول', true); return; }
+    fuGrab_(); const d = FU.weeks[w - 1];
+    if((d.text || (d.meds || []).length) && !confirm('القالب هيستبدل تعليمات وأدوية الأسبوع ' + w + '. تكمل؟')) return;
+    applyTpl(wtpls[+i], w); FU.openW = w; renderFu_();
+  });
+  document.querySelectorAll('#fuBody [data-wtpl-save]').forEach(b => b.onclick = ()=>{
+    fuGrab_(); const w = +b.dataset.wtplSave, d = FU.weeks[w - 1];
+    const name = (prompt('اسم قالب الأسبوع:', d.title || '') || '').trim(); if(!name) return;
+    const t = { name, text: String(d.text || '').trim(), meds: (d.meds || []).filter(m => String(m.name || '').trim()).map(m => ({ name: m.name.trim(), instructions: String(m.instructions || '').trim() })) };
+    const l = fuWTpls_(), i = l.findIndex(x => x.name === name);
+    if(i >= 0){ if(!confirm('فيه قالب بنفس الاسم. استبداله؟')) return; l[i] = t; } else l.push(t);
+    fuWTplsSave_(l); FU.openW = w; renderFu_(); showToast('اتحفظ قالب «' + name + '» ✓');
+  });
+  document.querySelectorAll('#fuBody [data-wtpl-del]').forEach(b => b.onclick = ()=>{
+    const w = +b.dataset.wtplDel, i = document.querySelector(`#fuBody .wtpl[data-w="${w}"]`).value;
+    if(i === ''){ showToast('اختار القالب اللي عايز تحذفه من القايمة الأول', true); return; }
+    if(!confirm('حذف قالب «' + wtpls[+i].name + '»؟ (الأسابيع اللي اتعملت بيه مش هتتأثر)')) return;
+    const l = fuWTpls_(); l.splice(+i, 1); fuWTplsSave_(l); fuGrab_(); FU.openW = w; renderFu_();
+  });
+  $('fuAddFromTpl').onchange = ()=>{
+    const i = $('fuAddFromTpl').value; if(i === '') return;
+    fuGrab_(); FU.weeks.push({ title: '', text: '', meds: [] }); applyTpl(wtpls[+i], FU.weeks.length); FU.openW = FU.weeks.length; renderFu_();
   };
   B('fuAddWk').onclick = ()=>{ fuGrab_(); FU.weeks.push({ title: '', text: '', meds: [] }); FU.openW = FU.weeks.length; renderFu_(); };
   const carry = $('fuAddWkCarry');
