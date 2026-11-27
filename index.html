@@ -677,7 +677,6 @@ var n=localStorage.getItem('clinicName');if(n)document.title=n;}catch(e){}})();
         <button class="dropdown-item" id="secretaryBtn">📱 السكرتارية (QR)</button>
         <button class="dropdown-item" id="webRequestsBtn">🌐 طلبات الموقع <span id="webReqBadge" style="display:none; background:var(--red); color:#fff; border-radius:999px; font-size:11px; font-weight:800; padding:1px 7px; margin-inline-start:6px;"></span></button>
         <button class="dropdown-item" id="importCasesFromDriveBtn">📂 استيراد حالات من فولدر درايف</button>
-        <button class="dropdown-item" id="viewImagesPatientsBtn">🖼️ صور</button>
         <button class="dropdown-item" id="openDrawStudioBtn">📐 رسم وقياس</button>
         <button class="dropdown-item" id="viewOperationPatientsBtn">🩺 حالات عمليات</button>
         <button class="dropdown-item" id="viewStatsBtn">📊 إحصائيات</button>
@@ -9590,92 +9589,6 @@ $('closeRedFlagsViewBtn').onclick = ()=>{
 };
 
 $('openDrawStudioBtn').onclick = ()=> openMeasureStudio();
-$('viewImagesPatientsBtn').onclick = async ()=>{
-  $('listView').style.display = 'none';
-  $('workspace').style.display = 'none';
-  $('calendarView').style.display = 'none';
-  $('statsView').style.display = 'none';
-  $('messagesView').style.display = 'none';
-  $('operationsPatientsView').style.display = 'none';
-  $('redFlagPatientsView').style.display = 'none';
-  $('listsManagerView').style.display = 'none';
-  $('imagesPatientsView').style.display = 'block';
-  $('imagesPatientsList').innerHTML = '<div class="no-visits">جاري التحميل...</div>';
-  if(navigator.onLine === false){
-    $('imagesPatientsList').innerHTML = '<div class="no-visits">محتاج نت</div>';
-    return;
-  }
-  try{
-    const token = await ensureAppsScriptLogin();
-    const res = await fetch(`${APPS_SCRIPT_URL}?action=getPatientIdsWithImages&token=${encodeURIComponent(token)}`);
-    const data = await res.json();
-    if(data.error){ $('imagesPatientsList').innerHTML = `<div class="no-visits">${escapeHtml(data.error)}</div>`; return; }
-    const ids = new Set((data.patientIds || []).map(x=>String(x).trim()));
-    IMG_THUMBS_READY = true; IMG_THUMBS = {}; Object.entries(data.thumbs || {}).forEach(([k,v])=>{ IMG_THUMBS[String(k).trim()] = v; });
-    const patientsAll = allPatients.filter(p => ids.has(String(p.id).trim()));
-    const opPatients = patientsAll.filter(p => !!p.HasOperation);
-    const patients = patientsAll.filter(p => !p.HasOperation);
-    renderQuickPatientsList('imagesPatientsList', patients);
-    fillThumbs($('imagesPatientsList'));
-    window.__imgIds = ids; window.__imgPatients = patients.length;
-
-    if(!currentCases.length) await loadOperationCases();
-    try{
-      const orphanIds = [...ids].filter(i => !allPatients.some(p=>String(p.id).trim()===i) && !currentCases.some(c=>String(c.id).trim()===i));
-      const oBox = $('imagesOrphanBox'), oList = $('imagesOrphanList');
-      if(oBox && oList){
-        oBox.style.display = orphanIds.length ? '' : 'none';
-        oList.innerHTML = orphanIds.map(id => {
-          const files = (IMG_THUMBS[id] || []);
-          const links = files.map((f,i) => `<a href="https://drive.google.com/file/d/${encodeURIComponent(f)}/view" target="_blank" rel="noopener" style="margin-inline-start:8px;">صورة ${i+1}</a>`).join('');
-          return `<div class="patient-row" style="display:flex;align-items:center;gap:12px;cursor:default;">
-            ${thumbImg(id, {})}
-            <div><div class="pname" style="direction:ltr;text-align:right;">رقم: ${escapeHtml(id)}</div><div class="pmeta">${links || 'مفيش ملف صورة'}</div></div>
-          </div>`;
-        }).join('');
-        fillThumbs(oList);
-      }
-    }catch(_){}
-    const casesWithImages = currentCases.filter(c => ids.has(c.id));
-    const casesBox = $('imagesCasesList');
-    const opRows = [
-      ...casesWithImages.map(c => ({ kind:'case', id:c.id, rec:c, name:c.Name || '—', meta:String(c.CaseDate || '').slice(0,10) })),
-      ...opPatients.map(p => ({ kind:'patient', id:p.id, rec:p, name:p.Name || '—', meta:[p.Phone || '', p.ClinicNumber ? 'رقم ' + p.ClinicNumber : ''].filter(Boolean).join(' · ') }))
-    ];
-    if(!opRows.length){ casesBox.innerHTML = '<div class="no-visits">لا يوجد عمليات ليها صور</div>'; }
-    else{
-      casesBox.innerHTML = opRows.map(r => `
-        <div class="patient-row" data-kind="${r.kind}" data-id="${escapeHtml(String(r.id))}" style="display:flex;align-items:center;gap:12px;">
-          ${thumbImg(r.id, r.rec)}
-          <div>
-            <div class="pname">${r.kind === 'case' ? '🩹' : '🦴'} ${escapeHtml(r.name)}${r.kind === 'patient' && r.rec.RedFlag ? ' 🚩' : ''}</div>
-            <div class="pmeta">${escapeHtml(r.meta)}${r.kind === 'case' ? ' · حالة مستقلة' : ' · عملية مريض'}</div>
-          </div>
-        </div>`).join('');
-      fillThumbs(casesBox);
-      casesBox.querySelectorAll('.patient-row').forEach(row=>{
-        row.addEventListener('click', ()=>{
-          $('imagesPatientsView').style.display = 'none';
-          if(row.dataset.kind === 'case'){
-            const c = currentCases.find(x => x.id === row.dataset.id);
-            if(c) openOperationCaseDetail(c);
-          }else{
-            openPatient(row.dataset.id);
-          }
-        });
-      });
-    }
-    try{
-      const shown = patientsAll.length + casesWithImages.length;
-      const orphan = [...ids].filter(i => !allPatients.some(p=>String(p.id).trim()===i) && !currentCases.some(c=>String(c.id).trim()===i));
-      let note = $('imagesCountNote');
-      if(!note){ note = document.createElement('div'); note.id='imagesCountNote'; note.className='hint'; note.style.margin='8px 0'; $('imagesCasesList').parentNode.insertBefore(note, $('imagesCasesList').previousElementSibling); }
-      note.textContent = `📊 عدد اللي ليهم صور في السيستم: ${ids.size} — ظاهر هنا: ${shown}` + (orphan.length ? ` — ${orphan.length} صور مربوطة بحالة مش موجودة (اتمسحت أو رقمها مختلف)` : '');
-    }catch(_){}
-  }catch(err){
-    $('imagesPatientsList').innerHTML = '<div class="no-visits">تعذر التحميل - جرب تاني</div>';
-  }
-};
 $('closeImagesPatientsViewBtn').onclick = ()=>{
   $('imagesPatientsView').style.display = 'none';
   $('listView').style.display = 'block';
