@@ -128,24 +128,27 @@ const COLORS = ['#a24fc0','#ff9f1a','#19b3cf','#43b05c','#ff6a3d','#e8579a'];
 let selW = 0;
 function calc(){
   const phases = (D.phases || []).map(p => ({ name: p.name || '', from: +p.from || 1, to: +p.to || +p.from || 1, text: p.text || '' })).sort((a, b) => a.from - b.from);
-  const total = phases.reduce((m, p) => Math.max(m, p.to), 0);
+  let total = +D.total || 0;
+  if(D.weeks) total = Math.max(total, ...Object.keys(D.weeks).map(Number), 0);
+  total = Math.max(total, phases.reduce((m, p) => Math.max(m, p.to), 0));
   const start = parseDate(D.startDate);
   const today = new Date(); today.setHours(0, 0, 0, 0);
   const cur = start ? Math.floor((today - start) / (7 * DAY)) + 1 : 0;
   return { phases, total, start, cur };
 }
+function wTitle(w){ const v = D.weeks && D.weeks[w]; return (v && v.title) || ''; }
 function detailHtml(w){
   const { phases, total, start, cur } = calc();
   const ph = phaseOf(phases, w), c = COLORS[(w - 1) % COLORS.length];
   const ws = start ? new Date(start.getTime() + (w - 1) * 7 * DAY) : null, we = ws ? new Date(ws.getTime() + 6 * DAY) : null;
   if(start && w > cur){
-    return `<div class="card detail" style="--c:#aab3b8"><div class="dh">الأسبوع ${w}${ph && ph.name ? ' — ' + esc(ph.name) : ''}</div>
+    return `<div class="card detail" style="--c:#aab3b8"><div class="dh">الأسبوع ${w}${wTitle(w) ? ' — ' + esc(wTitle(w)) : ''}</div>
       <div class="locked"><div class="lk">🔒</div><div><b>الأسبوع ده لسه مجاش</b></div><div>هتظهر تعليماته وأدويته يوم ${ws ? esc(fmt(ws)) : 'بدايته'}.</div></div></div>`;
   }
   const wd = (D.weeks && D.weeks[w]) || null;
   const meds = ((wd && wd.meds) ? wd.meds : (D.meds || [])).filter(m => m && m.name);
   return `<div class="card detail" style="--c:${c}">
-    <div class="dh">الأسبوع ${w}${ph && ph.name ? ' — ' + esc(ph.name) : ''}</div>
+    <div class="dh">الأسبوع ${w}${wTitle(w) ? ' — ' + esc(wTitle(w)) : ''}</div>
     <div class="ds">${ws ? esc(fmt(ws)) + ' – ' + esc(fmt(we)) : ''}${start && w === cur ? ' · 📍 إحنا هنا دلوقتي' : ''}${start && w < cur ? ' · ✓ خلص' : ''}</div>
     <h3>📌 التعليمات</h3>
     <div class="txt">${esc((wd && wd.text) ? wd.text : (ph && ph.text ? ph.text : 'مفيش تعليمات إضافية للأسبوع ده.'))}</div>
@@ -156,8 +159,6 @@ function detailHtml(w){
 function selectWeek(w, scroll){
   selW = w;
   document.querySelectorAll('.node').forEach(n => n.classList.toggle('sel', +n.dataset.w === w));
-  const { phases } = calc(), ph = phaseOf(phases, w);
-  document.querySelectorAll('.pchip').forEach(c => c.classList.toggle('on', !!ph && c.dataset.k === ph.from + '|' + ph.name));
   const box = $('detail'); if(box) box.innerHTML = detailHtml(w);
   if(scroll){ const n = document.querySelector(`.node[data-w="${w}"]`); if(n) n.scrollIntoView({ inline:'center', block:'nearest', behavior:'smooth' }); }
 }
@@ -171,11 +172,10 @@ function render(){
   }else{
     let head;
     if(start && cur < 1) head = `<small>المتابعة هتبدأ يوم</small><div class="big">${esc(fmt(start))}</div>`;
-    else if(start && cur > total) head = `<div class="big">✅ خلصت مدة المتابعة المحددة</div><small>لو في أي حاجة محتاج تسأل عنها ابعت استفسار للدكتور.</small>`;
+    else if(start && cur > total) head = `<small>${esc(D.title || 'المتابعة')}</small><div class="big">⏳ في انتظار تعليمات الأسبوع ${cur}</div><small>الدكتور هيضيفها قريب. لو عندك أي استفسار ابعته من الزرار تحت.</small>`;
     else if(start) head = `<small>${esc(D.title || 'المتابعة')}</small><div class="big">الأسبوع ${cur} من ${total}</div><div class="bar"><i style="width:${Math.round((cur - 1) / total * 100)}%"></i></div>`;
     else head = `<small>${esc(D.title || 'المتابعة')}</small><div class="big">${total} أسبوع</div>`;
     html += `<div class="card lift now">${head}<small>دوس على أي رقم تحت علشان تشوف تعليمات الأسبوع والأدوية 👇</small></div>`;
-    html += `<div class="chips">` + phases.map(p => `<button type="button" class="pchip" data-k="${esc(p.from + '|' + p.name)}" data-from="${p.from}">${esc(p.name || 'المتابعة')}</button>`).join('') + `</div>`;
     html += `<div class="tlwrap" id="tlwrap"><div class="track">`;
     for(let w = 1; w <= total; w++){
       const ph = phaseOf(phases, w), c = COLORS[(w - 1) % COLORS.length], up = w % 2 === 1;
@@ -183,7 +183,7 @@ function render(){
       const cls = (up ? 'up' : 'dn') + (start ? (w < cur ? ' past' : (w === cur ? ' cur' : ' fut')) : '');
       html += `<div class="node ${cls}" data-w="${w}" style="--c:${c}"><div class="stem"></div><div class="dot"></div>
         <div class="ball"><i>${String(w).padStart(2, '0')}</i></div>
-        <div class="lab"><b>${esc(ph && ph.name ? ph.name : 'أسبوع ' + w)}</b>${ws ? '<br>' + esc(fmt(ws)) : ''}</div></div>`;
+        <div class="lab"><b>${esc(wTitle(w) || 'الأسبوع ' + w)}</b>${ws ? '<br>' + esc(fmt(ws)) : ''}</div></div>`;
     }
     html += `</div></div><div id="detail"></div>`;
   }
@@ -193,8 +193,7 @@ function render(){
   $('askBtn').style.display = D.msgUrl ? '' : 'none';
   if(total){
     document.querySelectorAll('.node').forEach(n => n.onclick = ()=> selectWeek(+n.dataset.w, false));
-    document.querySelectorAll('.pchip').forEach(c => c.onclick = ()=> selectWeek(+c.dataset.from, true));
-    const first = (start && cur >= 1 && cur <= total) ? cur : (selW && selW <= total ? selW : 1);
+    const first = (start && cur >= 1) ? Math.min(cur, total) : (selW && selW <= total ? selW : 1);
     selectWeek(first, false);
     if(!render.done){ render.done = true; setTimeout(()=>{ const n = document.querySelector(`.node[data-w="${first}"]`); if(n) n.scrollIntoView({ inline:'center', block:'nearest' }); }, 150); }
   }
