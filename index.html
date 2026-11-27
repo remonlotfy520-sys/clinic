@@ -9916,7 +9916,7 @@ function renderFu_(){
       <div style="display:flex;gap:6px;margin-top:8px;"><input type="text" readonly id="fuLinkInp" value="${escapeHtml(fuLink_(FU.token))}" style="${inp}direction:ltr;"><button type="button" class="btn btn-ghost" id="fuCopy">نسخ</button></div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;align-items:center;">
         <a class="btn btn-ghost" href="${escapeHtml(fuWaLink_())}" target="_blank" rel="noopener">📲 واتساب</a>
-        <a class="btn btn-ghost" href="${escapeHtml(fuLink_(FU.token))}" target="_blank" rel="noopener">👁 معاينة</a>
+        <a class="btn btn-ghost" href="${escapeHtml(fuLink_(FU.token))}&preview=1">👁 معاينة</a>
         <button type="button" class="btn btn-ghost" id="fuQrPrint">🖨 طباعة QR</button></div>
       <div style="text-align:center;margin-top:10px;"><img id="fuQr" alt="QR" width="160" height="160" src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(fuLink_(FU.token))}" style="background:#fff;padding:6px;border-radius:10px;border:1px solid var(--line);"></div></div>`;
   }
